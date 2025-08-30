@@ -1,0 +1,129 @@
+/* Estilos base para emails corporativos */
+
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Colores corporativos */
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --dark-color: #2c3e50;
+    --light-color: #f8f9fa;
+}
+
+/* Tipografía */
+.email-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--dark-color);
+    margin-bottom: 20px;
+}
+
+.email-subtitle {
+    font-size: 20px;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.email-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Botones */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: bold;
+    display: inline-block;
+    margin: 20px 0;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: bold;
+    display: inline-block;
+    margin: 20px 0;
+}
+
+/* Cajas de contenido */
+.message-box {
+    background-color: var(--light-color);
+    border-left: 4px solid var(--primary-color);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 5px;
+}
+
+.highlight-box {
+    background-color: #fff3cd;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid var(--warning-color);
+    margin: 20px 0;
+}
+
+.info-box {
+    background-color: #d1ecf1;
+    padding: 20px;
+    border-radius: 5px;
+    border-left: 4px solid var(--info-color);
+    margin: 20px 0;
+}
+
+/* Badges */
+.badge {
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+.badge-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.badge-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Responsive */
+@media only screen and (max-width: 600px) {
+    .container {
+        margin: 10px !important;
+    }
+    
+    .content {
+        padding: 20px !important;
+    }
+    
+    .email-title {
+        font-size: 24px;
+    }
+    
+    .btn-primary, .btn-success {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+}

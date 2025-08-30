@@ -42,6 +42,18 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# Firebase and other sensitive files
+config/firebase-service-account.json
+config/*.json
+firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# API Keys and credentials
+*.pem
+*.key
+.env.*
+!.env.example
+
 # temp directory
 .temp
 .tmp
