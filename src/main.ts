@@ -9,9 +9,22 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Configurar CORS para desarrollo
+  // Configurar CORS dinámico (env: ALLOWED_ORIGINS) y confiar en proxy cuando se ejecuta en Cloud Run
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ??
+    'http://localhost:4321,http://127.0.0.1:4321,https://gabrielzavando.cl'
+  ).split(',');
+
+  // Si la app se ejecuta detrás de un proxy (Cloud Run), confiar en él para X-Forwarded-*
+  app.set('trust proxy', true);
+
   app.enableCors({
-    origin: ['http://localhost:4321', 'http://127.0.0.1:4321'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: (origin, callback) => {
+      // permitir requests sin origin (curl, servidores, same-origin)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS policy: origen no permitido'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
     credentials: true,
   });
@@ -27,6 +40,7 @@ async function bootstrap() {
 
   console.log('Static assets served from:', join(__dirname, '..', 'public'));
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Cloud Run espera que la aplicación escuche el puerto indicado en PORT (usualmente 8080)
+  await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();
