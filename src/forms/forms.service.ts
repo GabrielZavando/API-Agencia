@@ -6,6 +6,8 @@ import { FirebaseService, ProspectRecord } from '../firebase/firebase.service';
 import { TemplateService } from '../templates/template.service';
 // import { AIService } from '../ai/ai.service'; // Comentado temporalmente
 import * as nodemailer from 'nodemailer';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class FormsService {
@@ -17,6 +19,38 @@ export class FormsService {
     // private readonly aiService: AIService, // Comentado temporalmente
     private readonly configService: ConfigService,
   ) {
+    this.initializeSMTP();
+  }
+
+  private initializeSMTP() {
+    // Intentar cargar configuración SMTP desde archivo JSON primero
+    const smtpConfigPath = path.join(process.cwd(), 'config', 'smtp-config.json');
+    
+    if (fs.existsSync(smtpConfigPath)) {
+      // Usar archivo JSON
+      try {
+        const smtpConfig = JSON.parse(fs.readFileSync(smtpConfigPath, 'utf8'));
+        this.transporter = nodemailer.createTransport({
+          host: smtpConfig.host,
+          port: smtpConfig.port,
+          secure: smtpConfig.secure,
+          auth: {
+            user: smtpConfig.user,
+            pass: smtpConfig.pass,
+          },
+        });
+        console.log(`📧 SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`);
+      } catch (error) {
+        console.error('Error cargando configuración SMTP desde JSON:', error);
+        this.initializeSMTPFromEnv();
+      }
+    } else {
+      // Fallback: usar variables de entorno
+      this.initializeSMTPFromEnv();
+    }
+  }
+
+  private initializeSMTPFromEnv() {
     // Configurar el transportador de email con variables de entorno
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
@@ -28,7 +62,7 @@ export class FormsService {
       },
     });
     
-    console.log(`📧 SMTP configurado: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')} (secure: ${this.configService.get('SMTP_SECURE')})`);
+    console.log(`📧 SMTP configurado desde variables de entorno: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')} (secure: ${this.configService.get('SMTP_SECURE')})`);
   }
 
   // Normaliza strings leídos del .env (quita comillas y espacios)

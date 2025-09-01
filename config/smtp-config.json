@@ -1,0 +1,8 @@
+{
+  "host": "smtp.hostinger.com",
+  "port": 465,
+  "secure": true,
+  "user": "contacto@gabrielzavando.cl",
+  "pass": "MIaH6HlpTzIXfq#",
+  "from": "contacto@gabrielzavando.cl"
+}
