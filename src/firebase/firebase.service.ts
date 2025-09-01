@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
+import * as path from 'path';
+import * as fs from 'fs';
 import { ContactDto } from '../forms/dto/contact.dto';
 import { SubscribeDto } from '../forms/dto/subscribe.dto';
 
@@ -48,25 +50,48 @@ export class FirebaseService {
   private db: admin.firestore.Firestore;
 
   constructor(private configService: ConfigService) {
-    // Inicializar Firebase Admin con credenciales del .env
+    this.initializeFirebase();
+  }
+
+  private initializeFirebase() {
+    // Inicializar Firebase Admin con archivo JSON o variables de entorno
     if (!admin.apps.length) {
-      const serviceAccount = {
-        projectId: this.configService.get('FIREBASE_PROJECT_ID'),
-        privateKey: this.configService.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n'),
-        clientEmail: this.configService.get('FIREBASE_CLIENT_EMAIL'),
-      };
+      try {
+        // Intentar usar archivo JSON primero
+        const serviceAccountPath = path.join(process.cwd(), 'config', 'firebase-service-account.json');
+        
+        if (fs.existsSync(serviceAccountPath)) {
+          // Usar archivo JSON
+          const serviceAccount = require(serviceAccountPath);
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: serviceAccount.project_id,
+          });
+          console.log(`✅ Firebase inicializado con archivo JSON para proyecto: ${serviceAccount.project_id}`);
+        } else {
+          // Fallback: usar variables de entorno
+          const serviceAccount = {
+            projectId: this.configService.get('FIREBASE_PROJECT_ID'),
+            privateKey: this.configService.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n'),
+            clientEmail: this.configService.get('FIREBASE_CLIENT_EMAIL'),
+          };
 
-      // Validar que tenemos todas las credenciales necesarias
-      if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
-        throw new Error('Faltan credenciales de Firebase en las variables de entorno');
+          // Validar que tenemos todas las credenciales necesarias
+          if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
+            throw new Error('Faltan credenciales de Firebase en las variables de entorno');
+          }
+
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: serviceAccount.projectId,
+          });
+
+          console.log(`✅ Firebase inicializado con variables de entorno para proyecto: ${serviceAccount.projectId}`);
+        }
+      } catch (error) {
+        console.error('Error inicializando Firebase:', error);
+        throw new Error('No se pudieron cargar las credenciales de Firebase');
       }
-
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.projectId,
-      });
-
-      console.log(`✅ Firebase inicializado para proyecto: ${serviceAccount.projectId}`);
     }
 
     this.db = admin.firestore();
