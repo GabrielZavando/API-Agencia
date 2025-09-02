@@ -15,13 +15,24 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copiar módulos de producción desde builder
-COPY --from=builder /app/node_modules ./node_modules
+# Instalar solo dependencias de producción
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copiar código compilado
 COPY --from=builder /app/dist ./dist
 
-# Copiar assets necesarios en runtime (templates y public)
-COPY --from=builder /app/src/templates ./src/templates
+# Copiar solo assets necesarios en runtime (templates y public)
+COPY --from=builder /app/src/templates ./dist/templates
 COPY --from=builder /app/public ./public
+
+# Copiar archivo de credenciales de Firebase (solo para testing local)
+COPY --from=builder /app/config ./config
+
+# Crear usuario no-root para seguridad
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+USER nestjs
 
 EXPOSE 8080
 CMD ["node", "dist/main.js"]

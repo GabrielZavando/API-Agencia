@@ -7,9 +7,19 @@ export class TemplateService {
   private templatesPath: string;
 
   constructor() {
-    // Usar process.cwd() para obtener la raíz del proyecto
-    this.templatesPath = path.join(process.cwd(), 'src', 'templates', 'email');
+    // Detectar si estamos en desarrollo (src/) o producción (dist/)
+    const isDev = __dirname.includes('/src/');
+    
+    if (isDev) {
+      // Desarrollo: usar src/templates/email
+      this.templatesPath = path.join(process.cwd(), 'src', 'templates', 'email');
+    } else {
+      // Producción: usar dist/templates/email (copiado durante build)
+      this.templatesPath = path.join(__dirname, '..', 'templates', 'email');
+    }
+    
     console.log('📧 Ruta de plantillas configurada:', this.templatesPath);
+    console.log('🔧 Modo:', isDev ? 'desarrollo' : 'producción');
   }
 
   async getEmailTemplate(templateName: string, variables: Record<string, any>): Promise<string> {
