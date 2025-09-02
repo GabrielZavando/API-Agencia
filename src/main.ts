@@ -11,7 +11,7 @@ async function bootstrap() {
   // Configurar CORS para desarrollo
   // Configurar CORS dinámico (env: ALLOWED_ORIGINS) y confiar en proxy cuando se ejecuta en Cloud Run
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ??
-    'http://localhost:4321,http://127.0.0.1:4321,https://gabrielzavando.cl'
+    'https://gabrielzavando.cl'
   ).split(',');
 
   // Si la app se ejecuta detrás de un proxy (Cloud Run), confiar en él para X-Forwarded-*
