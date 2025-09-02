@@ -28,9 +28,8 @@ RUN npm ci --omit=dev --force && npm cache clean --force
 # Copiar código compilado
 COPY --from=builder /app/dist ./dist
 
-# Copiar solo assets necesarios en runtime (templates y public)
+# Copiar solo assets necesarios en runtime (templates)
 COPY --from=builder /app/src/templates ./dist/templates
-COPY --from=builder /app/public ./public
 
 # Copiar archivos de configuración
 COPY --from=builder /app/config ./config
