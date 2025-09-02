@@ -2,9 +2,12 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Actualizar npm a la versión más reciente
+RUN npm install -g npm@11.5.2
+
 # Instalar dependencias (instala devDeps para build)
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --force
 
 # Copiar el código y compilar
 COPY . .
@@ -15,9 +18,12 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Actualizar npm en producción también
+RUN npm install -g npm@11.5.2
+
 # Instalar solo dependencias de producción
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --force && npm cache clean --force
 
 # Copiar código compilado
 COPY --from=builder /app/dist ./dist
@@ -26,7 +32,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/templates ./dist/templates
 COPY --from=builder /app/public ./public
 
-# Copiar archivo de credenciales de Firebase (solo para testing local)
+# Copiar archivos de configuración
 COPY --from=builder /app/config ./config
 
 # Crear usuario no-root para seguridad
