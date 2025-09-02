@@ -5,9 +5,9 @@ WORKDIR /app
 # Actualizar npm a la versión más reciente
 RUN npm install -g npm@11.5.2
 
-# Instalar dependencias (instala devDeps para build)
+# Instalar dependencias (sin --force)
 COPY package.json package-lock.json ./
-RUN npm ci --force
+RUN npm ci --legacy-peer-deps
 
 # Copiar el código y compilar
 COPY . .
@@ -21,9 +21,9 @@ ENV NODE_ENV=production
 # Actualizar npm en producción también
 RUN npm install -g npm@11.5.2
 
-# Instalar solo dependencias de producción
+# Instalar solo dependencias de producción (sin --force)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --force && npm cache clean --force
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copiar código compilado
 COPY --from=builder /app/dist ./dist
