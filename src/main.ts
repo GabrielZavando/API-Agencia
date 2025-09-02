@@ -32,14 +32,6 @@ async function bootstrap() {
   // Validación global
   app.useGlobalPipes(new ValidationPipe());
 
-  // Servir archivos estáticos desde la carpeta 'public'
-  // Accesibles en runtime en: http://<host>:<port>/public/<ruta>
-  app.useStaticAssets(join(__dirname, '..', 'public'), {
-    prefix: '/public/',
-  });
-
-  console.log('Static assets served from:', join(__dirname, '..', 'public'));
-
   // Cloud Run espera que la aplicación escuche el puerto indicado en PORT (usualmente 8080)
   await app.listen(process.env.PORT ?? 8080);
 }
