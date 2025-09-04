@@ -1,4 +1,3 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -7,8 +6,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Configurar CORS para desarrollo
-  // Configurar CORS dinámico (env: ALLOWED_ORIGINS) y confiar en proxy cuando se ejecuta en Cloud Run
+  // Configurar CORS simple para producción
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ??
     'https://gabrielzavando.cl'
   ).split(',');
@@ -17,12 +15,7 @@ async function bootstrap() {
   app.set('trust proxy', true);
 
   app.enableCors({
-    origin: (origin, callback) => {
-      // permitir requests sin origin (curl, servidores, same-origin)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS policy: origen no permitido'));
-    },
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
     credentials: true,
