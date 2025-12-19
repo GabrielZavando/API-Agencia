@@ -333,4 +333,21 @@ export class FirebaseService {
       return null;
     }
   }
+
+  // Eliminar suscriptor de la colección 'subscribers'
+  async removeSubscriber(email: string): Promise<boolean> {
+    try {
+      const subscriber = await this.findSubscriberByEmail(email);
+      if (!subscriber) {
+        return false; // Suscriptor no encontrado
+      }
+
+      await this.db.collection('subscribers').doc(subscriber.subscriberId).delete();
+      console.log(`🗑️ Suscriptor eliminado: ${email}`);
+      return true;
+    } catch (error) {
+      console.error('Error eliminando suscriptor:', error);
+      throw new Error('Error eliminando suscriptor de Firebase');
+    }
+  }
 }

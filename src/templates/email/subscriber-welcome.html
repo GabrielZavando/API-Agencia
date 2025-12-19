@@ -4,9 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gracias por tu mensaje</title>
+  <title>¡Bienvenido a mi newsletter!</title>
   <!-- Cargar fuentes: Montserrat (títulos) y Open Sans (párrafos) -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap"
+    rel="stylesheet">
   <style>
     body {
       font-family: 'Open Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -24,18 +26,17 @@
       background-color: #ffffff;
       margin: 20px;
       border-radius: 0;
-      /* sin esquinas redondeadas */
       overflow: hidden;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     }
 
     .header {
-      background: #3b0464;
-      padding: 20px 30px;
-      color: #FFFFFF; /* token: white */
-      border-radius: 0; /* sin esquinas redondeadas */
-      border: 0;
-      text-align: center;
+  background: #3b0464;
+  padding: 20px 30px;
+  text-align: center;
+  color: #FFFFFF; /* token: white */
+  border-radius: 0;
+  border: 0;
     }
 
     .logo {
@@ -77,20 +78,6 @@
       border-radius: 0;
     }
 
-    .footer {
-      background-color: #1D0033;
-      /* token: dark */
-      color: #FFFFFF;
-      /* token: white */
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-    }
-
-    .social-links {
-      margin: 15px 0;
-    }
-
     .social-links a {
       display: inline-block;
       margin: 0 10px;
@@ -129,25 +116,34 @@
       transform: translateY(-1px);
     }
 
-    .cta-button.outline {
-      background: transparent;
-      border: 2px solid #FF0080;
-      color: #FF0080;
-    }
-
-    .cta-button.outline:hover {
-      background: #FF0080;
-      color: #FFFFFF;
-    }
-
-    .highlight {
+    .welcome-back {
       background-color: #F0E6FF;
       /* token: btn-secondary-hover */
-      padding: 15px;
+      padding: 20px;
       border-radius: 0;
       border-left: 4px solid #A600FF;
       /* token: secondary */
       margin: 20px 0;
+    }
+
+    .priority-badge {
+      background-color: #FF0080;
+      /* token: primary */
+      color: #FFFFFF;
+      padding: 5px 15px;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      background-color: #1D0033; /* token: dark */
+      color: #FFFFFF; /* token: white */
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -155,7 +151,6 @@
 <body>
   <div class="container">
     <div class="header">
-      <!-- Estructura con tablas para compatibilidad con clientes de correo y centrado horizontal -->
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
         <tr>
           <td align="center" style="text-align:center;">
@@ -173,33 +168,35 @@
     </div>
 
     <div class="content">
-      <h1 class="greeting">¡Hola {{name}}!</h1>
-      <div class="message-box">
-        <strong>Tu mensaje:</strong><br>
-        {{message}}
+      <h1 class="greeting">¡Bienvenido/a a mi newsletter! 🎉</h1>
+
+      <div class="welcome-back">
+        <strong>¡Gracias por suscribirte!</strong><br>
+        Me alegra mucho que hayas decidido formar parte de mi comunidad. Recibirás actualizaciones sobre mis proyectos, consejos de desarrollo web y oportunidades de colaboración.
       </div>
 
-      <div class="highlight">
-        <strong>🎯 ¿Qué sigue ahora?</strong><br>
-        {{responseContent}}
-      </div>
-
-      <p>Mientras tanto, te invito a:</p>
+      <p>Como suscriptor/a, tendrás acceso prioritario a:</p>
       <ul>
-        <li>📋 Explorar mis <a href="{{servicesUrl}}" style="color: #FF0080;" target="_blank"
-            rel="noopener noreferrer">servicios</a></li>
-        <li>📱 Seguirme en mis redes sociales</li>
-        <li> Conocer más sobre mí en mi sitio web</li>
+        <li>📰 <strong>Actualizaciones semanales:</strong> Novedades en mis proyectos y tecnologías</li>
+        <li>💡 <strong>Consejos prácticos:</strong> Tips de desarrollo web y mejores prácticas</li>
+        <li>🚀 <strong>Oportunidades:</strong> Proyectos colaborativos y ofertas especiales</li>
+        <li>📧 <strong>Contenido exclusivo:</strong> Recursos y guías que no comparto en redes</li>
       </ul>
+
+      <div class="message-box">
+        <strong>¿Qué sigue?</strong><br>
+        Mantente atento/a a tu bandeja de entrada. Mi próximo email llegará pronto con contenido exclusivo para suscriptores.
+      </div>
+
+      <p><strong>⚡ ¿Necesitas algo urgente?</strong> No dudes en contactarme directamente para consultas personalizadas.</p>
 
       <div style="text-align: center;">
         <a href="{{websiteUrl}}" class="cta-button" target="_blank" rel="noopener noreferrer"
-          style="display:inline-block; font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; font-weight:600; text-decoration:none; padding:12px 20px; color:#FFFFFF; text-transform:uppercase; border-radius:0; box-shadow:0 6px 18px rgba(0,0,0,0.12); border:none; cursor:pointer; margin:20px 0; transition: all 0.3s ease; outline:none;">Visitar
-          mi sitio web</a>
+          style="display:inline-block; font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; font-weight:600; text-decoration:none; padding:12px 20px; color:#FFFFFF; text-transform:uppercase; border-radius:0; box-shadow:0 6px 18px rgba(0,0,0,0.12); border:none; cursor:pointer; margin:20px 0; transition: all 0.3s ease; outline:none;">Explorar mi sitio web</a>
       </div>
 
       <p style="margin-top: 30px; font-style: italic; color: #666;">
-        Si tienes alguna pregunta urgente, no dudes en contactarme directamente al {{phone}}.
+        💬 ¿Tienes alguna sugerencia para el newsletter? Me encantaría escucharte.
       </p>
     </div>
 
@@ -232,8 +229,8 @@
       </div>
 
       <p style="font-size: 12px; margin-top: 20px; color: #bdc3c7;">
-        Este es un email automático de confirmación. Si no deseas recibir más correos,
-        <a href="{{unsubscribeUrl}}" style="color: #ecf0f1;" target="_blank" rel="noopener noreferrer">haz clic aquí</a>
+        Gracias por tu interés continuo. Si ya no deseas recibir mis actualizaciones,
+        <a href="{{unsubscribeUrl}}" style="color: #ecf0f1;" target="_blank" rel="noopener noreferrer">haz clic aquí para darte de baja</a>
       </p>
     </div>
   </div>

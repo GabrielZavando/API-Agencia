@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmación de desuscripción</title>
+  <!-- Cargar fuentes: Montserrat (títulos) y Open Sans (párrafos) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Open Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      /* párrafos: Open Sans */
+      line-height: 1.6;
+      color: #111827;
+      /* token: text */
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #f9fafb;
+      /* token: background */
+    }
+
+    .container {
+      background-color: #ffffff;
+      margin: 20px;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+  background: #3b0464;
+  padding: 20px 30px;
+  text-align: center;
+  color: #FFFFFF; /* token: white */
+  border-radius: 0;
+  border: 0;
+    }
+
+    .logo {
+      max-width: 96px;
+      height: auto;
+      margin: 0;
+      display: inline-block;
+    }
+
+    .company-name {
+      font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .content {
+      padding: 40px 30px;
+    }
+
+    .greeting {
+      font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+      /* títulos: Montserrat */
+      font-size: 24px;
+      color: #111827;
+      /* token: text */
+      margin-bottom: 20px;
+    }
+
+    .message-box {
+      background-color: #f3f4f6;
+      /* token: surface-secondary */
+      border-left: 4px solid #FF0080;
+      /* token: primary */
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 0;
+    }
+
+    .footer {
+      background-color: #1D0033; /* token: dark */
+      color: #FFFFFF; /* token: white */
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td align="center" style="text-align:center;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td align="center" valign="middle" style="font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:32px;font-weight:700;color:#FFFFFF;">
+                  <img src="{{logoUrl}}" alt="{{companyName}} logo" width="96" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;height:auto;" />
+                  <span style="display:inline-block;vertical-align:middle;padding-left:12px;color:#FFFFFF;font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:32px;font-weight:700;">{{companyName}}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="content">
+      <h1 class="greeting">¡Desuscripción confirmada!</h1>
+
+      <div class="message-box">
+        <strong>✅ Has sido desuscrito/a correctamente</strong><br>
+        Ya no recibirás más emails de nuestro newsletter. Lamentamos que te vayas, pero respetamos tu decisión.
+      </div>
+
+      <p>Si en el futuro cambias de opinión, siempre puedes volver a suscribirte desde nuestro sitio web.</p>
+
+      <p>Gracias por haber formado parte de nuestra comunidad.</p>
+    </div>
+
+    <div class="footer">
+      <p><strong>{{companyName}}</strong></p>
+      <p>{{address}}</p>
+      <p>📞 {{phone}} | ✉️ {{email}}</p>
+    </div>
+  </div>
+</body>
+
+</html>

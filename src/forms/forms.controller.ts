@@ -1,5 +1,5 @@
 
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { ContactDto } from './dto/contact.dto';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { FormsService } from './forms.service';
@@ -17,6 +17,11 @@ export class FormsController {
   @Post('subscribe')
   handleSubscribe(@Body() subscribeDto: SubscribeDto) {
     return this.formsService.handleSubscribe(subscribeDto);
+  }
+
+  @Post('unsubscribe')
+  handleUnsubscribe(@Query('email') email: string) {
+    return this.formsService.handleUnsubscribe(email);
   }
 
   @Get('test-firebase')
@@ -57,6 +62,7 @@ export class FormsController {
       endpoints: {
         contact: 'POST /forms/contact',
         subscribe: 'POST /forms/subscribe',
+        unsubscribe: 'POST /forms/unsubscribe?email=example@email.com',
         testFirebase: 'GET /forms/test-firebase',
         testSMTP: 'GET /forms/test-smtp',
         status: 'GET /forms/status',
