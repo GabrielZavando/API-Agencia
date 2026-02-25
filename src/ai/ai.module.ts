@@ -5,12 +5,7 @@ import { ClaudeProvider } from './providers/claude.provider';
 import { GeminiProvider } from './providers/gemini.provider';
 
 @Module({
-  providers: [
-    AIService,
-    OpenAIProvider,
-    ClaudeProvider,
-    GeminiProvider,
-  ],
+  providers: [AIService, OpenAIProvider, ClaudeProvider, GeminiProvider],
   exports: [AIService],
 })
 export class AiModule {}

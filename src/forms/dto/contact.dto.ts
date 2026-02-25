@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsISO8601, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsISO8601,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class MetaDto {
@@ -35,5 +42,4 @@ export class ContactDto {
   @ValidateNested()
   @Type(() => MetaDto)
   meta: MetaDto;
-
 }

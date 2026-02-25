@@ -16,18 +16,20 @@ export class OpenAIProvider implements AIProvider {
   async generateResponse(prompt: string, context?: AIContext): Promise<string> {
     try {
       const systemPrompt = this.buildSystemPrompt(context);
-      
+
       const completion = await this.client.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
+          { role: 'user', content: prompt },
         ],
         max_tokens: 500,
         temperature: 0.7,
       });
 
-      return completion.choices[0]?.message?.content || 'Error generando respuesta';
+      return (
+        completion.choices[0]?.message?.content || 'Error generando respuesta'
+      );
     } catch (error) {
       console.error('Error en OpenAI:', error);
       throw new Error('Error generando respuesta con OpenAI');
@@ -40,7 +42,7 @@ export class OpenAIProvider implements AIProvider {
     }
 
     const { companyInfo, isReturningProspect, prospectName } = context;
-    
+
     return `Eres un asistente de atención al cliente para ${companyInfo.name}.
 
 INFORMACIÓN DE LA EMPRESA:

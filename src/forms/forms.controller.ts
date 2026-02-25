@@ -1,13 +1,11 @@
-
 import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { ContactDto } from './dto/contact.dto';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { FormsService } from './forms.service';
 
-
 @Controller('forms')
 export class FormsController {
-  constructor(private readonly formsService: FormsService) { }
+  constructor(private readonly formsService: FormsService) {}
 
   @Post('contact')
   handleContact(@Body() contactDto: ContactDto) {
@@ -31,13 +29,13 @@ export class FormsController {
       return {
         success: true,
         message: 'Conexión a Firebase exitosa',
-        details: testResult
+        details: testResult,
       };
     } catch (error) {
       return {
         success: false,
         message: 'Error conectando a Firebase',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -66,7 +64,7 @@ export class FormsController {
         testFirebase: 'GET /forms/test-firebase',
         testSMTP: 'GET /forms/test-smtp',
         status: 'GET /forms/status',
-      }
+      },
     };
   }
 }

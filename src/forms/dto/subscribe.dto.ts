@@ -1,4 +1,10 @@
-import { IsEmail, IsISO8601, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class SubscribeMetaDto {

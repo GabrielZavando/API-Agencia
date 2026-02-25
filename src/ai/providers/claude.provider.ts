@@ -16,18 +16,18 @@ export class ClaudeProvider implements AIProvider {
   async generateResponse(prompt: string, context?: AIContext): Promise<string> {
     try {
       const systemPrompt = this.buildSystemPrompt(context);
-      
+
       const response = await this.client.messages.create({
         model: process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307',
         max_tokens: 500,
         system: systemPrompt,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
+        messages: [{ role: 'user', content: prompt }],
       });
 
       const content = response.content[0];
-      return content.type === 'text' ? content.text : 'Error generando respuesta';
+      return content.type === 'text'
+        ? content.text
+        : 'Error generando respuesta';
     } catch (error) {
       console.error('Error en Claude:', error);
       throw new Error('Error generando respuesta con Claude');
@@ -40,7 +40,7 @@ export class ClaudeProvider implements AIProvider {
     }
 
     const { companyInfo, isReturningProspect, prospectName } = context;
-    
+
     return `Actúas como representante de atención al cliente de ${companyInfo.name}.
 
 PERFIL DE LA EMPRESA:

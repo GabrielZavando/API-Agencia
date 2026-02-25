@@ -7,7 +7,7 @@ import { ContactDto } from '../forms/dto/contact.dto';
 import { SubscribeDto } from '../forms/dto/subscribe.dto';
 
 export interface ProspectRecord {
-  prospectId: string;  // ID interno del prospecto (Firestore)
+  prospectId: string; // ID interno del prospecto (Firestore)
   name: string;
   email: string;
   phone: string; // Siempre será un string (vacío o con teléfono)
@@ -15,7 +15,7 @@ export interface ProspectRecord {
   updatedAt: Date;
   conversations: ConversationRecord[];
   // Campo para cuando se convierta en usuario autenticado
-  authUserId?: string;  // Firebase Auth UID (cuando se registre)
+  authUserId?: string; // Firebase Auth UID (cuando se registre)
   status: 'prospect' | 'converted' | 'inactive';
 }
 
@@ -58,8 +58,12 @@ export class FirebaseService {
     if (!admin.apps.length) {
       try {
         // Intentar usar archivo JSON primero
-        const serviceAccountPath = path.join(process.cwd(), 'config', 'firebase-service-account.json');
-        
+        const serviceAccountPath = path.join(
+          process.cwd(),
+          'config',
+          'firebase-service-account.json',
+        );
+
         if (fs.existsSync(serviceAccountPath)) {
           // Usar archivo JSON
           const serviceAccount = require(serviceAccountPath);
@@ -67,18 +71,28 @@ export class FirebaseService {
             credential: admin.credential.cert(serviceAccount),
             projectId: serviceAccount.project_id,
           });
-          console.log(`✅ Firebase inicializado con archivo JSON para proyecto: ${serviceAccount.project_id}`);
+          console.log(
+            `✅ Firebase inicializado con archivo JSON para proyecto: ${serviceAccount.project_id}`,
+          );
         } else {
           // Fallback: usar variables de entorno
           const serviceAccount = {
             projectId: this.configService.get('FIREBASE_PROJECT_ID'),
-            privateKey: this.configService.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n'),
+            privateKey: this.configService
+              .get('FIREBASE_PRIVATE_KEY')
+              ?.replace(/\\n/g, '\n'),
             clientEmail: this.configService.get('FIREBASE_CLIENT_EMAIL'),
           };
 
           // Validar que tenemos todas las credenciales necesarias
-          if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
-            throw new Error('Faltan credenciales de Firebase en las variables de entorno');
+          if (
+            !serviceAccount.projectId ||
+            !serviceAccount.privateKey ||
+            !serviceAccount.clientEmail
+          ) {
+            throw new Error(
+              'Faltan credenciales de Firebase en las variables de entorno',
+            );
           }
 
           admin.initializeApp({
@@ -86,7 +100,9 @@ export class FirebaseService {
             projectId: serviceAccount.projectId,
           });
 
-          console.log(`✅ Firebase inicializado con variables de entorno para proyecto: ${serviceAccount.projectId}`);
+          console.log(
+            `✅ Firebase inicializado con variables de entorno para proyecto: ${serviceAccount.projectId}`,
+          );
         }
       } catch (error) {
         console.error('Error inicializando Firebase:', error);
@@ -95,7 +111,7 @@ export class FirebaseService {
     }
 
     this.db = admin.firestore();
-    
+
     // Configurar settings de Firestore
     this.db.settings({
       timestampsInSnapshots: true,
@@ -122,7 +138,10 @@ export class FirebaseService {
     }
   }
 
-  async createProspectWithConversation(contactDto: ContactDto, responseContent: string): Promise<string> {
+  async createProspectWithConversation(
+    contactDto: ContactDto,
+    responseContent: string,
+  ): Promise<string> {
     try {
       // Generar IDs únicos
       const prospectId = this.db.collection('prospects').doc().id;
@@ -211,19 +230,25 @@ export class FirebaseService {
     }
   }
 
-  async markEmailAsSent(prospectId: string, conversationId: string): Promise<void> {
+  async markEmailAsSent(
+    prospectId: string,
+    conversationId: string,
+  ): Promise<void> {
     try {
       // Obtener el prospecto
-      const prospectDoc = await this.db.collection('prospects').doc(prospectId).get();
-      
+      const prospectDoc = await this.db
+        .collection('prospects')
+        .doc(prospectId)
+        .get();
+
       if (!prospectDoc.exists) {
         throw new Error('Prospecto no encontrado');
       }
 
       const prospectData = prospectDoc.data() as ProspectRecord;
-      
+
       // Actualizar el estado del email en la conversación específica
-      const updatedConversations = prospectData.conversations.map(conv => {
+      const updatedConversations = prospectData.conversations.map((conv) => {
         if (conv.conversationId === conversationId) {
           return {
             ...conv,
@@ -236,13 +261,10 @@ export class FirebaseService {
         return conv;
       });
 
-      await this.db
-        .collection('prospects')
-        .doc(prospectId)
-        .update({
-          conversations: updatedConversations,
-          updatedAt: new Date(),
-        });
+      await this.db.collection('prospects').doc(prospectId).update({
+        conversations: updatedConversations,
+        updatedAt: new Date(),
+      });
     } catch (error) {
       console.error('Error marcando email como enviado:', error);
       throw new Error('Error actualizando estado del email');
@@ -258,22 +280,22 @@ export class FirebaseService {
         projectId: this.configService.get('FIREBASE_PROJECT_ID'),
         testId: Math.random().toString(36).substring(7),
       };
-      
+
       console.log('🔄 Probando conexión a Firebase...');
-      
+
       // Crear documento de prueba
       const docRef = await this.db.collection('connection_tests').add(testData);
       console.log(`✅ Documento de prueba creado con ID: ${docRef.id}`);
-      
+
       // Leer el documento creado
       const doc = await docRef.get();
       const docData = doc.data();
       console.log('📖 Datos leídos:', docData);
-      
+
       // Eliminar el documento de prueba
       await docRef.delete();
       console.log('🗑️ Documento de prueba eliminado');
-      
+
       return {
         success: true,
         message: 'Conexión a Firebase exitosa',
@@ -317,7 +339,9 @@ export class FirebaseService {
     }
   }
 
-  async findSubscriberByEmail(email: string): Promise<{ subscriberId: string; email: string } | null> {
+  async findSubscriberByEmail(
+    email: string,
+  ): Promise<{ subscriberId: string; email: string } | null> {
     try {
       const snapshot = await this.db
         .collection('subscribers')
@@ -342,7 +366,10 @@ export class FirebaseService {
         return false; // Suscriptor no encontrado
       }
 
-      await this.db.collection('subscribers').doc(subscriber.subscriberId).delete();
+      await this.db
+        .collection('subscribers')
+        .doc(subscriber.subscriberId)
+        .delete();
       console.log(`🗑️ Suscriptor eliminado: ${email}`);
       return true;
     } catch (error) {

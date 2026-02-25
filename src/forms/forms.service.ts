@@ -24,8 +24,12 @@ export class FormsService {
 
   private initializeSMTP() {
     // Intentar cargar configuración SMTP desde archivo JSON primero
-    const smtpConfigPath = path.join(process.cwd(), 'config', 'smtp-config.json');
-    
+    const smtpConfigPath = path.join(
+      process.cwd(),
+      'config',
+      'smtp-config.json',
+    );
+
     if (fs.existsSync(smtpConfigPath)) {
       // Usar archivo JSON
       try {
@@ -39,7 +43,9 @@ export class FormsService {
             pass: smtpConfig.pass,
           },
         });
-        console.log(`📧 SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`);
+        console.log(
+          `📧 SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`,
+        );
       } catch (error) {
         console.error('Error cargando configuración SMTP desde JSON:', error);
         this.initializeSMTPFromEnv();
@@ -61,29 +67,37 @@ export class FormsService {
         pass: this.configService.get('SMTP_PASS'),
       },
     });
-    
-    console.log(`📧 SMTP configurado desde variables de entorno: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')} (secure: ${this.configService.get('SMTP_SECURE')})`);
+
+    console.log(
+      `📧 SMTP configurado desde variables de entorno: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')} (secure: ${this.configService.get('SMTP_SECURE')})`,
+    );
   }
 
   // Normaliza strings leídos del .env (quita comillas y espacios)
   private clean(v?: string): string {
-    return (v ?? '').toString().trim().replace(/^['"]|['"]$/g, '');
+    return (v ?? '')
+      .toString()
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
   }
 
   // Método principal del flujo
   async handleContact(contactDto: ContactDto) {
     try {
       // 1. Recibir formulario (ya validado por el DTO)
-      
+
       // 2. Buscar prospecto
       const existingProspect = await this.findProspect(contactDto.email);
-      
+
       // 3. Generar respuesta personalizada con IA
-      const responseContent = await this.generateResponse(contactDto, existingProspect);
-      
+      const responseContent = await this.generateResponse(
+        contactDto,
+        existingProspect,
+      );
+
       let prospectId: string;
       let conversationId: string;
-      
+
       if (!existingProspect) {
         // 4a. Crear nuevo prospecto con primera conversación
         prospectId = await this.storeNewProspect(contactDto, responseContent);
@@ -91,20 +105,32 @@ export class FormsService {
       } else {
         // 4b. Agregar nueva conversación a prospecto existente
         prospectId = existingProspect.prospectId;
-        conversationId = await this.storeNewConversation(prospectId, contactDto, responseContent);
+        conversationId = await this.storeNewConversation(
+          prospectId,
+          contactDto,
+          responseContent,
+        );
       }
-      
+
       // 5. Enviar respuesta por correo
-      const emailSent = await this.sendResponseEmail(contactDto, responseContent, !existingProspect);
-      
+      const emailSent = await this.sendResponseEmail(
+        contactDto,
+        responseContent,
+        !existingProspect,
+      );
+
       // 6. Enviar notificación al administrador
-      const adminNotified = await this.sendAdminNotificationEmail(contactDto, responseContent, !existingProspect);
-      
+      const adminNotified = await this.sendAdminNotificationEmail(
+        contactDto,
+        responseContent,
+        !existingProspect,
+      );
+
       // 7. Marcar email como enviado en Firebase
       if (emailSent) {
         await this.firebaseService.markEmailAsSent(prospectId, conversationId);
       }
-      
+
       return {
         success: true,
         message: 'Formulario procesado correctamente',
@@ -130,17 +156,34 @@ export class FormsService {
   }
 
   // Método para almacenar nuevo prospecto
-  private async storeNewProspect(contactDto: ContactDto, responseContent: string): Promise<string> {
-    return await this.firebaseService.createProspectWithConversation(contactDto, responseContent);
+  private async storeNewProspect(
+    contactDto: ContactDto,
+    responseContent: string,
+  ): Promise<string> {
+    return await this.firebaseService.createProspectWithConversation(
+      contactDto,
+      responseContent,
+    );
   }
 
   // Método para guardar nueva conversación
-  private async storeNewConversation(prospectId: string, contactDto: ContactDto, responseContent: string): Promise<string> {
-    return await this.firebaseService.addConversationToProspect(prospectId, contactDto, responseContent);
+  private async storeNewConversation(
+    prospectId: string,
+    contactDto: ContactDto,
+    responseContent: string,
+  ): Promise<string> {
+    return await this.firebaseService.addConversationToProspect(
+      prospectId,
+      contactDto,
+      responseContent,
+    );
   }
 
   // Método para generar respuesta personalizada con IA
-  private async generateResponse(contactDto: ContactDto, existingProspect?: ProspectRecord | null): Promise<string> {
+  private async generateResponse(
+    contactDto: ContactDto,
+    existingProspect?: ProspectRecord | null,
+  ): Promise<string> {
     try {
       // Temporalmente deshabilitado - falta configurar API keys de IA
       /* 
@@ -152,7 +195,7 @@ export class FormsService {
       console.log(`Respuesta generada por ${aiResponse.provider} en ${aiResponse.processingTime}ms`);
       return aiResponse.content;
       */
-      
+
       // Fallback a respuesta estática por ahora (alineada con el contenido del email)
       if (existingProspect) {
         return `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`;
@@ -161,7 +204,7 @@ export class FormsService {
       }
     } catch (error) {
       console.error('Error generando respuesta:', error);
-      
+
       // Fallback a respuesta estática
       if (existingProspect) {
         return `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`;
@@ -172,45 +215,81 @@ export class FormsService {
   }
 
   // Método para enviar respuesta por correo
-  private async sendResponseEmail(contactDto: ContactDto, responseContent: string, isNewProspect: boolean): Promise<boolean> {
+  private async sendResponseEmail(
+    contactDto: ContactDto,
+    responseContent: string,
+    isNewProspect: boolean,
+  ): Promise<boolean> {
     try {
-      const templateName = isNewProspect ? 'welcome-prospect' : 'returning-prospect';
-      
+      const templateName = isNewProspect
+        ? 'welcome-prospect'
+        : 'returning-prospect';
+
       const templateVariables = {
         name: contactDto.name,
         message: contactDto.message,
         responseContent,
-        companyName: this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer',
-        logoUrl: this.clean(this.configService.get('LOGO_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        websiteUrl: this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
-        servicesUrl: this.clean(this.configService.get('SERVICES_URL')) || 'https://l1nq.com/vkSUa',
+        companyName:
+          this.configService.get('COMPANY_NAME') ||
+          'Gabriel Zavando Full Stack Developer',
+        logoUrl:
+          this.clean(this.configService.get('LOGO_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
+        websiteUrl:
+          this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
+        servicesUrl:
+          this.clean(this.configService.get('SERVICES_URL')) ||
+          'https://l1nq.com/vkSUa',
         address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
         phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
-        email: this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl',
-        linkedinUrl: this.configService.get('LINKEDIN_URL') || 'https://linkedin.com/in/gabrielzavando',
-        githubUrl: this.configService.get('GITHUB_URL') || 'https://github.com/gabrielzavando',
-        instagramUrl: this.configService.get('INSTAGRAM_URL') || 'https://instagram.com/gabrielzavando',
-        youtubeUrl: this.configService.get('YOUTUBE_URL') || 'https://www.youtube.com/@gabrielzavando',
-        linkedinIconUrl: this.clean(this.configService.get('LINKEDIN_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
-        instagramIconUrl: this.clean(this.configService.get('INSTAGRAM_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
-        githubIconUrl: this.clean(this.configService.get('GITHUB_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
-        youtubeIconUrl: this.clean(this.configService.get('YOUTUBE_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
+        email:
+          this.configService.get('COMPANY_EMAIL') ||
+          'contacto@gabrielzavando.cl',
+        linkedinUrl:
+          this.configService.get('LINKEDIN_URL') ||
+          'https://linkedin.com/in/gabrielzavando',
+        githubUrl:
+          this.configService.get('GITHUB_URL') ||
+          'https://github.com/gabrielzavando',
+        instagramUrl:
+          this.configService.get('INSTAGRAM_URL') ||
+          'https://instagram.com/gabrielzavando',
+        youtubeUrl:
+          this.configService.get('YOUTUBE_URL') ||
+          'https://www.youtube.com/@gabrielzavando',
+        linkedinIconUrl:
+          this.clean(this.configService.get('LINKEDIN_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
+        instagramIconUrl:
+          this.clean(this.configService.get('INSTAGRAM_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
+        githubIconUrl:
+          this.clean(this.configService.get('GITHUB_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
+        youtubeIconUrl:
+          this.clean(this.configService.get('YOUTUBE_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
         unsubscribeUrl: `${this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${contactDto.email}`,
       };
 
-      const htmlContent = await this.templateService.getEmailTemplate(templateName, templateVariables);
+      const htmlContent = await this.templateService.getEmailTemplate(
+        templateName,
+        templateVariables,
+      );
 
       const mailOptions = {
         from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
         to: contactDto.email,
-        subject: isNewProspect 
-          ? `Gracias por contactarnos, ${contactDto.name}` 
+        subject: isNewProspect
+          ? `Gracias por contactarnos, ${contactDto.name}`
           : `¡Qué gusto verte de nuevo, ${contactDto.name}!`,
         html: htmlContent,
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Email corporativo enviado a: ${contactDto.email} (${isNewProspect ? 'nuevo' : 'recurrente'})`);
+      console.log(
+        `Email corporativo enviado a: ${contactDto.email} (${isNewProspect ? 'nuevo' : 'recurrente'})`,
+      );
       return true;
     } catch (error) {
       console.error('Error enviando email:', error);
@@ -219,9 +298,14 @@ export class FormsService {
   }
 
   // Método para enviar notificación al administrador
-  private async sendAdminNotificationEmail(contactDto: ContactDto, responseContent: string, isNewProspect: boolean): Promise<boolean> {
+  private async sendAdminNotificationEmail(
+    contactDto: ContactDto,
+    responseContent: string,
+    isNewProspect: boolean,
+  ): Promise<boolean> {
     try {
-      const adminEmail = this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
+      const adminEmail =
+        this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
 
       const mailOptions = {
         from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
@@ -276,7 +360,9 @@ export class FormsService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`📧 Notificación administrativa enviada a: ${adminEmail} (${isNewProspect ? 'nuevo' : 'recurrente'})`);
+      console.log(
+        `📧 Notificación administrativa enviada a: ${adminEmail} (${isNewProspect ? 'nuevo' : 'recurrente'})`,
+      );
       return true;
     } catch (error) {
       console.error('Error enviando notificación administrativa:', error);
@@ -285,9 +371,12 @@ export class FormsService {
   }
 
   // Método para enviar notificación de nueva suscripción al administrador
-  private async sendAdminSubscriptionNotification(subscribeDto: SubscribeDto): Promise<boolean> {
+  private async sendAdminSubscriptionNotification(
+    subscribeDto: SubscribeDto,
+  ): Promise<boolean> {
     try {
-      const adminEmail = this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
+      const adminEmail =
+        this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
 
       const mailOptions = {
         from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
@@ -335,7 +424,9 @@ export class FormsService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`📧 Notificación de suscripción enviada al administrador: ${adminEmail}`);
+      console.log(
+        `📧 Notificación de suscripción enviada al administrador: ${adminEmail}`,
+      );
       return true;
     } catch (error) {
       console.error('Error enviando notificación de suscripción:', error);
@@ -347,24 +438,50 @@ export class FormsService {
   private async sendSubscriberWelcomeEmail(email: string): Promise<boolean> {
     try {
       const templateVariables = {
-        companyName: this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer',
-        logoUrl: this.clean(this.configService.get('LOGO_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        websiteUrl: this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
+        companyName:
+          this.configService.get('COMPANY_NAME') ||
+          'Gabriel Zavando Full Stack Developer',
+        logoUrl:
+          this.clean(this.configService.get('LOGO_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
+        websiteUrl:
+          this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
         address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
         phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
-        email: this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl',
-        linkedinUrl: this.configService.get('LINKEDIN_URL') || 'https://linkedin.com/in/gabrielzavando',
-        githubUrl: this.configService.get('GITHUB_URL') || 'https://github.com/gabrielzavando',
-        instagramUrl: this.configService.get('INSTAGRAM_URL') || 'https://instagram.com/gabrielzavando',
-        youtubeUrl: this.configService.get('YOUTUBE_URL') || 'https://www.youtube.com/@gabrielzavando',
-        linkedinIconUrl: this.clean(this.configService.get('LINKEDIN_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
-        instagramIconUrl: this.clean(this.configService.get('INSTAGRAM_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
-        githubIconUrl: this.clean(this.configService.get('GITHUB_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
-        youtubeIconUrl: this.clean(this.configService.get('YOUTUBE_ICON_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
+        email:
+          this.configService.get('COMPANY_EMAIL') ||
+          'contacto@gabrielzavando.cl',
+        linkedinUrl:
+          this.configService.get('LINKEDIN_URL') ||
+          'https://linkedin.com/in/gabrielzavando',
+        githubUrl:
+          this.configService.get('GITHUB_URL') ||
+          'https://github.com/gabrielzavando',
+        instagramUrl:
+          this.configService.get('INSTAGRAM_URL') ||
+          'https://instagram.com/gabrielzavando',
+        youtubeUrl:
+          this.configService.get('YOUTUBE_URL') ||
+          'https://www.youtube.com/@gabrielzavando',
+        linkedinIconUrl:
+          this.clean(this.configService.get('LINKEDIN_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
+        instagramIconUrl:
+          this.clean(this.configService.get('INSTAGRAM_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
+        githubIconUrl:
+          this.clean(this.configService.get('GITHUB_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
+        youtubeIconUrl:
+          this.clean(this.configService.get('YOUTUBE_ICON_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
         unsubscribeUrl: `${this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${email}`,
       };
 
-      const htmlContent = await this.templateService.getEmailTemplate('subscriber-welcome', templateVariables);
+      const htmlContent = await this.templateService.getEmailTemplate(
+        'subscriber-welcome',
+        templateVariables,
+      );
 
       const mailOptions = {
         from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
@@ -418,17 +535,28 @@ export class FormsService {
   }
 
   // Método para enviar email de confirmación de desuscripción
-  private async sendUnsubscribeConfirmationEmail(email: string): Promise<boolean> {
+  private async sendUnsubscribeConfirmationEmail(
+    email: string,
+  ): Promise<boolean> {
     try {
       const templateVariables = {
-        companyName: this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer',
-        logoUrl: this.clean(this.configService.get('LOGO_URL')) || 'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
+        companyName:
+          this.configService.get('COMPANY_NAME') ||
+          'Gabriel Zavando Full Stack Developer',
+        logoUrl:
+          this.clean(this.configService.get('LOGO_URL')) ||
+          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
         address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
         phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
-        email: this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl',
+        email:
+          this.configService.get('COMPANY_EMAIL') ||
+          'contacto@gabrielzavando.cl',
       };
 
-      const htmlContent = await this.templateService.getEmailTemplate('unsubscribe-confirmation', templateVariables);
+      const htmlContent = await this.templateService.getEmailTemplate(
+        'unsubscribe-confirmation',
+        templateVariables,
+      );
 
       const mailOptions = {
         from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
@@ -438,10 +566,15 @@ export class FormsService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Newsletter unsubscribe confirmation email enviado a: ${email}`);
+      console.log(
+        `Newsletter unsubscribe confirmation email enviado a: ${email}`,
+      );
       return true;
     } catch (error) {
-      console.error('Error enviando email de confirmación de desuscripción:', error);
+      console.error(
+        'Error enviando email de confirmación de desuscripción:',
+        error,
+      );
       return false;
     }
   }
@@ -455,11 +588,11 @@ export class FormsService {
   async testSMTPConnection() {
     try {
       console.log('🔄 Probando conexión SMTP...');
-      
+
       // Verificar la conexión
       await this.transporter.verify();
       console.log('✅ Conexión SMTP verificada correctamente');
-      
+
       // Enviar email de prueba
       const testEmail = {
         from: `"${this.configService.get('COMPANY_NAME')}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
@@ -479,10 +612,10 @@ export class FormsService {
           <p><em>Enviado desde: ${this.configService.get('COMPANY_NAME')}</em></p>
         `,
       };
-      
+
       const result = await this.transporter.sendMail(testEmail);
       console.log('✅ Email de prueba enviado exitosamente');
-      
+
       return {
         success: true,
         message: 'Configuración SMTP exitosa',
@@ -494,7 +627,7 @@ export class FormsService {
           port: this.configService.get('SMTP_PORT'),
           secure: this.configService.get('SMTP_SECURE'),
           user: this.configService.get('SMTP_USER'),
-        }
+        },
       };
     } catch (error) {
       console.error('❌ Error en configuración SMTP:', error);
@@ -507,7 +640,7 @@ export class FormsService {
           port: this.configService.get('SMTP_PORT'),
           secure: this.configService.get('SMTP_SECURE'),
           user: this.configService.get('SMTP_USER'),
-        }
+        },
       };
     }
   }
@@ -516,7 +649,9 @@ export class FormsService {
   async handleSubscribe(subscribeDto: SubscribeDto) {
     try {
       // Verificar si ya existe
-      const existing = await this.firebaseService.findSubscriberByEmail(subscribeDto.email);
+      const existing = await this.firebaseService.findSubscriberByEmail(
+        subscribeDto.email,
+      );
       if (existing) {
         return {
           success: true,
@@ -529,10 +664,13 @@ export class FormsService {
       const id = await this.firebaseService.saveSubscriber(subscribeDto);
 
       // Enviar notificación al administrador
-      const adminNotified = await this.sendAdminSubscriptionNotification(subscribeDto);
+      const adminNotified =
+        await this.sendAdminSubscriptionNotification(subscribeDto);
 
       // Enviar email de bienvenida al nuevo suscriptor
-      const emailSent = await this.sendSubscriberWelcomeEmail(subscribeDto.email);
+      const emailSent = await this.sendSubscriberWelcomeEmail(
+        subscribeDto.email,
+      );
 
       return {
         success: true,

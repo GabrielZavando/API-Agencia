@@ -13,16 +13,16 @@ export class GeminiProvider implements AIProvider {
 
   async generateResponse(prompt: string, context?: AIContext): Promise<string> {
     try {
-      const model = this.client.getGenerativeModel({ 
-        model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' 
+      const model = this.client.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
       });
-      
+
       const systemPrompt = this.buildSystemPrompt(context);
       const fullPrompt = `${systemPrompt}\n\nConsulta del prospecto: ${prompt}`;
-      
+
       const result = await model.generateContent(fullPrompt);
       const response = await result.response;
-      
+
       return response.text() || 'Error generando respuesta';
     } catch (error) {
       console.error('Error en Gemini:', error);
@@ -36,7 +36,7 @@ export class GeminiProvider implements AIProvider {
     }
 
     const { companyInfo, isReturningProspect, prospectName } = context;
-    
+
     return `Eres el asistente virtual especializado en atención al cliente de ${companyInfo.name}.
 
 DATOS DE LA ORGANIZACIÓN:
