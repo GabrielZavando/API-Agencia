@@ -8,13 +8,18 @@ import {
 import { Reflector } from '@nestjs/core';
 import * as admin from 'firebase-admin';
 import { ROLES_KEY } from './roles.decorator';
+import { Request } from 'express';
+
+export interface AuthenticatedRequest extends Request {
+  user?: admin.auth.DecodedIdToken & { role?: string };
+}
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -24,7 +29,7 @@ export class FirebaseAuthGuard implements CanActivate {
     try {
       // 1. Verificar Token
       const decodedToken = await admin.auth().verifyIdToken(token);
-      request['user'] = decodedToken;
+      request.user = decodedToken;
 
       // 2. Verificar Roles (si el endpoint tiene roles requeridos)
       const requiredRoles = this.reflector.getAllAndOverride<string[]>(
@@ -37,10 +42,9 @@ export class FirebaseAuthGuard implements CanActivate {
       }
 
       // Obtener el rol del usuario desde Firestore (claims custom o documento user)
-      // Por simplicidad y performance, idealmente usar Custom Claims.
-      // Si no hay claims, consultamos Firestore (más lento pero más fácil de implementar inicialmente)
-
-      let userRole = (decodedToken as any).role; // Si usamos custom claims
+      let userRole = (
+        decodedToken as admin.auth.DecodedIdToken & { role?: string }
+      ).role;
 
       if (!userRole) {
         // Fallback: Consultar Firestore
@@ -50,18 +54,19 @@ export class FirebaseAuthGuard implements CanActivate {
           .doc(decodedToken.uid)
           .get();
         if (userDoc.exists) {
-          userRole = userDoc.data()?.role;
+          const data = userDoc.data();
+          userRole = data?.role as string | undefined;
         }
       }
 
       // Attach role to user object in request so controllers can use it
-      if (userRole) {
-        request['user'].role = userRole;
+      if (userRole && request.user) {
+        request.user.role = userRole;
       }
 
-      if (!requiredRoles.includes(userRole)) {
+      if (!userRole || !requiredRoles.includes(userRole)) {
         throw new ForbiddenException(
-          `User role '${userRole}' does not have permission. Required: ${requiredRoles.join(
+          `User role does not have permission. Required: ${requiredRoles.join(
             ', ',
           )}`,
         );
@@ -74,7 +79,7 @@ export class FirebaseAuthGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }

@@ -27,7 +27,9 @@ export class BlogService {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       published: createPostDto.published ?? false,
-      publishedAt: createPostDto.publishedAt ? new Date(createPostDto.publishedAt) : null,
+      publishedAt: createPostDto.publishedAt
+        ? new Date(createPostDto.publishedAt)
+        : null,
       coverImage: createPostDto.coverImage || null,
       author: createPostDto.author || null,
       category: createPostDto.category || null,
@@ -47,7 +49,10 @@ export class BlogService {
     let docs = snapshot.docs.map((doc) => doc.data());
 
     if (publishedOnly) {
-      docs = docs.filter((doc: any) => doc.published === true);
+      docs = docs.filter((doc) => {
+        const data = doc as Record<string, unknown>;
+        return data.published === true;
+      });
     }
 
     return docs;
@@ -79,15 +84,17 @@ export class BlogService {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
 
-    const updateData: any = {
-      ...updatePostDto,
+    const updateData: Record<string, unknown> = {
+      ...(updatePostDto as Record<string, unknown>),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     if (updatePostDto.publishedAt !== undefined) {
-      updateData.publishedAt = updatePostDto.publishedAt ? new Date(updatePostDto.publishedAt) : null;
+      updateData.publishedAt = updatePostDto.publishedAt
+        ? new Date(updatePostDto.publishedAt)
+        : null;
     }
-    
+
     await docRef.update(updateData);
     return { id, ...updateData };
   }

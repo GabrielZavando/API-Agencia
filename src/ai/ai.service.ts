@@ -177,8 +177,6 @@ export class AIService {
     contactDto: ContactDto,
     isReturning: boolean,
   ): string {
-    const companyName = process.env.COMPANY_NAME || 'Tu Empresa';
-
     if (isReturning) {
       return `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`;
     } else {

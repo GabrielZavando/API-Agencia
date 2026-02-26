@@ -33,14 +33,18 @@ export class FormsService {
     if (fs.existsSync(smtpConfigPath)) {
       // Usar archivo JSON
       try {
-        const smtpConfig = JSON.parse(fs.readFileSync(smtpConfigPath, 'utf8'));
+        const fileContent = fs.readFileSync(smtpConfigPath, 'utf8');
+        const smtpConfig = JSON.parse(fileContent) as Record<
+          string,
+          string | number | boolean
+        >;
         this.transporter = nodemailer.createTransport({
-          host: smtpConfig.host,
-          port: smtpConfig.port,
-          secure: smtpConfig.secure,
+          host: smtpConfig.host as string,
+          port: Number(smtpConfig.port),
+          secure: Boolean(smtpConfig.secure),
           auth: {
-            user: smtpConfig.user,
-            pass: smtpConfig.pass,
+            user: smtpConfig.user as string,
+            pass: smtpConfig.pass as string,
           },
         });
         console.log(
@@ -59,17 +63,17 @@ export class FormsService {
   private initializeSMTPFromEnv() {
     // Configurar el transportador de email con variables de entorno
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get('SMTP_PORT') || '587'),
-      secure: this.configService.get('SMTP_SECURE') === 'true', // true para puerto 465, false para otros
+      host: this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com',
+      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
+      secure: this.configService.get<string>('SMTP_SECURE') === 'true', // true para puerto 465, false para otros
       auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASS'),
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
       },
     });
 
     console.log(
-      `📧 SMTP configurado desde variables de entorno: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')} (secure: ${this.configService.get('SMTP_SECURE')})`,
+      `📧 SMTP configurado desde variables de entorno: ${this.configService.get<string>('SMTP_HOST')}:${this.configService.get<string>('SMTP_PORT')} (secure: ${this.configService.get<string>('SMTP_SECURE')})`,
     );
   }
 
@@ -145,7 +149,7 @@ export class FormsService {
       return {
         success: false,
         message: 'Error procesando el formulario',
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }
@@ -180,7 +184,7 @@ export class FormsService {
   }
 
   // Método para generar respuesta personalizada con IA
-  private async generateResponse(
+  private generateResponse(
     contactDto: ContactDto,
     existingProspect?: ProspectRecord | null,
   ): Promise<string> {
@@ -198,18 +202,26 @@ export class FormsService {
 
       // Fallback a respuesta estática por ahora (alineada con el contenido del email)
       if (existingProspect) {
-        return `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`;
+        return Promise.resolve(
+          `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
+        );
       } else {
-        return `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`;
+        return Promise.resolve(
+          `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
+        );
       }
     } catch (error) {
       console.error('Error generando respuesta:', error);
 
       // Fallback a respuesta estática
       if (existingProspect) {
-        return `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`;
+        return Promise.resolve(
+          `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
+        );
       } else {
-        return `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`;
+        return Promise.resolve(
+          `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
+        );
       }
     }
   }
@@ -230,46 +242,49 @@ export class FormsService {
         message: contactDto.message,
         responseContent,
         companyName:
-          this.configService.get('COMPANY_NAME') ||
+          this.configService.get<string>('COMPANY_NAME') ||
           'Gabriel Zavando Full Stack Developer',
         logoUrl:
-          this.clean(this.configService.get('LOGO_URL')) ||
+          this.clean(this.configService.get<string>('LOGO_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
         websiteUrl:
-          this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
+          this.configService.get<string>('WEBSITE_URL') ||
+          'https://gabrielzavando.cl',
         servicesUrl:
-          this.clean(this.configService.get('SERVICES_URL')) ||
+          this.clean(this.configService.get<string>('SERVICES_URL')) ||
           'https://l1nq.com/vkSUa',
-        address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
+        address:
+          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
+        phone:
+          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
         email:
-          this.configService.get('COMPANY_EMAIL') ||
+          this.configService.get<string>('COMPANY_EMAIL') ||
           'contacto@gabrielzavando.cl',
         linkedinUrl:
-          this.configService.get('LINKEDIN_URL') ||
+          this.configService.get<string>('LINKEDIN_URL') ||
           'https://linkedin.com/in/gabrielzavando',
         githubUrl:
-          this.configService.get('GITHUB_URL') ||
+          this.configService.get<string>('GITHUB_URL') ||
           'https://github.com/gabrielzavando',
         instagramUrl:
-          this.configService.get('INSTAGRAM_URL') ||
+          this.configService.get<string>('INSTAGRAM_URL') ||
           'https://instagram.com/gabrielzavando',
         youtubeUrl:
-          this.configService.get('YOUTUBE_URL') ||
+          this.configService.get<string>('YOUTUBE_URL') ||
           'https://www.youtube.com/@gabrielzavando',
         linkedinIconUrl:
-          this.clean(this.configService.get('LINKEDIN_ICON_URL')) ||
+          this.clean(this.configService.get<string>('LINKEDIN_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
         instagramIconUrl:
-          this.clean(this.configService.get('INSTAGRAM_ICON_URL')) ||
+          this.clean(this.configService.get<string>('INSTAGRAM_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
         githubIconUrl:
-          this.clean(this.configService.get('GITHUB_ICON_URL')) ||
+          this.clean(this.configService.get<string>('GITHUB_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
         youtubeIconUrl:
-          this.clean(this.configService.get('YOUTUBE_ICON_URL')) ||
+          this.clean(this.configService.get<string>('YOUTUBE_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
-        unsubscribeUrl: `${this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${contactDto.email}`,
+        unsubscribeUrl: `${this.configService.get<string>('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${contactDto.email}`,
       };
 
       const htmlContent = await this.templateService.getEmailTemplate(
@@ -278,7 +293,7 @@ export class FormsService {
       );
 
       const mailOptions = {
-        from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: contactDto.email,
         subject: isNewProspect
           ? `Gracias por contactarnos, ${contactDto.name}`
@@ -305,10 +320,11 @@ export class FormsService {
   ): Promise<boolean> {
     try {
       const adminEmail =
-        this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
+        this.configService.get<string>('COMPANY_EMAIL') ||
+        'contacto@gabrielzavando.cl';
 
       const mailOptions = {
-        from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: adminEmail,
         subject: `Nuevo mensaje de contacto ${isNewProspect ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
         html: `
@@ -376,10 +392,11 @@ export class FormsService {
   ): Promise<boolean> {
     try {
       const adminEmail =
-        this.configService.get('COMPANY_EMAIL') || 'contacto@gabrielzavando.cl';
+        this.configService.get<string>('COMPANY_EMAIL') ||
+        'contacto@gabrielzavando.cl';
 
       const mailOptions = {
-        from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: adminEmail,
         subject: `🔔 Nueva suscripción al newsletter`,
         html: `
@@ -439,43 +456,46 @@ export class FormsService {
     try {
       const templateVariables = {
         companyName:
-          this.configService.get('COMPANY_NAME') ||
+          this.configService.get<string>('COMPANY_NAME') ||
           'Gabriel Zavando Full Stack Developer',
         logoUrl:
-          this.clean(this.configService.get('LOGO_URL')) ||
+          this.clean(this.configService.get<string>('LOGO_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
         websiteUrl:
-          this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl',
-        address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
+          this.configService.get<string>('WEBSITE_URL') ||
+          'https://gabrielzavando.cl',
+        address:
+          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
+        phone:
+          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
         email:
-          this.configService.get('COMPANY_EMAIL') ||
+          this.configService.get<string>('COMPANY_EMAIL') ||
           'contacto@gabrielzavando.cl',
         linkedinUrl:
-          this.configService.get('LINKEDIN_URL') ||
+          this.configService.get<string>('LINKEDIN_URL') ||
           'https://linkedin.com/in/gabrielzavando',
         githubUrl:
-          this.configService.get('GITHUB_URL') ||
+          this.configService.get<string>('GITHUB_URL') ||
           'https://github.com/gabrielzavando',
         instagramUrl:
-          this.configService.get('INSTAGRAM_URL') ||
+          this.configService.get<string>('INSTAGRAM_URL') ||
           'https://instagram.com/gabrielzavando',
         youtubeUrl:
-          this.configService.get('YOUTUBE_URL') ||
+          this.configService.get<string>('YOUTUBE_URL') ||
           'https://www.youtube.com/@gabrielzavando',
         linkedinIconUrl:
-          this.clean(this.configService.get('LINKEDIN_ICON_URL')) ||
+          this.clean(this.configService.get<string>('LINKEDIN_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
         instagramIconUrl:
-          this.clean(this.configService.get('INSTAGRAM_ICON_URL')) ||
+          this.clean(this.configService.get<string>('INSTAGRAM_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
         githubIconUrl:
-          this.clean(this.configService.get('GITHUB_ICON_URL')) ||
+          this.clean(this.configService.get<string>('GITHUB_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
         youtubeIconUrl:
-          this.clean(this.configService.get('YOUTUBE_ICON_URL')) ||
+          this.clean(this.configService.get<string>('YOUTUBE_ICON_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
-        unsubscribeUrl: `${this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${email}`,
+        unsubscribeUrl: `${this.configService.get<string>('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${email}`,
       };
 
       const htmlContent = await this.templateService.getEmailTemplate(
@@ -484,7 +504,7 @@ export class FormsService {
       );
 
       const mailOptions = {
-        from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: email,
         subject: '¡Bienvenido/a a mi newsletter! 🎉',
         html: htmlContent,
@@ -529,7 +549,7 @@ export class FormsService {
       return {
         success: false,
         message: 'Error procesando la desuscripción',
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }
@@ -541,15 +561,17 @@ export class FormsService {
     try {
       const templateVariables = {
         companyName:
-          this.configService.get('COMPANY_NAME') ||
+          this.configService.get<string>('COMPANY_NAME') ||
           'Gabriel Zavando Full Stack Developer',
         logoUrl:
-          this.clean(this.configService.get('LOGO_URL')) ||
+          this.clean(this.configService.get<string>('LOGO_URL')) ||
           'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        address: this.configService.get('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone: this.configService.get('COMPANY_PHONE') || '+56 9 641 65 631',
+        address:
+          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
+        phone:
+          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
         email:
-          this.configService.get('COMPANY_EMAIL') ||
+          this.configService.get<string>('COMPANY_EMAIL') ||
           'contacto@gabrielzavando.cl',
       };
 
@@ -559,7 +581,7 @@ export class FormsService {
       );
 
       const mailOptions = {
-        from: `"${this.configService.get('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: email,
         subject: 'Confirmación de desuscripción - Newsletter',
         html: htmlContent,
@@ -595,8 +617,8 @@ export class FormsService {
 
       // Enviar email de prueba
       const testEmail = {
-        from: `"${this.configService.get('COMPANY_NAME')}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
-        to: this.configService.get('SMTP_USER'), // Enviar a la misma dirección para prueba
+        from: `"${this.configService.get<string>('COMPANY_NAME')}" <${this.configService.get<string>('SMTP_FROM_EMAIL')}>`,
+        to: this.configService.get<string>('SMTP_USER'), // Enviar a la misma dirección para prueba
         subject: 'Prueba de configuración SMTP - API',
         html: `
           <h2>🎉 ¡Configuración SMTP exitosa!</h2>
@@ -604,16 +626,18 @@ export class FormsService {
           <hr>
           <p><strong>Configuración:</strong></p>
           <ul>
-            <li><strong>Servidor:</strong> ${this.configService.get('SMTP_HOST')}</li>
-            <li><strong>Puerto:</strong> ${this.configService.get('SMTP_PORT')}</li>
-            <li><strong>Seguro:</strong> ${this.configService.get('SMTP_SECURE')}</li>
-            <li><strong>Usuario:</strong> ${this.configService.get('SMTP_USER')}</li>
+            <li><strong>Servidor:</strong> ${this.configService.get<string>('SMTP_HOST')}</li>
+            <li><strong>Puerto:</strong> ${this.configService.get<string>('SMTP_PORT')}</li>
+            <li><strong>Seguro:</strong> ${this.configService.get<string>('SMTP_SECURE')}</li>
+            <li><strong>Usuario:</strong> ${this.configService.get<string>('SMTP_USER')}</li>
           </ul>
-          <p><em>Enviado desde: ${this.configService.get('COMPANY_NAME')}</em></p>
+          <p><em>Enviado desde: ${this.configService.get<string>('COMPANY_NAME')}</em></p>
         `,
       };
 
-      const result = await this.transporter.sendMail(testEmail);
+      const result = (await this.transporter.sendMail(testEmail)) as {
+        messageId?: string;
+      };
       console.log('✅ Email de prueba enviado exitosamente');
 
       return {
@@ -623,10 +647,10 @@ export class FormsService {
         from: testEmail.from,
         to: testEmail.to,
         config: {
-          host: this.configService.get('SMTP_HOST'),
-          port: this.configService.get('SMTP_PORT'),
-          secure: this.configService.get('SMTP_SECURE'),
-          user: this.configService.get('SMTP_USER'),
+          host: this.configService.get<string>('SMTP_HOST'),
+          port: this.configService.get<string>('SMTP_PORT'),
+          secure: this.configService.get<string>('SMTP_SECURE'),
+          user: this.configService.get<string>('SMTP_USER'),
         },
       };
     } catch (error) {
@@ -634,12 +658,12 @@ export class FormsService {
       return {
         success: false,
         message: 'Error en configuración SMTP',
-        error: error.message,
+        error: (error as Error).message,
         config: {
-          host: this.configService.get('SMTP_HOST'),
-          port: this.configService.get('SMTP_PORT'),
-          secure: this.configService.get('SMTP_SECURE'),
-          user: this.configService.get('SMTP_USER'),
+          host: this.configService.get<string>('SMTP_HOST'),
+          port: this.configService.get<string>('SMTP_PORT'),
+          secure: this.configService.get<string>('SMTP_SECURE'),
+          user: this.configService.get<string>('SMTP_USER'),
         },
       };
     }
@@ -685,7 +709,7 @@ export class FormsService {
       return {
         success: false,
         message: 'Error registrando la suscripción',
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }

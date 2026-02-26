@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,17 +27,28 @@ export class UsersService {
   }
 
   private initializeSMTP() {
-    const smtpConfigPath = path.join(process.cwd(), 'config', 'smtp-config.json');
+    const smtpConfigPath = path.join(
+      process.cwd(),
+      'config',
+      'smtp-config.json',
+    );
     if (fs.existsSync(smtpConfigPath)) {
       try {
-        const smtpConfig = JSON.parse(fs.readFileSync(smtpConfigPath, 'utf8'));
+        const fileContent = fs.readFileSync(smtpConfigPath, 'utf8');
+        const smtpConfig = JSON.parse(fileContent) as Record<
+          string,
+          string | number | boolean
+        >;
         this.transporter = nodemailer.createTransport({
-          host: smtpConfig.host,
-          port: smtpConfig.port,
-          secure: smtpConfig.secure,
-          auth: { user: smtpConfig.user, pass: smtpConfig.pass },
+          host: smtpConfig.host as string,
+          port: Number(smtpConfig.port),
+          secure: Boolean(smtpConfig.secure),
+          auth: {
+            user: smtpConfig.user as string,
+            pass: smtpConfig.pass as string,
+          },
         });
-      } catch (error) {
+      } catch {
         this.initializeSMTPFromEnv();
       }
     } else {
@@ -43,24 +58,33 @@ export class UsersService {
 
   private initializeSMTPFromEnv() {
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get('SMTP_PORT') || '587'),
-      secure: this.configService.get('SMTP_SECURE') === 'true',
+      host: this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com',
+      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
+      secure: this.configService.get<string>('SMTP_SECURE') === 'true',
       auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASS'),
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
       },
     });
   }
 
   private clean(v?: string): string {
-    return (v ?? '').toString().trim().replace(/^['"]|['"]$/g, '');
+    return (v ?? '')
+      .toString()
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
   }
 
   async create(createUserDto: CreateUserDto) {
-    const { email, password, displayName, role } = createUserDto as any;
+    const data = createUserDto as unknown as Record<string, unknown>;
+    const email = data.email as string;
+    const password = data.password as string | undefined;
+    const displayName = data.displayName as string;
+    const role = data.role as string | undefined;
+
     const assignedRole = role || 'client';
-    const generatedPassword = password || Math.random().toString(36).slice(-8) + 'A1!';
+    const generatedPassword =
+      password || Math.random().toString(36).slice(-8) + 'A1!';
     const photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`;
 
     try {
@@ -69,7 +93,7 @@ export class UsersService {
         email,
         password: generatedPassword,
         displayName,
-        photoURL
+        photoURL,
       });
 
       const uid = userRecord.uid;
@@ -88,23 +112,39 @@ export class UsersService {
       });
 
       // 4. Enviar email de bienvenida
-      await this.sendWelcomeEmail(email, displayName, generatedPassword, assignedRole);
+      await this.sendWelcomeEmail(
+        email,
+        displayName,
+        generatedPassword,
+        assignedRole,
+      );
 
       return { uid, email, displayName, photoURL, role: assignedRole };
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-exists') {
-        throw new BadRequestException('El correo electrónico ya está registrado.');
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
+      if (err.code === 'auth/email-already-exists') {
+        throw new BadRequestException(
+          'El correo electrónico ya está registrado.',
+        );
       }
-      throw new BadRequestException(`Error creando usuario: ${error.message}`);
+      throw new BadRequestException(`Error creando usuario: ${err.message}`);
     }
   }
 
-  private async sendWelcomeEmail(email: string, name: string, pass: string, role: string) {
+  private async sendWelcomeEmail(
+    email: string,
+    name: string,
+    pass: string,
+    role: string,
+  ) {
     try {
       // Usaremos un HTML directo en caso de no haber un template específico aún
-      const websiteUrl = this.configService.get('WEBSITE_URL') || 'https://gabrielzavando.cl';
-      const companyName = this.configService.get('COMPANY_NAME') || 'Agencia Digital';
-      
+      const websiteUrl =
+        this.configService.get<string>('WEBSITE_URL') ||
+        'https://gabrielzavando.cl';
+      const companyName =
+        this.configService.get<string>('COMPANY_NAME') || 'Agencia Digital';
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333; border-bottom: 2px solid #FF0080; padding-bottom: 10px;">
@@ -126,7 +166,7 @@ export class UsersService {
       `;
 
       const mailOptions = {
-        from: `"${companyName}" <${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')}>`,
+        from: `"${companyName}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
         to: email,
         subject: `Tus credenciales de acceso - ${companyName}`,
         html: htmlContent,
@@ -141,7 +181,7 @@ export class UsersService {
 
   async findAll() {
     const snapshot = await this.collection.orderBy('createdAt', 'desc').get();
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map((doc) => doc.data());
   }
 
   async findOne(uid: string) {
@@ -152,18 +192,26 @@ export class UsersService {
     return doc.data();
   }
 
-  async updateProfile(uid: string, updateData: { displayName?: string; phone?: string }) {
+  async updateProfile(
+    uid: string,
+    updateData: { displayName?: string; phone?: string },
+  ) {
     const docRef = this.collection.doc(uid);
     const doc = await docRef.get();
     if (!doc.exists) {
       throw new NotFoundException(`Usuario no encontrado.`);
     }
 
-    const updates: any = { ...updateData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
-    
+    const updates: Record<string, unknown> = {
+      ...updateData,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
     // Actualizar también en Auth si cambia el nombre
     if (updateData.displayName) {
-      await admin.auth().updateUser(uid, { displayName: updateData.displayName });
+      await admin
+        .auth()
+        .updateUser(uid, { displayName: updateData.displayName });
     }
 
     await docRef.update(updates);
@@ -171,15 +219,17 @@ export class UsersService {
     return updatedDoc.data();
   }
 
-  async updateUser(uid: string, updateData: any) {
+  async updateUser(uid: string, updateData: Record<string, unknown>) {
     const docRef = this.collection.doc(uid);
     const doc = await docRef.get();
     if (!doc.exists) {
       throw new NotFoundException(`Usuario no encontrado.`);
     }
 
-    const updates: any = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
-    const authUpdates: any = {};
+    const updates: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    const authUpdates: Record<string, unknown> = {};
 
     if (updateData.displayName !== undefined) {
       authUpdates.displayName = updateData.displayName;
@@ -196,8 +246,10 @@ export class UsersService {
     if (Object.keys(authUpdates).length > 0) {
       try {
         await admin.auth().updateUser(uid, authUpdates);
-      } catch (error: any) {
-        throw new BadRequestException(`Error al actualizar usuario en Auth: ${error.message}`);
+      } catch (error: unknown) {
+        throw new BadRequestException(
+          `Error al actualizar usuario en Auth: ${(error as Error).message}`,
+        );
       }
     }
 

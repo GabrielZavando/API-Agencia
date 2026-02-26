@@ -8,8 +8,10 @@ import { TemplatesModule } from './templates/templates.module';
 import { AiModule } from './ai/ai.module';
 import { UsersModule } from './users/users.module';
 import { BlogModule } from './blog/blog.module';
-import { ProjectsModule } from './projects/projects.module';
 import { ClientsModule } from './clients/clients.module';
+import { ReportsModule } from './reports/reports.module';
+import { SupportModule } from './support/support.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -22,8 +24,10 @@ import { ClientsModule } from './clients/clients.module';
     AiModule,
     UsersModule,
     BlogModule,
-    ProjectsModule,
     ClientsModule,
+    ReportsModule,
+    SupportModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

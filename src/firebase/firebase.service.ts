@@ -66,10 +66,15 @@ export class FirebaseService {
 
         if (fs.existsSync(serviceAccountPath)) {
           // Usar archivo JSON
-          const serviceAccount = require(serviceAccountPath);
+          const fileContent = fs.readFileSync(serviceAccountPath, 'utf8');
+          const serviceAccount = JSON.parse(fileContent) as Record<
+            string,
+            string
+          >;
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             projectId: serviceAccount.project_id,
+            storageBucket: `${serviceAccount.project_id}.firebasestorage.app`,
           });
           console.log(
             `✅ Firebase inicializado con archivo JSON para proyecto: ${serviceAccount.project_id}`,
@@ -77,11 +82,13 @@ export class FirebaseService {
         } else {
           // Fallback: usar variables de entorno
           const serviceAccount = {
-            projectId: this.configService.get('FIREBASE_PROJECT_ID'),
+            projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
             privateKey: this.configService
-              .get('FIREBASE_PRIVATE_KEY')
+              .get<string>('FIREBASE_PRIVATE_KEY')
               ?.replace(/\\n/g, '\n'),
-            clientEmail: this.configService.get('FIREBASE_CLIENT_EMAIL'),
+            clientEmail: this.configService.get<string>(
+              'FIREBASE_CLIENT_EMAIL',
+            ),
           };
 
           // Validar que tenemos todas las credenciales necesarias
@@ -97,7 +104,8 @@ export class FirebaseService {
 
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
-            projectId: serviceAccount.projectId,
+            projectId: String(serviceAccount.projectId),
+            storageBucket: `${serviceAccount.projectId}.firebasestorage.app`,
           });
 
           console.log(
@@ -277,7 +285,7 @@ export class FirebaseService {
       const testData = {
         message: 'Prueba de conexión a Firebase',
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        projectId: this.configService.get('FIREBASE_PROJECT_ID'),
+        projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
         testId: Math.random().toString(36).substring(7),
       };
 
@@ -289,7 +297,7 @@ export class FirebaseService {
 
       // Leer el documento creado
       const doc = await docRef.get();
-      const docData = doc.data();
+      const docData = doc.data() as Record<string, unknown>;
       console.log('📖 Datos leídos:', docData);
 
       // Eliminar el documento de prueba
@@ -299,14 +307,16 @@ export class FirebaseService {
       return {
         success: true,
         message: 'Conexión a Firebase exitosa',
-        projectId: this.configService.get('FIREBASE_PROJECT_ID'),
+        projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
         documentId: docRef.id,
         data: docData,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
       console.error('❌ Error en prueba de Firebase:', error);
-      throw new Error(`Error conectando a Firebase: ${error.message}`);
+      throw new Error(
+        `Error conectando a Firebase: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -351,7 +361,10 @@ export class FirebaseService {
 
       if (snapshot.empty) return null;
       const doc = snapshot.docs[0];
-      return { subscriberId: doc.id, email: (doc.data() as any).email };
+      return {
+        subscriberId: doc.id,
+        email: (doc.data() as Record<string, unknown>).email as string,
+      };
     } catch (error) {
       console.error('Error buscando suscriptor:', error);
       return null;

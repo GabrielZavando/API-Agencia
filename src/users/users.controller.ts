@@ -13,6 +13,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Request as ExpressRequest } from 'express';
+
+// Define the custom request type
+interface AuthRequest extends ExpressRequest {
+  user: { uid: string };
+}
 
 @Controller('users')
 export class UsersController {
@@ -34,13 +40,16 @@ export class UsersController {
 
   @Get('profile')
   @UseGuards(FirebaseAuthGuard)
-  async getProfile(@Request() req) {
+  async getProfile(@Request() req: AuthRequest) {
     return this.usersService.findOne(req.user.uid);
   }
 
   @Patch('profile')
   @UseGuards(FirebaseAuthGuard)
-  async updateProfile(@Request() req, @Body() updateData: { displayName?: string; phone?: string }) {
+  async updateProfile(
+    @Request() req: AuthRequest,
+    @Body() updateData: { displayName?: string; phone?: string },
+  ) {
     return this.usersService.updateProfile(req.user.uid, updateData);
   }
 
@@ -62,7 +71,9 @@ export class UsersController {
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateUser(id, updateUserDto);
+    return this.usersService.updateUser(
+      id,
+      updateUserDto as Record<string, unknown>,
+    );
   }
 }
-

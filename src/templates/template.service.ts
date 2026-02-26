@@ -27,6 +27,7 @@ export class TemplateService {
     console.log('🔧 Modo:', isDev ? 'desarrollo' : 'producción');
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getEmailTemplate(
     templateName: string,
     variables: Record<string, any>,

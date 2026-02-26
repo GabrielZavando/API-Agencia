@@ -21,7 +21,7 @@ export class GeminiProvider implements AIProvider {
       const fullPrompt = `${systemPrompt}\n\nConsulta del prospecto: ${prompt}`;
 
       const result = await model.generateContent(fullPrompt);
-      const response = await result.response;
+      const response = result.response;
 
       return response.text() || 'Error generando respuesta';
     } catch (error) {

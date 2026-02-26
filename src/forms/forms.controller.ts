@@ -35,7 +35,7 @@ export class FormsController {
       return {
         success: false,
         message: 'Error conectando a Firebase',
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }
@@ -47,7 +47,7 @@ export class FormsController {
   }
 
   @Get('status')
-  async getStatus() {
+  getStatus() {
     return {
       success: true,
       message: 'API funcionando correctamente',
