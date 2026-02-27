@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsService } from './reports.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { FirebaseService } from '../firebase/firebase.service';
 
 // Mock firebase-admin
 const mockDoc = jest.fn();
@@ -10,7 +11,6 @@ const mockDelete = jest.fn();
 const mockWhere = jest.fn();
 const mockOrderBy = jest.fn();
 const mockSave = jest.fn();
-const mockFile = jest.fn();
 const mockGetSignedUrl = jest.fn();
 const mockBucketFile = jest.fn();
 
@@ -39,6 +39,7 @@ describe('ReportsService', () => {
       id: 'report-123',
       set: mockSet,
       get: mockGet,
+      delete: mockDelete,
     });
 
     mockWhere.mockReturnValue({
@@ -58,7 +59,13 @@ describe('ReportsService', () => {
     });
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ReportsService],
+      providers: [
+        ReportsService,
+        {
+          provide: FirebaseService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     service = module.get<ReportsService>(ReportsService);

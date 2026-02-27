@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SupportService } from './support.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
+import { FirebaseService } from '../firebase/firebase.service';
+
 // Mock firebase-admin
 const mockDoc = jest.fn();
 const mockSet = jest.fn();
@@ -57,7 +59,27 @@ describe('SupportService', () => {
     });
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SupportService],
+      providers: [
+        SupportService,
+        {
+          provide: FirebaseService,
+          useValue: {
+            db: {
+              collection: jest.fn(() => ({
+                doc: mockDoc,
+                where: mockWhere,
+                orderBy: mockOrderBy,
+              })),
+            },
+          },
+        },
+        {
+          provide: 'ConfigService',
+          useValue: {
+            get: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<SupportService>(SupportService);

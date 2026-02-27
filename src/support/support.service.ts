@@ -17,6 +17,8 @@ export interface TicketRecord {
   priority: 'low' | 'medium' | 'high';
   status: 'open' | 'in-progress' | 'resolved';
   adminResponse: string;
+  projectId: string;
+  projectName: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,25 +41,41 @@ export class SupportService {
     this.db = admin.firestore();
   }
 
-  async getTicketQuota(uid: string): Promise<TicketQuota> {
-    // Obtener límite del usuario
-    const userDoc = await this.db.collection('users').doc(uid).get();
+  async getTicketQuota(projectId: string): Promise<TicketQuota> {
+    // Obtener límite del proyecto
+    const projectDoc = await this.db
+      .collection('projects')
+      .doc(projectId)
+      .get();
 
-    const userData = userDoc.data() as Record<string, unknown> | undefined;
+    if (!projectDoc.exists) {
+      throw new NotFoundException('Proyecto no encontrado');
+    }
+
+    const projectData = projectDoc.data() as Record<string, unknown>;
     const limit =
-      (userData?.monthlyTicketLimit as number) ?? DEFAULT_MONTHLY_LIMIT;
+      (projectData?.monthlyTicketLimit as number) ?? DEFAULT_MONTHLY_LIMIT;
 
-    // Contar tickets del mes actual
+    // Contar tickets del mes actual para el proyecto
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const snapshot = await this.db
       .collection('support_tickets')
-      .where('clientId', '==', uid)
-      .where('createdAt', '>=', startOfMonth)
+      .where('projectId', '==', projectId)
       .get();
 
-    const used = snapshot.size;
+    let used = 0;
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const createdAt = (data.createdAt as unknown as admin.firestore.Timestamp).toMillis
+        ? (data.createdAt as unknown as admin.firestore.Timestamp).toMillis()
+        : new Date(data.createdAt as any).getTime();
+        
+      if (createdAt >= startOfMonth.getTime()) {
+        used++;
+      }
+    });
     return {
       used,
       limit,
@@ -69,13 +87,58 @@ export class SupportService {
     uid: string,
     email: string,
     dto: CreateTicketDto,
+    file?: Express.Multer.File,
   ): Promise<TicketRecord> {
     // Verificar cuota
-    const quota = await this.getTicketQuota(uid);
+    const quota = await this.getTicketQuota(dto.projectId);
     if (quota.remaining <= 0) {
       throw new BadRequestException(
-        `Has alcanzado tu límite de ${quota.limit} ` + 'tickets mensuales',
+        `Este proyecto ha alcanzado su límite de ${quota.limit} tickets mensuales`,
       );
+    }
+
+    let attachmentPath = '';
+
+    if (file) {
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          'Solo se permiten imágenes (PNG, JPEG, WEBP)',
+        );
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5 MB
+      if (file.size > maxSize) {
+        throw new BadRequestException('La imagen no debe superar los 5 MB');
+      }
+
+      const docRef = this.db.collection('support_tickets').doc();
+      attachmentPath = `support_attachments/${uid}/${docRef.id}_${file.originalname}`;
+      const bucket = admin.storage().bucket();
+      const fileRef = bucket.file(attachmentPath);
+      await fileRef.save(file.buffer, {
+        metadata: { contentType: file.mimetype },
+      });
+
+      const now = new Date();
+      const ticket: TicketRecord & { attachmentPath?: string } = {
+        id: docRef.id,
+        clientId: uid,
+        clientEmail: email,
+        subject: dto.subject,
+        message: dto.message,
+        priority: dto.priority || 'medium',
+        status: 'open',
+        adminResponse: '',
+        projectId: dto.projectId,
+        projectName: dto.projectName,
+        attachmentPath,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await docRef.set(ticket);
+      return ticket;
     }
 
     const docRef = this.db.collection('support_tickets').doc();
@@ -90,6 +153,8 @@ export class SupportService {
       priority: dto.priority || 'medium',
       status: 'open',
       adminResponse: '',
+      projectId: dto.projectId,
+      projectName: dto.projectName,
       createdAt: now,
       updatedAt: now,
     };
@@ -115,6 +180,48 @@ export class SupportService {
       .get();
 
     return snapshot.docs.map((doc) => doc.data() as TicketRecord);
+  }
+
+  async findById(
+    ticketId: string,
+    uid: string,
+    role: string,
+  ): Promise<TicketRecord & { attachmentUrl?: string }> {
+    const doc = await this.db.collection('support_tickets').doc(ticketId).get();
+
+    if (!doc.exists) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    const data = doc.data() as TicketRecord & { attachmentPath?: string };
+
+    if (role === 'client' && data.clientId !== uid) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    let attachmentUrl: string | undefined = undefined;
+
+    if (data.attachmentPath) {
+      try {
+        const bucket = admin.storage().bucket();
+        const fileRef = bucket.file(data.attachmentPath);
+        const [url] = await fileRef.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 60 * 60 * 1000, // 1 hour
+        });
+        attachmentUrl = url;
+      } catch (error) {
+        console.error(
+          'Error generating signed URL for ticket attachment:',
+          error,
+        );
+      }
+    }
+
+    return {
+      ...data,
+      attachmentUrl,
+    };
   }
 
   async updateTicket(

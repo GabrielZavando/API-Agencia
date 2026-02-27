@@ -12,6 +12,7 @@ import { ClientsModule } from './clients/clients.module';
 import { ReportsModule } from './reports/reports.module';
 import { SupportModule } from './support/support.module';
 import { FilesModule } from './files/files.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FilesModule } from './files/files.module';
     ReportsModule,
     SupportModule,
     FilesModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

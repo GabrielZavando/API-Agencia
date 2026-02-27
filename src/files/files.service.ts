@@ -29,8 +29,8 @@ export interface StorageQuota {
 
 /** 5 GB default para clientes */
 const DEFAULT_STORAGE_LIMIT = 5 * 1024 * 1024 * 1024;
-/** Sin límite real para admin */
-const UNLIMITED = 100 * 1024 * 1024 * 1024 * 1024;
+/** 30 GB para admin */
+const ADMIN_STORAGE_LIMIT = 30 * 1024 * 1024 * 1024;
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -70,7 +70,7 @@ export class FilesService {
       return acc + (d.size || 0);
     }, 0);
 
-    let limitBytes = UNLIMITED;
+    let limitBytes = ADMIN_STORAGE_LIMIT;
     if (role === 'client') {
       const userDoc = await this.db.collection('users').doc(uid).get();
       const data = userDoc.data() as Record<string, unknown> | undefined;
@@ -100,16 +100,14 @@ export class FilesService {
       throw new BadRequestException('Tipo de archivo no permitido');
     }
 
-    // Verificar cuota para clientes
-    if (role === 'client') {
-      const quota = await this.getStorageQuota(uid, 'client');
-      if (file.size > quota.remainingBytes) {
-        throw new BadRequestException(
-          `Espacio insuficiente. Disponible: ` +
-            `${quota.remainingBytes > 0 ? this.formatBytes(quota.remainingBytes) : '0 B'}, ` +
-            `Archivo: ${this.formatBytes(file.size)}`,
-        );
-      }
+    // Verificar cuota
+    const quota = await this.getStorageQuota(uid, role);
+    if (file.size > quota.remainingBytes) {
+      throw new BadRequestException(
+        `Espacio insuficiente. Disponible: ` +
+          `${quota.remainingBytes > 0 ? this.formatBytes(quota.remainingBytes) : '0 B'}, ` +
+          `Archivo: ${this.formatBytes(file.size)}`,
+      );
     }
 
     const docRef = this.db.collection('files').doc();
@@ -163,7 +161,6 @@ export class FilesService {
   async getDownloadUrl(
     fileId: string,
     uid: string,
-    role: 'admin' | 'client',
   ): Promise<{ url: string; fileName: string }> {
     const doc = await this.db.collection('files').doc(fileId).get();
 
@@ -173,8 +170,8 @@ export class FilesService {
 
     const record = doc.data() as FileRecord;
 
-    // Los clientes solo pueden descargar sus archivos
-    if (role === 'client' && record.ownerId !== uid) {
+    // Solo puede descargar sus archivos
+    if (record.ownerId !== uid) {
       throw new NotFoundException('Archivo no encontrado');
     }
 
@@ -189,11 +186,7 @@ export class FilesService {
   }
 
   /** Eliminar archivo */
-  async deleteFile(
-    fileId: string,
-    uid: string,
-    role: 'admin' | 'client',
-  ): Promise<void> {
+  async deleteFile(fileId: string, uid: string): Promise<void> {
     const doc = await this.db.collection('files').doc(fileId).get();
 
     if (!doc.exists) {
@@ -202,7 +195,7 @@ export class FilesService {
 
     const record = doc.data() as FileRecord;
 
-    if (role === 'client' && record.ownerId !== uid) {
+    if (record.ownerId !== uid) {
       throw new NotFoundException('Archivo no encontrado');
     }
 

@@ -45,11 +45,7 @@ export class FilesController {
   async findAll(@Req() req: AuthenticatedRequest) {
     if (!req.user) throw new Error('User not authenticated');
     const uid = req.user.uid;
-    const role = req.user.role;
-    // Admin puede ver todos; cliente solo los suyos
-    if (role === 'admin') {
-      return await this.filesService.findAll();
-    }
+    // Todos los usuarios (admins o clientes) solo ven sus propios archivos
     return await this.filesService.findByOwner(uid);
   }
 
@@ -69,8 +65,8 @@ export class FilesController {
   async download(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     if (!req.user) throw new Error('User not authenticated');
     const uid = req.user.uid;
-    const role = (req.user.role as 'admin' | 'client') || 'client';
-    return await this.filesService.getDownloadUrl(id, uid, role);
+    // Download solo permite archivos propios
+    return await this.filesService.getDownloadUrl(id, uid);
   }
 
   /** Eliminar archivo */
@@ -79,7 +75,7 @@ export class FilesController {
   async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     if (!req.user) throw new Error('User not authenticated');
     const uid = req.user.uid;
-    const role = (req.user.role as 'admin' | 'client') || 'client';
-    return await this.filesService.deleteFile(id, uid, role);
+    // Delete solo permite archivos propios
+    return await this.filesService.deleteFile(id, uid);
   }
 }

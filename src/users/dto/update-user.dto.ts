@@ -3,4 +3,6 @@ export class UpdateUserDto {
   password?: string;
   displayName?: string;
   role?: string;
+  storageLimitGb?: number;
+  monthlyTicketLimit?: number;
 }

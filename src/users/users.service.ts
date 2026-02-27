@@ -258,6 +258,20 @@ export class UsersService {
       updates.role = updateData.role;
     }
 
+    // Parse and save new limits
+    if (updateData.storageLimitGb !== undefined) {
+      const storageLimit = Number(updateData.storageLimitGb);
+      if (!isNaN(storageLimit)) {
+        updates.storageLimitGb = storageLimit;
+      }
+    }
+    if (updateData.monthlyTicketLimit !== undefined) {
+      const ticketLimit = Number(updateData.monthlyTicketLimit);
+      if (!isNaN(ticketLimit)) {
+        updates.monthlyTicketLimit = ticketLimit;
+      }
+    }
+
     await docRef.update(updates);
     const updatedDoc = await docRef.get();
     return updatedDoc.data();
