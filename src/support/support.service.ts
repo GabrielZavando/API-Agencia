@@ -7,6 +7,7 @@ import * as admin from 'firebase-admin';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { FirebaseService } from '../firebase/firebase.service';
+import { MailService } from '../mail/mail.service';
 
 export interface TicketRecord {
   id: string;
@@ -37,7 +38,10 @@ export class SupportService {
 
   // Inyectar FirebaseService garantiza que Firebase
   // esté inicializado antes de usarlo
-  constructor(private readonly _firebase: FirebaseService) {
+  constructor(
+    private readonly _firebase: FirebaseService,
+    private readonly mailService: MailService,
+  ) {
     this.db = admin.firestore();
   }
 
@@ -68,10 +72,11 @@ export class SupportService {
     let used = 0;
     snapshot.forEach((doc) => {
       const data = doc.data();
-      const createdAt = (data.createdAt as unknown as admin.firestore.Timestamp).toMillis
+      const createdAt = (data.createdAt as unknown as admin.firestore.Timestamp)
+        .toMillis
         ? (data.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(data.createdAt as any).getTime();
-        
+        : new Date(data.createdAt as string | number | Date).getTime();
+
       if (createdAt >= startOfMonth.getTime()) {
         used++;
       }
@@ -249,6 +254,28 @@ export class SupportService {
     await docRef.update(updateData);
 
     const updated = await docRef.get();
-    return updated.data() as TicketRecord;
+    const ticketRecord = updated.data() as TicketRecord;
+
+    // Al responder, notificar al cliente vía MailService
+    if (
+      dto.adminResponse &&
+      dto.adminResponse.trim().length > 0 &&
+      ticketRecord.clientEmail
+    ) {
+      void this.mailService.sendMail({
+        from: '"Soporte WebAstro" <soporte@gabrielzavando.cl>',
+        to: ticketRecord.clientEmail,
+        subject: `Actualización de tu ticket: ${ticketRecord.subject}`,
+        templateName: 'ticket-response',
+        templateVariables: {
+          subject: ticketRecord.subject,
+          status: ticketRecord.status,
+          message: ticketRecord.message,
+          adminResponse: ticketRecord.adminResponse,
+        },
+      });
+    }
+
+    return ticketRecord;
   }
 }

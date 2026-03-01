@@ -28,7 +28,15 @@ export class FirebaseAuthGuard implements CanActivate {
 
     try {
       // 1. Verificar Token
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      // Intentar primero como Session Cookie (nuestra nueva lógica en Astro SSR)
+      let decodedToken: admin.auth.DecodedIdToken;
+      try {
+        decodedToken = await admin.auth().verifySessionCookie(token, true);
+      } catch {
+        // Fallback: Si no es Session Cookie, intentar como IdToken clásico
+        decodedToken = await admin.auth().verifyIdToken(token);
+      }
+
       request.user = decodedToken;
 
       // 2. Verificar Roles (si el endpoint tiene roles requeridos)

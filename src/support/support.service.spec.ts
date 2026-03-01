@@ -3,6 +3,7 @@ import { SupportService } from './support.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { FirebaseService } from '../firebase/firebase.service';
+import { MailService } from '../mail/mail.service';
 
 // Mock firebase-admin
 const mockDoc = jest.fn();
@@ -41,15 +42,17 @@ describe('SupportService', () => {
       data: () => ({}),
     });
 
-    // Mock de where().where().get() para cuota
+    // Mock de where().get() para cuota
+    const fakeWhere = jest.fn();
     const whereChain = {
-      where: jest.fn().mockReturnValue({
-        get: jest.fn().mockResolvedValue({
-          size: 0,
-          docs: [],
-        }),
+      where: fakeWhere,
+      get: jest.fn().mockResolvedValue({
+        size: 0,
+        docs: [],
+        forEach: jest.fn((cb: any) => [].forEach(cb)),
       }),
     };
+    fakeWhere.mockReturnValue(whereChain);
     mockWhere.mockReturnValue(whereChain);
 
     mockOrderBy.mockReturnValue({
@@ -71,6 +74,12 @@ describe('SupportService', () => {
                 orderBy: mockOrderBy,
               })),
             },
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendMail: jest.fn().mockResolvedValue(true),
           },
         },
         {
@@ -119,6 +128,8 @@ describe('SupportService', () => {
         subject: 'Problema con factura',
         message: 'No puedo ver mi última factura',
         priority: 'high' as const,
+        projectId: 'project-1',
+        projectName: 'Project One',
       };
 
       const result = await service.createTicket('user-1', 'user@test.com', dto);
@@ -127,24 +138,34 @@ describe('SupportService', () => {
       expect(result.subject).toBe('Problema con factura');
       expect(result.status).toBe('open');
       expect(result.priority).toBe('high');
+      expect(result.projectId).toBe('project-1');
       expect(mockSet).toHaveBeenCalled();
     });
 
     it('debe rechazar si se excede la cuota', async () => {
       // Simular que ya usó 2 tickets
+      const fakeWhere = jest.fn();
       const whereChain = {
-        where: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            size: 2,
-            docs: [],
-          }),
+        where: fakeWhere,
+        get: jest.fn().mockResolvedValue({
+          size: 2,
+          docs: [{}, {}],
+          forEach: jest.fn((cb) =>
+            [
+              { data: () => ({ createdAt: new Date() }) },
+              { data: () => ({ createdAt: new Date() }) },
+            ].forEach(cb),
+          ),
         }),
       };
+      fakeWhere.mockReturnValue(whereChain);
       mockWhere.mockReturnValue(whereChain);
 
       const dto = {
         subject: 'Otro ticket',
         message: 'Contenido',
+        projectId: 'project-1',
+        projectName: 'Project One',
       };
 
       await expect(

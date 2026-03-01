@@ -3,87 +3,17 @@ import { ConfigService } from '@nestjs/config';
 import { ContactDto } from './dto/contact.dto';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { FirebaseService, ProspectRecord } from '../firebase/firebase.service';
-import { TemplateService } from '../templates/template.service';
+import { MailService } from '../mail/mail.service';
 // import { AIService } from '../ai/ai.service'; // Comentado temporalmente
-import * as nodemailer from 'nodemailer';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class FormsService {
-  private transporter: nodemailer.Transporter;
-
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly templateService: TemplateService,
+    private readonly mailService: MailService,
     // private readonly aiService: AIService, // Comentado temporalmente
     private readonly configService: ConfigService,
-  ) {
-    this.initializeSMTP();
-  }
-
-  private initializeSMTP() {
-    // Intentar cargar configuración SMTP desde archivo JSON primero
-    const smtpConfigPath = path.join(
-      process.cwd(),
-      'config',
-      'smtp-config.json',
-    );
-
-    if (fs.existsSync(smtpConfigPath)) {
-      // Usar archivo JSON
-      try {
-        const fileContent = fs.readFileSync(smtpConfigPath, 'utf8');
-        const smtpConfig = JSON.parse(fileContent) as Record<
-          string,
-          string | number | boolean
-        >;
-        this.transporter = nodemailer.createTransport({
-          host: smtpConfig.host as string,
-          port: Number(smtpConfig.port),
-          secure: Boolean(smtpConfig.secure),
-          auth: {
-            user: smtpConfig.user as string,
-            pass: smtpConfig.pass as string,
-          },
-        });
-        console.log(
-          `📧 SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`,
-        );
-      } catch (error) {
-        console.error('Error cargando configuración SMTP desde JSON:', error);
-        this.initializeSMTPFromEnv();
-      }
-    } else {
-      // Fallback: usar variables de entorno
-      this.initializeSMTPFromEnv();
-    }
-  }
-
-  private initializeSMTPFromEnv() {
-    // Configurar el transportador de email con variables de entorno
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
-      secure: this.configService.get<string>('SMTP_SECURE') === 'true', // true para puerto 465, false para otros
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
-    });
-
-    console.log(
-      `📧 SMTP configurado desde variables de entorno: ${this.configService.get<string>('SMTP_HOST')}:${this.configService.get<string>('SMTP_PORT')} (secure: ${this.configService.get<string>('SMTP_SECURE')})`,
-    );
-  }
-
-  // Normaliza strings leídos del .env (quita comillas y espacios)
-  private clean(v?: string): string {
-    return (v ?? '')
-      .toString()
-      .trim()
-      .replace(/^['"]|['"]$/g, '');
-  }
+  ) {}
 
   // Método principal del flujo
   async handleContact(contactDto: ContactDto) {
@@ -237,75 +167,20 @@ export class FormsService {
         ? 'welcome-prospect'
         : 'returning-prospect';
 
-      const templateVariables = {
-        name: contactDto.name,
-        message: contactDto.message,
-        responseContent,
-        companyName:
-          this.configService.get<string>('COMPANY_NAME') ||
-          'Gabriel Zavando Full Stack Developer',
-        logoUrl:
-          this.clean(this.configService.get<string>('LOGO_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        websiteUrl:
-          this.configService.get<string>('WEBSITE_URL') ||
-          'https://gabrielzavando.cl',
-        servicesUrl:
-          this.clean(this.configService.get<string>('SERVICES_URL')) ||
-          'https://l1nq.com/vkSUa',
-        address:
-          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone:
-          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
-        email:
-          this.configService.get<string>('COMPANY_EMAIL') ||
-          'contacto@gabrielzavando.cl',
-        linkedinUrl:
-          this.configService.get<string>('LINKEDIN_URL') ||
-          'https://linkedin.com/in/gabrielzavando',
-        githubUrl:
-          this.configService.get<string>('GITHUB_URL') ||
-          'https://github.com/gabrielzavando',
-        instagramUrl:
-          this.configService.get<string>('INSTAGRAM_URL') ||
-          'https://instagram.com/gabrielzavando',
-        youtubeUrl:
-          this.configService.get<string>('YOUTUBE_URL') ||
-          'https://www.youtube.com/@gabrielzavando',
-        linkedinIconUrl:
-          this.clean(this.configService.get<string>('LINKEDIN_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
-        instagramIconUrl:
-          this.clean(this.configService.get<string>('INSTAGRAM_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
-        githubIconUrl:
-          this.clean(this.configService.get<string>('GITHUB_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
-        youtubeIconUrl:
-          this.clean(this.configService.get<string>('YOUTUBE_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
-        unsubscribeUrl: `${this.configService.get<string>('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${contactDto.email}`,
-      };
+      const subject = isNewProspect
+        ? `Gracias por contactarnos, ${contactDto.name}`
+        : `¡Qué gusto verte de nuevo, ${contactDto.name}!`;
 
-      const htmlContent = await this.templateService.getEmailTemplate(
-        templateName,
-        templateVariables,
-      );
-
-      const mailOptions = {
-        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      return await this.mailService.sendMail({
         to: contactDto.email,
-        subject: isNewProspect
-          ? `Gracias por contactarnos, ${contactDto.name}`
-          : `¡Qué gusto verte de nuevo, ${contactDto.name}!`,
-        html: htmlContent,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-      console.log(
-        `Email corporativo enviado a: ${contactDto.email} (${isNewProspect ? 'nuevo' : 'recurrente'})`,
-      );
-      return true;
+        subject,
+        templateName,
+        templateVariables: {
+          name: contactDto.name,
+          message: contactDto.message,
+          responseContent,
+        },
+      });
     } catch (error) {
       console.error('Error enviando email:', error);
       return false;
@@ -323,8 +198,7 @@ export class FormsService {
         this.configService.get<string>('COMPANY_EMAIL') ||
         'contacto@gabrielzavando.cl';
 
-      const mailOptions = {
-        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      return await this.mailService.sendMail({
         to: adminEmail,
         subject: `Nuevo mensaje de contacto ${isNewProspect ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
         html: `
@@ -373,13 +247,7 @@ export class FormsService {
             </p>
           </div>
         `,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-      console.log(
-        `📧 Notificación administrativa enviada a: ${adminEmail} (${isNewProspect ? 'nuevo' : 'recurrente'})`,
-      );
-      return true;
+      });
     } catch (error) {
       console.error('Error enviando notificación administrativa:', error);
       return false;
@@ -395,8 +263,7 @@ export class FormsService {
         this.configService.get<string>('COMPANY_EMAIL') ||
         'contacto@gabrielzavando.cl';
 
-      const mailOptions = {
-        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      return await this.mailService.sendMail({
         to: adminEmail,
         subject: `🔔 Nueva suscripción al newsletter`,
         html: `
@@ -438,13 +305,7 @@ export class FormsService {
             </p>
           </div>
         `,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-      console.log(
-        `📧 Notificación de suscripción enviada al administrador: ${adminEmail}`,
-      );
-      return true;
+      });
     } catch (error) {
       console.error('Error enviando notificación de suscripción:', error);
       return false;
@@ -454,65 +315,11 @@ export class FormsService {
   // Método para enviar email de bienvenida a suscriptores
   private async sendSubscriberWelcomeEmail(email: string): Promise<boolean> {
     try {
-      const templateVariables = {
-        companyName:
-          this.configService.get<string>('COMPANY_NAME') ||
-          'Gabriel Zavando Full Stack Developer',
-        logoUrl:
-          this.clean(this.configService.get<string>('LOGO_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        websiteUrl:
-          this.configService.get<string>('WEBSITE_URL') ||
-          'https://gabrielzavando.cl',
-        address:
-          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone:
-          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
-        email:
-          this.configService.get<string>('COMPANY_EMAIL') ||
-          'contacto@gabrielzavando.cl',
-        linkedinUrl:
-          this.configService.get<string>('LINKEDIN_URL') ||
-          'https://linkedin.com/in/gabrielzavando',
-        githubUrl:
-          this.configService.get<string>('GITHUB_URL') ||
-          'https://github.com/gabrielzavando',
-        instagramUrl:
-          this.configService.get<string>('INSTAGRAM_URL') ||
-          'https://instagram.com/gabrielzavando',
-        youtubeUrl:
-          this.configService.get<string>('YOUTUBE_URL') ||
-          'https://www.youtube.com/@gabrielzavando',
-        linkedinIconUrl:
-          this.clean(this.configService.get<string>('LINKEDIN_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
-        instagramIconUrl:
-          this.clean(this.configService.get<string>('INSTAGRAM_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
-        githubIconUrl:
-          this.clean(this.configService.get<string>('GITHUB_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
-        youtubeIconUrl:
-          this.clean(this.configService.get<string>('YOUTUBE_ICON_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
-        unsubscribeUrl: `${this.configService.get<string>('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${email}`,
-      };
-
-      const htmlContent = await this.templateService.getEmailTemplate(
-        'subscriber-welcome',
-        templateVariables,
-      );
-
-      const mailOptions = {
-        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      return await this.mailService.sendMail({
         to: email,
         subject: '¡Bienvenido/a a mi newsletter! 🎉',
-        html: htmlContent,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Newsletter welcome email enviado a: ${email}`);
-      return true;
+        templateName: 'subscriber-welcome',
+      });
     } catch (error) {
       console.error('Error enviando email de bienvenida:', error);
       return false;
@@ -559,39 +366,11 @@ export class FormsService {
     email: string,
   ): Promise<boolean> {
     try {
-      const templateVariables = {
-        companyName:
-          this.configService.get<string>('COMPANY_NAME') ||
-          'Gabriel Zavando Full Stack Developer',
-        logoUrl:
-          this.clean(this.configService.get<string>('LOGO_URL')) ||
-          'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-        address:
-          this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
-        phone:
-          this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
-        email:
-          this.configService.get<string>('COMPANY_EMAIL') ||
-          'contacto@gabrielzavando.cl',
-      };
-
-      const htmlContent = await this.templateService.getEmailTemplate(
-        'unsubscribe-confirmation',
-        templateVariables,
-      );
-
-      const mailOptions = {
-        from: `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      return await this.mailService.sendMail({
         to: email,
         subject: 'Confirmación de desuscripción - Newsletter',
-        html: htmlContent,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-      console.log(
-        `Newsletter unsubscribe confirmation email enviado a: ${email}`,
-      );
-      return true;
+        templateName: 'unsubscribe-confirmation',
+      });
     } catch (error) {
       console.error(
         'Error enviando email de confirmación de desuscripción:',
@@ -606,67 +385,8 @@ export class FormsService {
     return await this.firebaseService.testConnection();
   }
 
-  // Método para probar la configuración SMTP
   async testSMTPConnection() {
-    try {
-      console.log('🔄 Probando conexión SMTP...');
-
-      // Verificar la conexión
-      await this.transporter.verify();
-      console.log('✅ Conexión SMTP verificada correctamente');
-
-      // Enviar email de prueba
-      const testEmail = {
-        from: `"${this.configService.get<string>('COMPANY_NAME')}" <${this.configService.get<string>('SMTP_FROM_EMAIL')}>`,
-        to: this.configService.get<string>('SMTP_USER'), // Enviar a la misma dirección para prueba
-        subject: 'Prueba de configuración SMTP - API',
-        html: `
-          <h2>🎉 ¡Configuración SMTP exitosa!</h2>
-          <p>Este es un email de prueba para verificar que la configuración SMTP está funcionando correctamente.</p>
-          <hr>
-          <p><strong>Configuración:</strong></p>
-          <ul>
-            <li><strong>Servidor:</strong> ${this.configService.get<string>('SMTP_HOST')}</li>
-            <li><strong>Puerto:</strong> ${this.configService.get<string>('SMTP_PORT')}</li>
-            <li><strong>Seguro:</strong> ${this.configService.get<string>('SMTP_SECURE')}</li>
-            <li><strong>Usuario:</strong> ${this.configService.get<string>('SMTP_USER')}</li>
-          </ul>
-          <p><em>Enviado desde: ${this.configService.get<string>('COMPANY_NAME')}</em></p>
-        `,
-      };
-
-      const result = (await this.transporter.sendMail(testEmail)) as {
-        messageId?: string;
-      };
-      console.log('✅ Email de prueba enviado exitosamente');
-
-      return {
-        success: true,
-        message: 'Configuración SMTP exitosa',
-        messageId: result.messageId,
-        from: testEmail.from,
-        to: testEmail.to,
-        config: {
-          host: this.configService.get<string>('SMTP_HOST'),
-          port: this.configService.get<string>('SMTP_PORT'),
-          secure: this.configService.get<string>('SMTP_SECURE'),
-          user: this.configService.get<string>('SMTP_USER'),
-        },
-      };
-    } catch (error) {
-      console.error('❌ Error en configuración SMTP:', error);
-      return {
-        success: false,
-        message: 'Error en configuración SMTP',
-        error: (error as Error).message,
-        config: {
-          host: this.configService.get<string>('SMTP_HOST'),
-          port: this.configService.get<string>('SMTP_PORT'),
-          secure: this.configService.get<string>('SMTP_SECURE'),
-          user: this.configService.get<string>('SMTP_USER'),
-        },
-      };
-    }
+    return this.mailService.testConnection();
   }
 
   // Manejo de suscripciones: guarda email + meta en colección 'subscribers'

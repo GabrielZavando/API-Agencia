@@ -126,6 +126,10 @@ export class FirebaseService {
     });
   }
 
+  public getDb(): admin.firestore.Firestore {
+    return this.db;
+  }
+
   async findProspectByEmail(email: string): Promise<ProspectRecord | null> {
     try {
       const snapshot = await this.db

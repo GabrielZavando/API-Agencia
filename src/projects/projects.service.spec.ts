@@ -2,44 +2,54 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { vi } from 'vitest';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
-  let mockFirebaseService: any;
-  let mockFirestore: any;
-  let mockCollection: any;
-  let mockDocRef: any;
+  let mockFirebaseService: { getDb: jest.Mock };
+  let mockFirestore: { collection: jest.Mock };
+  let mockCollection: {
+    doc: jest.Mock;
+    where: jest.Mock;
+    orderBy: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockDocRef: {
+    id: string;
+    set: jest.Mock;
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockDocRef = {
       id: 'test-project-id',
-      set: vi.fn().mockResolvedValue(true),
-      get: vi.fn(),
-      update: vi.fn().mockResolvedValue(true),
-      delete: vi.fn().mockResolvedValue(true),
+      set: jest.fn().mockResolvedValue(true),
+      get: jest.fn(),
+      update: jest.fn().mockResolvedValue(true),
+      delete: jest.fn().mockResolvedValue(true),
     };
 
     const mockQuerySnapshot = {
       docs: [
-        { data: () => ({ id: '1', name: 'Project 1' }) },
-        { data: () => ({ id: '2', name: 'Project 2' }) },
+        { data: () => ({ id: '1', name: 'Project 1', createdAt: new Date() }) },
+        { data: () => ({ id: '2', name: 'Project 2', createdAt: new Date() }) },
       ],
     };
 
     mockCollection = {
-      doc: vi.fn().mockReturnValue(mockDocRef),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      get: vi.fn().mockResolvedValue(mockQuerySnapshot),
+      doc: jest.fn().mockReturnValue(mockDocRef),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue(mockQuerySnapshot),
     };
 
     mockFirestore = {
-      collection: vi.fn().mockReturnValue(mockCollection),
+      collection: jest.fn().mockReturnValue(mockCollection),
     };
 
     mockFirebaseService = {
-      getDb: vi.fn().mockReturnValue(mockFirestore),
+      getDb: jest.fn().mockReturnValue(mockFirestore),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -63,6 +73,7 @@ describe('ProjectsService', () => {
         name: 'Test Project',
         clientId: 'client123',
         description: 'Desc',
+        monthlyTicketLimit: 10,
       };
 
       // Act
@@ -77,7 +88,12 @@ describe('ProjectsService', () => {
 
     it('should throw an error if clientId is missing', async () => {
       // Arrange
-      const dto = { name: 'Test Project', clientId: '', description: 'Desc' };
+      const dto = {
+        name: 'Test Project',
+        clientId: '',
+        description: 'Desc',
+        monthlyTicketLimit: 10,
+      };
 
       // Act & Assert
       await expect(service.create(dto)).rejects.toThrow(BadRequestException);
@@ -85,7 +101,12 @@ describe('ProjectsService', () => {
 
     it('should throw an error if name is missing', async () => {
       // Arrange
-      const dto = { name: '', clientId: 'client123', description: 'Desc' };
+      const dto = {
+        name: '',
+        clientId: 'client123',
+        description: 'Desc',
+        monthlyTicketLimit: 10,
+      };
 
       // Act & Assert
       await expect(service.create(dto)).rejects.toThrow(BadRequestException);

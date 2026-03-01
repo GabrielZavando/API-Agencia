@@ -7,7 +7,10 @@ import {
   UseGuards,
   Request,
   Param,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
@@ -46,11 +49,14 @@ export class UsersController {
 
   @Patch('profile')
   @UseGuards(FirebaseAuthGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
   async updateProfile(
     @Request() req: AuthRequest,
-    @Body() updateData: { displayName?: string; phone?: string },
+    @Body()
+    updateData: { displayName?: string; phone?: string; description?: string },
+    @UploadedFile() avatar?: Express.Multer.File,
   ) {
-    return this.usersService.updateProfile(req.user.uid, updateData);
+    return this.usersService.updateProfile(req.user.uid, updateData, avatar);
   }
 
   @Post('set-admin-role')

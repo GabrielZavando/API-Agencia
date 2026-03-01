@@ -7,65 +7,18 @@ import * as admin from 'firebase-admin';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ConfigService } from '@nestjs/config';
-import { TemplateService } from '../templates/template.service';
-import * as nodemailer from 'nodemailer';
-import * as path from 'path';
-import * as fs from 'fs';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class UsersService {
   private collection: admin.firestore.CollectionReference;
-  private transporter: nodemailer.Transporter;
 
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly configService: ConfigService,
-    private readonly templateService: TemplateService,
+    private readonly mailService: MailService,
   ) {
     this.collection = admin.firestore().collection('users');
-    this.initializeSMTP();
-  }
-
-  private initializeSMTP() {
-    const smtpConfigPath = path.join(
-      process.cwd(),
-      'config',
-      'smtp-config.json',
-    );
-    if (fs.existsSync(smtpConfigPath)) {
-      try {
-        const fileContent = fs.readFileSync(smtpConfigPath, 'utf8');
-        const smtpConfig = JSON.parse(fileContent) as Record<
-          string,
-          string | number | boolean
-        >;
-        this.transporter = nodemailer.createTransport({
-          host: smtpConfig.host as string,
-          port: Number(smtpConfig.port),
-          secure: Boolean(smtpConfig.secure),
-          auth: {
-            user: smtpConfig.user as string,
-            pass: smtpConfig.pass as string,
-          },
-        });
-      } catch {
-        this.initializeSMTPFromEnv();
-      }
-    } else {
-      this.initializeSMTPFromEnv();
-    }
-  }
-
-  private initializeSMTPFromEnv() {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
-      secure: this.configService.get<string>('SMTP_SECURE') === 'true',
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
-    });
   }
 
   private clean(v?: string): string {
@@ -165,14 +118,11 @@ export class UsersService {
         </div>
       `;
 
-      const mailOptions = {
-        from: `"${companyName}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+      await this.mailService.sendMail({
         to: email,
         subject: `Tus credenciales de acceso - ${companyName}`,
         html: htmlContent,
-      };
-
-      await this.transporter.sendMail(mailOptions);
+      });
       console.log(`✅ Correo de bienvenida enviado a: ${email}`);
     } catch (error) {
       console.error('Error enviando email de bienvenida:', error);
@@ -194,7 +144,8 @@ export class UsersService {
 
   async updateProfile(
     uid: string,
-    updateData: { displayName?: string; phone?: string },
+    updateData: { displayName?: string; phone?: string; description?: string },
+    avatar?: Express.Multer.File,
   ) {
     const docRef = this.collection.doc(uid);
     const doc = await docRef.get();
@@ -202,16 +153,55 @@ export class UsersService {
       throw new NotFoundException(`Usuario no encontrado.`);
     }
 
+    let photoURL: string | undefined = undefined;
+
+    // Procesar Avatar si existe
+    if (avatar) {
+      const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+      const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+
+      if (avatar.size > MAX_SIZE) {
+        throw new BadRequestException(
+          'La imagen de perfil no debe superar los 2MB.',
+        );
+      }
+      if (!ALLOWED_MIME.includes(avatar.mimetype)) {
+        throw new BadRequestException(
+          'Formato de imagen no válido. Usa JPG, PNG o WEBP.',
+        );
+      }
+
+      const bucket = admin.storage().bucket();
+      const ext = avatar.originalname.split('.').pop() || 'jpg';
+      const storagePath = `users_avatars/${uid}_${Date.now()}.${ext}`;
+      const fileRef = bucket.file(storagePath);
+
+      await fileRef.save(avatar.buffer, {
+        metadata: { contentType: avatar.mimetype },
+      });
+
+      // Hacer que la URL sea pública nativamente (Firebase Cloud Storage URL public)
+      await fileRef.makePublic();
+      photoURL = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    }
+
     const updates: Record<string, unknown> = {
       ...updateData,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Actualizar también en Auth si cambia el nombre
-    if (updateData.displayName) {
-      await admin
-        .auth()
-        .updateUser(uid, { displayName: updateData.displayName });
+    if (photoURL) {
+      updates.photoURL = photoURL;
+    }
+
+    // Actualizar también en Auth si cambia el nombre o la foto
+    const authUpdates: admin.auth.UpdateRequest = {};
+    if (updateData.displayName)
+      authUpdates.displayName = updateData.displayName;
+    if (photoURL) authUpdates.photoURL = photoURL;
+
+    if (Object.keys(authUpdates).length > 0) {
+      await admin.auth().updateUser(uid, authUpdates);
     }
 
     await docRef.update(updates);

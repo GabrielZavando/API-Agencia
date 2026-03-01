@@ -4,19 +4,24 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AuthenticatedRequest } from '../auth/firebase-auth.guard';
-import { vi } from 'vitest';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
-  let mockProjectsService: any;
+  let mockProjectsService: Record<
+    keyof Pick<
+      ProjectsService,
+      'create' | 'findAllByClient' | 'findOne' | 'update' | 'remove'
+    >,
+    jest.Mock
+  >;
 
   beforeEach(async () => {
     mockProjectsService = {
-      create: vi.fn(),
-      findAllByClient: vi.fn(),
-      findOne: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
+      create: jest.fn(),
+      findAllByClient: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,7 +39,11 @@ describe('ProjectsController', () => {
   describe('create', () => {
     it('should create a project', async () => {
       // Arrange
-      const dto: CreateProjectDto = { name: 'Test', clientId: 'client1' };
+      const dto: CreateProjectDto = {
+        name: 'Test',
+        clientId: 'client1',
+        monthlyTicketLimit: 10,
+      };
       const expectedResult = { id: '1', ...dto };
       mockProjectsService.create.mockResolvedValue(expectedResult);
 

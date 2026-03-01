@@ -23,7 +23,7 @@ export class ProjectsService {
   private db: admin.firestore.Firestore;
 
   constructor(private readonly _firebase: FirebaseService) {
-    this.db = admin.firestore();
+    this.db = this._firebase.getDb();
   }
 
   async create(createProjectDto: CreateProjectDto): Promise<ProjectRecord> {
@@ -59,14 +59,16 @@ export class ProjectsService {
 
     const projects = snapshot.docs.map((doc) => doc.data() as ProjectRecord);
     return projects.sort((a, b) => {
-      const timeA = (a.createdAt as unknown as admin.firestore.Timestamp).toMillis
+      const timeA = (a.createdAt as unknown as admin.firestore.Timestamp)
+        .toMillis
         ? (a.createdAt as unknown as admin.firestore.Timestamp).toMillis()
         : new Date(a.createdAt).getTime();
-        
-      const timeB = (b.createdAt as unknown as admin.firestore.Timestamp).toMillis
+
+      const timeB = (b.createdAt as unknown as admin.firestore.Timestamp)
+        .toMillis
         ? (b.createdAt as unknown as admin.firestore.Timestamp).toMillis()
         : new Date(b.createdAt).getTime();
-        
+
       return timeB - timeA;
     });
   }

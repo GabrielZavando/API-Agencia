@@ -13,6 +13,8 @@ import { ReportsModule } from './reports/reports.module';
 import { SupportModule } from './support/support.module';
 import { FilesModule } from './files/files.module';
 import { ProjectsModule } from './projects/projects.module';
+import { MailModule } from './mail/mail.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { ProjectsModule } from './projects/projects.module';
     SupportModule,
     FilesModule,
     ProjectsModule,
+    MailModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
