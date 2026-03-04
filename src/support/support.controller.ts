@@ -56,6 +56,13 @@ export class SupportController {
     return this.supportService.findByClient(req.user!.uid);
   }
 
+  /** Admin: obtener tickets de un cliente específico */
+  @Get('tickets/client/:clientId')
+  @Roles('admin')
+  getClientTickets(@Param('clientId') clientId: string) {
+    return this.supportService.findByClient(clientId);
+  }
+
   /** Obtener un ticket por ID (Cliente o Admin) */
   @Get('tickets/:id')
   getTicketById(@Param('id') id: string, @Req() req: AuthenticatedRequest) {

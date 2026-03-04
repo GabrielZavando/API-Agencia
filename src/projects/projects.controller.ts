@@ -29,6 +29,12 @@ export class ProjectsController {
     return this.projectsService.create(createProjectDto);
   }
 
+  @Get()
+  @Roles('admin')
+  findAll() {
+    return this.projectsService.findAll();
+  }
+
   @Get('my')
   @Roles('client')
   findMyProjects(@Req() req: AuthenticatedRequest) {

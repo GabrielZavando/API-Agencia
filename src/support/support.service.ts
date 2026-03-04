@@ -30,7 +30,7 @@ export interface TicketQuota {
   remaining: number;
 }
 
-const DEFAULT_MONTHLY_LIMIT = 2;
+const DEFAULT_MONTHLY_LIMIT = 3;
 
 @Injectable()
 export class SupportService {

@@ -42,13 +42,31 @@ export class ProjectsService {
       clientId: createProjectDto.clientId,
       name: createProjectDto.name,
       description: createProjectDto.description || '',
-      monthlyTicketLimit: createProjectDto.monthlyTicketLimit || 10,
+      monthlyTicketLimit: createProjectDto.monthlyTicketLimit || 3,
       createdAt: now,
       updatedAt: now,
     };
 
     await docRef.set(project);
     return project;
+  }
+
+  async findAll(): Promise<ProjectRecord[]> {
+    const snapshot = await this.db.collection('projects').get();
+    const projects = snapshot.docs.map((doc) => doc.data() as ProjectRecord);
+    return projects.sort((a, b) => {
+      const timeA = (a.createdAt as unknown as admin.firestore.Timestamp)
+        .toMillis
+        ? (a.createdAt as unknown as admin.firestore.Timestamp).toMillis()
+        : new Date(a.createdAt).getTime();
+
+      const timeB = (b.createdAt as unknown as admin.firestore.Timestamp)
+        .toMillis
+        ? (b.createdAt as unknown as admin.firestore.Timestamp).toMillis()
+        : new Date(b.createdAt).getTime();
+
+      return timeB - timeA;
+    });
   }
 
   async findAllByClient(clientId: string): Promise<ProjectRecord[]> {

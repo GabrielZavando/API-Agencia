@@ -59,6 +59,16 @@ export class FilesController {
     return await this.filesService.getStorageQuota(uid, role);
   }
 
+  /** Admin: obtener cuota de almacenamiento de un usuario específico */
+  @Get('storage/quota/:uid')
+  @Roles('admin')
+  async getUserQuota(@Param('uid') uid: string) {
+    // Al ser admin consultando a otro, asumimos que es un cliente para aplicar su límite
+    // O podríamos buscar su rol real en la DB. Por simplicidad, usamos 'client'
+    // ya que el admin suele tener cuota fija.
+    return await this.filesService.getStorageQuota(uid, 'client');
+  }
+
   /** URL de descarga */
   @Get(':id/download')
   @Roles('admin', 'client')
