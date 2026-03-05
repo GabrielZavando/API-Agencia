@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { FirebaseModule } from './firebase/firebase.module';
 import { FormsModule } from './forms/forms.module';
 import { TemplatesModule } from './templates/templates.module';
@@ -15,12 +17,16 @@ import { FilesModule } from './files/files.module';
 import { ProjectsModule } from './projects/projects.module';
 import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
+import { BlogCategoriesModule } from './blog-categories/blog-categories.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 60_000, limit: 10 }, // 10 req / min (general)
+    ]),
     FirebaseModule,
     FormsModule,
     TemplatesModule,
@@ -34,8 +40,15 @@ import { AuthModule } from './auth/auth.module';
     ProjectsModule,
     MailModule,
     AuthModule,
+    BlogCategoriesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

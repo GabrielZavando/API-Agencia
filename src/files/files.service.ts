@@ -16,6 +16,7 @@ export interface FileRecord {
   storagePath: string;
   mimeType: string;
   size: number;
+  isPublic: boolean;
   createdAt: Date;
 }
 
@@ -129,6 +130,7 @@ export class FilesService {
       storagePath,
       mimeType: file.mimetype,
       size: file.size,
+      isPublic: dto.isPublic === 'true',
       createdAt: now,
     };
 
@@ -170,16 +172,21 @@ export class FilesService {
 
     const record = doc.data() as FileRecord;
 
-    // Solo puede descargar sus archivos
-    if (record.ownerId !== uid) {
+    // Archivos privados solo pueden ser descargados por el dueño
+    if (!record.isPublic && record.ownerId !== uid) {
       throw new NotFoundException('Archivo no encontrado');
     }
 
     const bucket = this.storage.bucket();
     const fileRef = bucket.file(record.storagePath);
+    // Si es público, caduca en 2100. Si es privado, en 15 minutos.
+    const expires = record.isPublic
+      ? '01-01-2100'
+      : Date.now() + 15 * 60 * 1000;
+
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
-      expires: Date.now() + 15 * 60 * 1000,
+      expires: expires,
     });
 
     return { url, fileName: record.fileName };

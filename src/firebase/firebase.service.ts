@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import { ContactDto } from '../forms/dto/contact.dto';
 import { SubscribeDto } from '../forms/dto/subscribe.dto';
 
@@ -150,6 +151,35 @@ export class FirebaseService {
     }
   }
 
+  async getAllProspects(): Promise<ProspectRecord[]> {
+    try {
+      const snapshot = await this.db
+        .collection('prospects')
+        .orderBy('updatedAt', 'desc')
+        .get();
+
+      return snapshot.docs.map((doc) => ({
+        prospectId: doc.id,
+        ...doc.data(),
+      })) as ProspectRecord[];
+    } catch (error) {
+      console.error('Error obteniendo todos los prospectos:', error);
+      throw new Error('Error al obtener los prospectos de Firebase');
+    }
+  }
+
+  async getProspectById(prospectId: string): Promise<ProspectRecord | null> {
+    try {
+      const doc = await this.db.collection('prospects').doc(prospectId).get();
+
+      if (!doc.exists) return null;
+      return { prospectId: doc.id, ...doc.data() } as ProspectRecord;
+    } catch (error) {
+      console.error('Error obteniendo prospecto por ID:', error);
+      return null;
+    }
+  }
+
   async createProspectWithConversation(
     contactDto: ContactDto,
     responseContent: string,
@@ -242,6 +272,68 @@ export class FirebaseService {
     }
   }
 
+  async addAdminReplyToProspect(
+    prospectId: string,
+    replyContent: string,
+  ): Promise<string> {
+    try {
+      const prospectDoc = await this.db
+        .collection('prospects')
+        .doc(prospectId)
+        .get();
+
+      if (!prospectDoc.exists) {
+        throw new Error('Prospecto no encontrado');
+      }
+
+      const prospectData = prospectDoc.data() as ProspectRecord;
+
+      // Si el prospecto no tiene conversaciones previas, no podemos responder a nada
+      // Esto no debería ocurrir bajo flujo normal, pero validamos
+      if (
+        !prospectData.conversations ||
+        prospectData.conversations.length === 0
+      ) {
+        throw new Error('El prospecto no tiene conversaciones para responder');
+      }
+
+      const conversationId = this.db.collection('conversations').doc().id;
+      const responseId = this.db.collection('responses').doc().id;
+      const now = new Date();
+
+      // Creamos una nueva 'conversación' simulada que sólo tiene la respuesta saliente
+      // Usaremos el último mensaje entrante como referencia, pero sin crear un mensaje nuevo
+      const lastIncomingMessage =
+        prospectData.conversations[prospectData.conversations.length - 1]
+          .incomingMessage;
+
+      const newConversation: ConversationRecord = {
+        conversationId,
+        incomingMessage: lastIncomingMessage, // Referenciamos el mensaje original que estamos respondiendo (para no alterar la firma)
+        outgoingResponse: {
+          responseId,
+          content: replyContent,
+          sentAt: now,
+          emailSent: false, // Se actualizará al enviar
+        },
+        timestamp: now,
+      };
+
+      await this.db
+        .collection('prospects')
+        .doc(prospectId)
+        .update({
+          updatedAt: now,
+          conversations: admin.firestore.FieldValue.arrayUnion(newConversation),
+        });
+
+      return conversationId;
+    } catch (error) {
+      console.error('Error añadiendo respuesta administrativa:', error);
+      throw new Error('Error añadiendo respuesta en Firebase');
+    }
+  }
+
   async markEmailAsSent(
     prospectId: string,
     conversationId: string,
@@ -330,20 +422,25 @@ export class FirebaseService {
       // Comprobar si ya existe
       const existing = await this.findSubscriberByEmail(subscribeDto.email);
       if (existing) {
-        // Si existe, no crear nuevo documento; retornar el id existente
+        // Si existe (sea pending o confirmed), retornar el id existente
         return existing.subscriberId;
       }
 
       const now = new Date();
       const docRef = this.db.collection('subscribers').doc();
+      // Generar token único para Double Opt-In (64 chars hex)
+      const confirmationToken = crypto.randomBytes(32).toString('hex');
+
       const data = {
         subscriberId: docRef.id,
         email: subscribeDto.email,
         meta: subscribeDto.meta,
         createdAt: now,
         updatedAt: now,
-        status: 'active',
-      } as const;
+        status: 'pending', // Pendiente de confirmación via email
+        confirmationToken,
+        confirmedAt: null,
+      };
 
       await docRef.set(data);
       return docRef.id;
@@ -375,6 +472,23 @@ export class FirebaseService {
     }
   }
 
+  async getAllSubscribers(): Promise<any[]> {
+    try {
+      const snapshot = await this.db
+        .collection('subscribers')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      return snapshot.docs.map((doc) => ({
+        subscriberId: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error) {
+      console.error('Error obteniendo todos los suscriptores:', error);
+      throw new Error('Error al obtener los suscriptores de Firebase');
+    }
+  }
+
   // Eliminar suscriptor de la colección 'subscribers'
   async removeSubscriber(email: string): Promise<boolean> {
     try {
@@ -387,11 +501,96 @@ export class FirebaseService {
         .collection('subscribers')
         .doc(subscriber.subscriberId)
         .delete();
-      console.log(`🗑️ Suscriptor eliminado: ${email}`);
+      console.log(`\uD83D\uDDD1\uFE0F Suscriptor eliminado: ${email}`);
       return true;
     } catch (error) {
       console.error('Error eliminando suscriptor:', error);
       throw new Error('Error eliminando suscriptor de Firebase');
     }
+  }
+
+  // Double Opt-In: obtener token de confirmación por ID de suscriptor
+  async getSubscriberConfirmationToken(
+    subscriberId: string,
+  ): Promise<string | null> {
+    try {
+      const doc = await this.db
+        .collection('subscribers')
+        .doc(subscriberId)
+        .get();
+      if (!doc.exists) return null;
+      const data = doc.data() as Record<string, unknown>;
+      return (data.confirmationToken as string) ?? null;
+    } catch (error) {
+      console.error('Error obteniendo token de confirmación:', error);
+      return null;
+    }
+  }
+
+  // Double Opt-In: confirmar suscripción por token
+  async confirmSubscriber(
+    token: string,
+  ): Promise<{ success: boolean; email?: string }> {
+    try {
+      const snapshot = await this.db
+        .collection('subscribers')
+        .where('confirmationToken', '==', token)
+        .where('status', '==', 'pending')
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return { success: false };
+      }
+
+      const doc = snapshot.docs[0];
+      const data = doc.data() as Record<string, unknown>;
+      const now = new Date();
+
+      await doc.ref.update({
+        status: 'confirmed',
+        confirmedAt: now,
+        updatedAt: now,
+        confirmationToken: null, // Invalidar token ya usado
+      });
+
+      console.log(`\u2705 Suscriptor confirmado: ${data['email'] as string}`);
+      return { success: true, email: data['email'] as string };
+    } catch (error) {
+      console.error('Error confirmando suscriptor:', error);
+      return { success: false };
+    }
+  }
+
+  // Campaña: genera un nuevo token de re-confirmación y registra la fecha
+  async refreshReconfirmationToken(
+    subscriberId: string,
+  ): Promise<string | null> {
+    try {
+      const crypto = await import('crypto');
+      const newToken = crypto.randomBytes(32).toString('hex');
+      const now = new Date();
+
+      await this.db.collection('subscribers').doc(subscriberId).update({
+        confirmationToken: newToken,
+        status: 'pending',
+        reconfirmationSentAt: now,
+        updatedAt: now,
+      });
+
+      return newToken;
+    } catch (error) {
+      console.error('Error generando token de re-confirmación:', error);
+      return null;
+    }
+  }
+
+  // Campaña: marcar suscriptor como inactivo (no confirmó en el plazo)
+  async markSubscriberInactive(subscriberId: string): Promise<void> {
+    await this.db.collection('subscribers').doc(subscriberId).update({
+      status: 'inactive',
+      inactivatedAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 }

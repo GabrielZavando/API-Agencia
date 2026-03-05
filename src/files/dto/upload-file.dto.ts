@@ -7,4 +7,8 @@ export class UploadFileDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  isPublic?: string;
 }

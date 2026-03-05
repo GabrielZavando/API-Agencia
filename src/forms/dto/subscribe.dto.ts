@@ -29,4 +29,8 @@ export class SubscribeDto {
   @ValidateNested()
   @Type(() => SubscribeMetaDto)
   meta: SubscribeMetaDto;
+
+  @IsOptional()
+  @IsString()
+  turnstileToken?: string;
 }

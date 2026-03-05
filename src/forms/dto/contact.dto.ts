@@ -42,4 +42,8 @@ export class ContactDto {
   @ValidateNested()
   @Type(() => MetaDto)
   meta: MetaDto;
+
+  @IsOptional()
+  @IsString()
+  turnstileToken?: string;
 }
