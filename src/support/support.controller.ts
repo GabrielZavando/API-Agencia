@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Req,
+  Delete,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -103,5 +104,12 @@ export class SupportController {
   ) {
     const email = req.user!.email || 'desconocido';
     return this.supportService.addMessage(id, dto, email, file);
+  }
+
+  /** Admin: eliminar ticket */
+  @Delete('tickets/:id')
+  @Roles('admin')
+  deleteTicket(@Param('id') id: string) {
+    return this.supportService.deleteTicket(id);
   }
 }

@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TemplateService } from '../templates/template.service';
 import * as nodemailer from 'nodemailer';
-import * as path from 'path';
-import * as fs from 'fs';
+
+export type MailAccount = 'CONTACT' | 'SUPPORT';
 
 export interface MailOptions {
   to: string;
@@ -13,79 +13,75 @@ export interface MailOptions {
   html?: string;
   isNewProspect?: boolean;
   from?: string;
+  account?: MailAccount; // Nueva opción para elegir cuenta
   attachments?: any[];
 }
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
-  private fromAddress: string = '';
+  private transporters: Map<MailAccount, nodemailer.Transporter> = new Map();
+  private fromAddresses: Map<MailAccount, string> = new Map();
   private readonly logger = new Logger(MailService.name);
 
   constructor(
     private readonly configService: ConfigService,
     private readonly templateService: TemplateService,
   ) {
-    this.initializeSMTP();
+    this.initializeTransporters();
   }
 
-  private initializeSMTP() {
-    // Intentar cargar configuración SMTP desde archivo JSON primero
-    const smtpConfigPath = path.join(
-      process.cwd(),
-      'config',
-      'smtp-config.json',
+  private initializeTransporters() {
+    // 1. Inicializar cuenta de CONTACTO (Principal)
+    const contactUser = this.configService.get<string>('SMTP_USER') || '';
+    const contactPass = this.configService.get<string>('SMTP_PASS') || '';
+
+    this.transporters.set(
+      'CONTACT',
+      nodemailer.createTransport({
+        host:
+          this.configService.get<string>('SMTP_HOST') || 'smtp.hostinger.com',
+        port: parseInt(this.configService.get<string>('SMTP_PORT') || '465'),
+        secure: this.configService.get<string>('SMTP_SECURE') !== 'false',
+        auth: {
+          user: contactUser,
+          pass: contactPass,
+        },
+      }),
+    );
+    this.fromAddresses.set(
+      'CONTACT',
+      this.configService.get<string>('SMTP_FROM_EMAIL') || contactUser,
     );
 
-    if (fs.existsSync(smtpConfigPath)) {
-      try {
-        const fileContent = fs.readFileSync(smtpConfigPath, 'utf8');
-        const smtpConfig = JSON.parse(fileContent) as Record<
-          string,
-          string | number | boolean
-        >;
-        this.transporter = nodemailer.createTransport({
-          host: smtpConfig.host as string,
-          port: Number(smtpConfig.port),
-          secure: Boolean(smtpConfig.secure),
+    // 2. Inicializar cuenta de SOPORTE
+    const supportUser = this.configService.get<string>('SMTP_SUPPORT_USER');
+    const supportPass = this.configService.get<string>('SMTP_SUPPORT_PASS');
+
+    if (supportUser && supportPass) {
+      this.transporters.set(
+        'SUPPORT',
+        nodemailer.createTransport({
+          host:
+            this.configService.get<string>('SMTP_HOST') || 'smtp.hostinger.com',
+          port: parseInt(this.configService.get<string>('SMTP_PORT') || '465'),
+          secure: this.configService.get<string>('SMTP_SECURE') !== 'false',
           auth: {
-            user: smtpConfig.user as string,
-            pass: smtpConfig.pass as string,
+            user: supportUser,
+            pass: supportPass,
           },
-        });
-        // Guardar el from del JSON para usarlo como remitente por defecto
-        this.fromAddress = smtpConfig.from
-          ? (smtpConfig.from as string)
-          : (smtpConfig.user as string);
-        this.logger.log(
-          `SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`,
-        );
-      } catch (error) {
-        this.logger.error(
-          'Error cargando configuración SMTP desde JSON:',
-          error,
-        );
-        this.initializeSMTPFromEnv();
-      }
+        }),
+      );
+      this.fromAddresses.set(
+        'SUPPORT',
+        this.configService.get<string>('SMTP_SUPPORT_FROM_EMAIL') ||
+          supportUser,
+      );
+      this.logger.log('Transporter de SOPORTE configurado correctamente.');
     } else {
-      this.initializeSMTPFromEnv();
+      this.logger.warn(
+        'Configuración de SOPORTE incompleta. Se usará CONTACTO como fallback.',
+      );
     }
-  }
-
-  private initializeSMTPFromEnv() {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
-      secure: this.configService.get<string>('SMTP_SECURE') === 'true',
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
-    });
-
-    this.logger.log(
-      `SMTP configurado desde variables de entorno: ${this.configService.get<string>('SMTP_HOST')}:${this.configService.get<string>('SMTP_PORT')} (secure: ${this.configService.get<string>('SMTP_SECURE')})`,
-    );
   }
 
   // Helper para variables compartidas en todas las plantillas
@@ -144,6 +140,16 @@ export class MailService {
 
   async sendMail(options: MailOptions): Promise<boolean> {
     try {
+      const account = options.account || 'CONTACT';
+      const transporter =
+        this.transporters.get(account) || this.transporters.get('CONTACT');
+      const fromAddress =
+        this.fromAddresses.get(account) || this.fromAddresses.get('CONTACT');
+
+      if (!transporter) {
+        throw new Error(`Transporter no disponible para la cuenta: ${account}`);
+      }
+
       let finalHtml = options.html || '';
 
       if (options.templateName) {
@@ -157,21 +163,22 @@ export class MailService {
         );
       }
 
+      const companyName =
+        this.configService.get<string>('COMPANY_NAME') || 'WebAstro';
+      const displayName =
+        account === 'SUPPORT' ? `Soporte ${companyName}` : companyName;
+
       const mailOptions = {
-        from:
-          options.from ||
-          (this.fromAddress
-            ? `"${this.configService.get<string>('COMPANY_NAME') || 'Soporte WebAstro'}" <${this.fromAddress}>`
-            : `"${this.configService.get<string>('COMPANY_NAME') || 'Soporte WebAstro'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`),
+        from: options.from || `"${displayName}" <${fromAddress}>`,
         to: options.to,
         subject: options.subject,
         html: finalHtml,
         attachments: options.attachments,
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await transporter.sendMail(mailOptions);
       this.logger.log(
-        `Email enviado con éxito a: ${options.to} con asunto: ${options.subject}`,
+        `Email [${account}] enviado con éxito a: ${options.to} con asunto: ${options.subject}`,
       );
       return true;
     } catch (error) {
@@ -182,36 +189,15 @@ export class MailService {
 
   async testConnection() {
     try {
-      this.logger.log('Probando conexión SMTP...');
-      await this.transporter.verify();
-      this.logger.log('Conexión SMTP verificada correctamente');
-
-      const adminEmail =
-        this.configService.get<string>('SMTP_USER') ||
-        'contacto@gabrielzavando.cl';
-      const result = await this.sendMail({
-        to: adminEmail,
-        subject: 'Prueba de configuración SMTP - API',
-        html: `
-          <h2>🎉 ¡Configuración SMTP exitosa!</h2>
-           <p>Este es un email de prueba para verificar que la configuración SMTP está funcionando correctamente.</p>
-           <hr>
-           <p><strong>Configuración:</strong></p>
-           <ul>
-             <li><strong>Servidor:</strong> ${this.configService.get<string>('SMTP_HOST')}</li>
-             <li><strong>Puerto:</strong> ${this.configService.get<string>('SMTP_PORT')}</li>
-             <li><strong>Seguro:</strong> ${this.configService.get<string>('SMTP_SECURE')}</li>
-             <li><strong>Usuario:</strong> ${this.configService.get<string>('SMTP_USER')}</li>
-           </ul>
-           <p><em>Enviado desde: ${this.configService.get<string>('COMPANY_NAME')}</em></p>
-          `,
-      });
+      this.logger.log('Probando conexiones SMTP...');
+      for (const [name, transporter] of this.transporters.entries()) {
+        await transporter.verify();
+        this.logger.log(`Conexión SMTP [${name}] verificada correctamente`);
+      }
 
       return {
-        success: result,
-        message: result
-          ? 'Configuración SMTP exitosa'
-          : 'Error enviando email de prueba',
+        success: true,
+        message: 'Todas las conexiones SMTP verificadas',
       };
     } catch (error) {
       this.logger.error('Error en configuración SMTP:', error);

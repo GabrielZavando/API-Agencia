@@ -58,8 +58,10 @@ export class ReportsController {
   async getDownloadUrl(
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
+    @Query('download') download?: string,
   ) {
-    return this.reportsService.getDownloadUrl(id, req.user!);
+    const isDownload = download === 'true';
+    return this.reportsService.getDownloadUrl(id, req.user!, isDownload);
   }
 
   /** Solo Admin: eliminar informe */

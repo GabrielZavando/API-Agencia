@@ -3,56 +3,51 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotificationsService } from './notifications.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { NotFoundException } from '@nestjs/common';
-import * as admin from 'firebase-admin';
 
 // Mock Firebase service
 const mockFirebaseService = {};
 
 // Mocks para la db de Firestore
-const { mockDocRef, mockCollectionRef } = vi.hoisted(() => {
-  const mockDocRef = {
-    id: 'test-notification-id',
-    set: vi.fn(),
-    update: vi.fn(),
-    get: vi.fn(),
-  };
+const { mockDocRef, mockCollectionRef, firestoreMock, mockCollection } =
+  vi.hoisted(() => {
+    const mockDocRef = {
+      id: 'test-notification-id',
+      set: vi.fn(),
+      update: vi.fn(),
+      get: vi.fn(),
+    };
 
-  const mockCollectionRef = {
-    doc: vi.fn().mockReturnValue(mockDocRef),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    get: vi.fn(),
-  };
+    const mockCollectionRef = {
+      doc: vi.fn().mockReturnValue(mockDocRef),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      get: vi.fn(),
+    };
 
-  return { mockDocRef, mockCollectionRef };
-});
+    const mockCollection = vi.fn().mockReturnValue(mockCollectionRef);
 
-// Mock admin
-vi.mock('firebase-admin', () => {
-  return {
-    default: {
-      firestore: Object.assign(
-        vi.fn().mockReturnValue({
-          collection: vi.fn().mockReturnValue(mockCollectionRef),
-        }),
-        {
-          FieldValue: {
-            serverTimestamp: vi.fn(),
-          },
-        },
-      ),
-    },
-    firestore: Object.assign(
+    const firestoreMock = Object.assign(
       vi.fn().mockReturnValue({
-        collection: vi.fn().mockReturnValue(mockCollectionRef),
+        collection: mockCollection,
       }),
       {
         FieldValue: {
           serverTimestamp: vi.fn(),
         },
       },
-    ),
+    );
+
+    return { mockDocRef, mockCollectionRef, firestoreMock, mockCollection };
+  });
+
+// Mock firebase-admin
+vi.mock('firebase-admin', () => {
+  return {
+    default: {
+      firestore: firestoreMock,
+    },
+    firestore: firestoreMock,
   };
 });
 
@@ -89,15 +84,11 @@ describe('NotificationsService', () => {
         link: '/support/123',
       };
 
-      const firestoreInstance = admin.firestore();
-
       // Act
       const result = await service.createNotification(dto);
 
       // Assert
-      expect(firestoreInstance.collection).toHaveBeenCalledWith(
-        'notifications',
-      );
+      expect(mockCollection).toHaveBeenCalledWith('notifications');
       expect(mockCollectionRef.doc).toHaveBeenCalled();
       expect(mockDocRef.set).toHaveBeenCalledTimes(1);
 

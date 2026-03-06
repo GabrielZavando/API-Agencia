@@ -297,6 +297,7 @@ export class SupportService {
       this.mailService
         .sendMail({
           to: ticketRecord.clientEmail,
+          account: 'SUPPORT',
           subject: `Actualización de tu ticket: ${ticketRecord.subject}`,
           templateName: 'ticket-response',
           templateVariables: {
@@ -453,5 +454,45 @@ export class SupportService {
     );
 
     return processedMessages;
+  }
+
+  async deleteTicket(id: string): Promise<void> {
+    const docRef = this.db.collection('support_tickets').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    const data = doc.data() as TicketRecord & { attachmentPath?: string };
+    const bucket = admin.storage().bucket();
+
+    // 1. Eliminar adjunto del ticket si existe
+    if (data.attachmentPath) {
+      try {
+        await bucket.file(data.attachmentPath).delete();
+      } catch (e) {
+        console.error('Error deleting ticket attachment:', e);
+      }
+    }
+
+    // 2. Eliminar mensajes y sus adjuntos
+    const messagesSnapshot = await docRef.collection('messages').get();
+    const deletePromises = messagesSnapshot.docs.map(async (msgDoc) => {
+      const msgData = msgDoc.data();
+      if (msgData.attachmentPath) {
+        try {
+          await bucket.file(msgData.attachmentPath as string).delete();
+        } catch (e) {
+          console.error('Error deleting message attachment:', e);
+        }
+      }
+      return msgDoc.ref.delete();
+    });
+
+    await Promise.all(deletePromises);
+
+    // 3. Eliminar el ticket
+    await docRef.delete();
   }
 }

@@ -4,6 +4,7 @@ import {
   Body,
   Get,
   Patch,
+  Delete,
   UseGuards,
   Request,
   Param,
@@ -81,5 +82,11 @@ export class UsersController {
       id,
       updateUserDto as Record<string, unknown>,
     );
+  }
+  @Delete(':id')
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
+  async remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
   }
 }

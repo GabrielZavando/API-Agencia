@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   Req,
   UseGuards,
   UseInterceptors,
@@ -72,11 +73,16 @@ export class FilesController {
   /** URL de descarga */
   @Get(':id/download')
   @Roles('admin', 'client')
-  async download(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  async download(
+    @Param('id') id: string, 
+    @Req() req: AuthenticatedRequest,
+    @Query('download') download?: string,
+  ) {
     if (!req.user) throw new Error('User not authenticated');
     const uid = req.user.uid;
+    const isDownload = download === 'true';
     // Download solo permite archivos propios
-    return await this.filesService.getDownloadUrl(id, uid);
+    return await this.filesService.getDownloadUrl(id, uid, isDownload);
   }
 
   /** Eliminar archivo */

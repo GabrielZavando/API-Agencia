@@ -163,6 +163,7 @@ export class FilesService {
   async getDownloadUrl(
     fileId: string,
     uid: string,
+    isDownload: boolean = false,
   ): Promise<{ url: string; fileName: string }> {
     const doc = await this.db.collection('files').doc(fileId).get();
 
@@ -187,6 +188,9 @@ export class FilesService {
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
       expires: expires,
+      responseDisposition: isDownload
+        ? `attachment; filename="${record.fileName}"`
+        : 'inline',
     });
 
     return { url, fileName: record.fileName };

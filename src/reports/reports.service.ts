@@ -97,7 +97,7 @@ export class ReportsService {
       if (user && user.email) {
         await this.mailService.sendMail({
           to: user.email,
-          from: 'soporte@gabrielzavando.cl',
+          account: 'SUPPORT',
           subject: `Nuevo Informe: ${dto.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -153,6 +153,7 @@ export class ReportsService {
   async getDownloadUrl(
     reportId: string,
     user: { uid: string; role?: string },
+    isDownload: boolean = false,
   ): Promise<{ url: string; fileName: string }> {
     const doc = await this.db.collection('reports').doc(reportId).get();
 
@@ -175,6 +176,9 @@ export class ReportsService {
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
       expires: Date.now() + 15 * 60 * 1000,
+      responseDisposition: isDownload
+        ? `attachment; filename="${report.fileName}"`
+        : 'inline',
     });
 
     return { url, fileName: report.fileName };

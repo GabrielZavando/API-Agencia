@@ -28,6 +28,34 @@ export class UsersService {
       .replace(/^['"]|['"]$/g, '');
   }
 
+  private validatePassword(password: string) {
+    if (password.length < 8) {
+      throw new BadRequestException(
+        'La contraseña debe tener al menos 8 caracteres.',
+      );
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new BadRequestException(
+        'La contraseña debe tener al menos una letra mayúscula.',
+      );
+    }
+    if (!/[a-z]/.test(password)) {
+      throw new BadRequestException(
+        'La contraseña debe tener al menos una letra minúscula.',
+      );
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new BadRequestException(
+        'La contraseña debe tener al menos un número.',
+      );
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      throw new BadRequestException(
+        'La contraseña debe tener al menos un carácter especial.',
+      );
+    }
+  }
+
   async create(createUserDto: CreateUserDto) {
     const data = createUserDto as unknown as Record<string, unknown>;
     const email = data.email as string;
@@ -36,6 +64,12 @@ export class UsersService {
     const role = data.role as string | undefined;
 
     const assignedRole = role || 'client';
+
+    // Si el usuario proporciona una contraseña, validarla
+    if (password) {
+      this.validatePassword(password);
+    }
+
     const generatedPassword =
       password || Math.random().toString(36).slice(-8) + 'A1!';
     const photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`;
@@ -268,6 +302,7 @@ export class UsersService {
       updates.email = updateData.email;
     }
     if (updateData.password) {
+      this.validatePassword(updateData.password as string);
       authUpdates.password = updateData.password;
     }
 
@@ -309,5 +344,20 @@ export class UsersService {
     await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
     await this.collection.doc(uid).update({ role: 'admin' });
     return { message: `User ${uid} is now admin` };
+  }
+
+  async remove(uid: string) {
+    // Eliminar de Firebase Auth
+    try {
+      await admin.auth().deleteUser(uid);
+    } catch (error) {
+      console.error(`Error deleting user from Auth: ${uid}`, error);
+      // No lanzamos error si no existe en Auth pero sí en Firestore
+    }
+
+    // Eliminar de Firestore
+    await this.collection.doc(uid).delete();
+
+    return { message: `Usuario ${uid} eliminado correctamente` };
   }
 }
