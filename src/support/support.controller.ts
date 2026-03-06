@@ -14,6 +14,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SupportService } from './support.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { AddMessageDto } from './dto/add-message.dto';
 import {
   FirebaseAuthGuard,
   AuthenticatedRequest,
@@ -66,7 +67,6 @@ export class SupportController {
   /** Obtener un ticket por ID (Cliente o Admin) */
   @Get('tickets/:id')
   getTicketById(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    // Firebase auth claims define the role.
     const user = req.user as { uid: string; role?: string };
     const role = user.role || 'client';
     return this.supportService.findById(id, user.uid, role);
@@ -79,10 +79,29 @@ export class SupportController {
     return this.supportService.findAll();
   }
 
-  /** Admin: actualizar ticket */
+  /** Admin: actualizar ticket (estado, adminResponse) */
   @Patch('tickets/:id')
   @Roles('admin')
   updateTicket(@Param('id') id: string, @Body() dto: UpdateTicketDto) {
     return this.supportService.updateTicket(id, dto);
+  }
+
+  /** Admin y Cliente: obtener mensajes de un ticket */
+  @Get('tickets/:id/messages')
+  getMessages(@Param('id') id: string) {
+    return this.supportService.getMessages(id);
+  }
+
+  /** Admin y Cliente: enviar un mensaje en un ticket */
+  @Post('tickets/:id/messages')
+  @UseInterceptors(FileInterceptor('attachment'))
+  addMessage(
+    @Param('id') id: string,
+    @Body() dto: AddMessageDto,
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const email = req.user!.email || 'desconocido';
+    return this.supportService.addMessage(id, dto, email, file);
   }
 }

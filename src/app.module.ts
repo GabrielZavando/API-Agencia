@@ -18,6 +18,8 @@ import { ProjectsModule } from './projects/projects.module';
 import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { BlogCategoriesModule } from './blog-categories/blog-categories.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { IdeasModule } from './ideas/ideas.module';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { BlogCategoriesModule } from './blog-categories/blog-categories.module';
       isGlobal: true,
     }),
     ThrottlerModule.forRoot([
-      { name: 'short', ttl: 60_000, limit: 10 }, // 10 req / min (general)
+      { name: 'short', ttl: 60_000, limit: 100 }, // 100 req / min (general)
     ]),
     FirebaseModule,
     FormsModule,
@@ -41,6 +43,8 @@ import { BlogCategoriesModule } from './blog-categories/blog-categories.module';
     MailModule,
     AuthModule,
     BlogCategoriesModule,
+    NotificationsModule,
+    IdeasModule,
   ],
   controllers: [AppController],
   providers: [

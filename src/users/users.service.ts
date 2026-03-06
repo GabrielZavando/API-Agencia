@@ -134,10 +134,27 @@ export class UsersService {
     return snapshot.docs.map((doc) => doc.data());
   }
 
+  async findAdmins() {
+    const snapshot = await this.collection.where('role', '==', 'admin').get();
+    return snapshot.docs.map((doc) => doc.data());
+  }
+
   async findOne(uid: string) {
     const doc = await this.collection.doc(uid).get();
     if (!doc.exists) {
-      throw new NotFoundException(`Usuario no encontrado.`);
+      // Fallback: Intentar obtener datos básicos de Firebase Auth
+      try {
+        const userRecord = await admin.auth().getUser(uid);
+        return {
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          photoURL: userRecord.photoURL,
+          role: (userRecord.customClaims?.role as string) || 'client',
+        };
+      } catch {
+        throw new NotFoundException(`Usuario no encontrado.`);
+      }
     }
     return doc.data();
   }
@@ -149,8 +166,22 @@ export class UsersService {
   ) {
     const docRef = this.collection.doc(uid);
     const doc = await docRef.get();
-    if (!doc.exists) {
-      throw new NotFoundException(`Usuario no encontrado.`);
+    let existingData = doc.exists ? doc.data() : null;
+
+    if (!existingData) {
+      // Si no existe el documento, intentamos obtener info de Auth para crearlo
+      try {
+        const userRecord = await admin.auth().getUser(uid);
+        existingData = {
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          photoURL: userRecord.photoURL,
+          role: (userRecord.customClaims?.role as string) || 'client',
+        };
+      } catch {
+        throw new NotFoundException(`Usuario no encontrado.`);
+      }
     }
 
     let photoURL: string | undefined = undefined;
@@ -204,9 +235,16 @@ export class UsersService {
       await admin.auth().updateUser(uid, authUpdates);
     }
 
-    await docRef.update(updates);
-    const updatedDoc = await docRef.get();
-    return updatedDoc.data();
+    // Actualizar o crear en Firestore
+    await docRef.set(
+      {
+        ...existingData,
+        ...updates,
+      },
+      { merge: true },
+    );
+
+    return { ...existingData, ...updates };
   }
 
   async updateUser(uid: string, updateData: Record<string, unknown>) {

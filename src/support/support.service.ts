@@ -6,8 +6,10 @@ import {
 import * as admin from 'firebase-admin';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { AddMessageDto } from './dto/add-message.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface TicketRecord {
   id: string;
@@ -41,6 +43,7 @@ export class SupportService {
   constructor(
     private readonly _firebase: FirebaseService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.db = admin.firestore();
   }
@@ -143,6 +146,16 @@ export class SupportService {
       };
 
       await docRef.set(ticket);
+
+      // Notificar a todos los administradores (sin await para no bloquear la iteración principal)
+      this.notifyAdmins(
+        'Nuevo Ticket Creado',
+        `El cliente ${email} ha abierto el ticket: ${dto.subject}`,
+        `/admin/tickets/${ticket.id}`,
+      ).catch((e) =>
+        console.error('Error notificando admins sobre nuevo ticket', e),
+      );
+
       return ticket;
     }
 
@@ -191,7 +204,9 @@ export class SupportService {
     ticketId: string,
     uid: string,
     role: string,
-  ): Promise<TicketRecord & { attachmentUrl?: string }> {
+  ): Promise<
+    TicketRecord & { attachmentUrl?: string; clientPhotoUrl?: string }
+  > {
     const doc = await this.db.collection('support_tickets').doc(ticketId).get();
 
     if (!doc.exists) {
@@ -215,17 +230,34 @@ export class SupportService {
           expires: Date.now() + 60 * 60 * 1000, // 1 hour
         });
         attachmentUrl = url;
-      } catch (error) {
-        console.error(
-          'Error generating signed URL for ticket attachment:',
-          error,
-        );
+      } catch {
+        console.error('Error generating signed URL for ticket attachment:');
       }
+    }
+
+    let clientPhotoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.clientEmail || 'User')}&background=random&rounded=false`;
+    try {
+      const userDoc = await this.db
+        .collection('users')
+        .doc(data.clientId)
+        .get();
+      if (userDoc.exists) {
+        const userData = userDoc.data() as { photoURL?: string } | undefined;
+        if (userData && userData.photoURL) {
+          const photoUrlUnrounded = userData.photoURL
+            .replace('&rounded=true', '&rounded=false')
+            .replace('rounded=true&', '');
+          clientPhotoUrl = photoUrlUnrounded;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching user photo for ticket:', err);
     }
 
     return {
       ...data,
       attachmentUrl,
+      clientPhotoUrl,
     };
   }
 
@@ -262,20 +294,164 @@ export class SupportService {
       dto.adminResponse.trim().length > 0 &&
       ticketRecord.clientEmail
     ) {
-      void this.mailService.sendMail({
-        from: '"Soporte WebAstro" <soporte@gabrielzavando.cl>',
-        to: ticketRecord.clientEmail,
-        subject: `Actualización de tu ticket: ${ticketRecord.subject}`,
-        templateName: 'ticket-response',
-        templateVariables: {
-          subject: ticketRecord.subject,
-          status: ticketRecord.status,
-          message: ticketRecord.message,
-          adminResponse: ticketRecord.adminResponse,
-        },
-      });
+      this.mailService
+        .sendMail({
+          to: ticketRecord.clientEmail,
+          subject: `Actualización de tu ticket: ${ticketRecord.subject}`,
+          templateName: 'ticket-response',
+          templateVariables: {
+            subject: ticketRecord.subject,
+            status: ticketRecord.status,
+            message: ticketRecord.message,
+            adminResponse: ticketRecord.adminResponse,
+          },
+        })
+        .catch((err) => console.error('Error enviando email soporte', err));
+
+      this.notificationsService
+        .createNotification({
+          title: 'Respuesta en Ticket',
+          message: `El equipo de soporte ha respondido a tu ticket: ${ticketRecord.subject}`,
+          userId: ticketRecord.clientId,
+          link: `/dashboard/soporte/${ticketRecord.id}`,
+        })
+        .catch((err) => console.error('Error creando notificación', err));
     }
 
     return ticketRecord;
+  }
+
+  // ── Helpers ──
+  private async notifyAdmins(title: string, message: string, link: string) {
+    try {
+      const adminsSnapshot = await this.db
+        .collection('users')
+        .where('role', '==', 'admin')
+        .get();
+
+      if (adminsSnapshot.empty) return;
+
+      const promises = adminsSnapshot.docs.map((doc) =>
+        this.notificationsService.createNotification({
+          title,
+          message,
+          userId: doc.id,
+          link,
+        }),
+      );
+
+      await Promise.all(promises);
+    } catch (e) {
+      console.error('Error en notifyAdmins:', e);
+    }
+  }
+
+  // ────────────── Conversation Messages ──────────────
+
+  async addMessage(
+    ticketId: string,
+    dto: AddMessageDto,
+    senderEmail: string,
+    file?: Express.Multer.File,
+  ): Promise<Record<string, unknown>> {
+    const docRef = this.db.collection('support_tickets').doc(ticketId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    const ticket = doc.data() as TicketRecord;
+
+    if (ticket.status === 'resolved') {
+      throw new BadRequestException(
+        'No se pueden enviar mensajes a un ticket resuelto',
+      );
+    }
+
+    const msgRef = docRef.collection('messages').doc();
+    const now = new Date();
+    const message = {
+      id: msgRef.id,
+      body: dto.body,
+      senderRole: dto.senderRole,
+      senderEmail,
+      createdAt: now,
+      attachmentPath: undefined as string | undefined,
+      senderPhotoUrl: dto.senderPhotoUrl,
+    };
+
+    if (file) {
+      const bucket = admin.storage().bucket();
+      const ext = file.originalname.split('.').pop() || 'jpg';
+      const path = `support_attachments/msg_${msgRef.id}_${Date.now()}.${ext}`;
+      const fileInBucket = bucket.file(path);
+
+      await fileInBucket.save(file.buffer, {
+        metadata: { contentType: file.mimetype },
+      });
+      message.attachmentPath = path;
+    }
+
+    await msgRef.set(message);
+
+    // Si el admin envía un mensaje, notificar al cliente
+    if (dto.senderRole === 'admin') {
+      this.notificationsService
+        .createNotification({
+          title: 'Nuevo mensaje en tu ticket',
+          message: `El equipo de soporte te ha respondido en el ticket: ${ticket.subject}`,
+          userId: ticket.clientId,
+          link: `/dashboard/soporte/${ticketId}`,
+        })
+        .catch((e) => console.error('Error notifying client:', e));
+    } else {
+      // Si el cliente responde, notificar a los administradores
+      this.notifyAdmins(
+        'Nuevo mensaje de cliente',
+        `El cliente ha respondido en el ticket: ${ticket.subject}`,
+        `/admin/tickets/${ticketId}`,
+      ).catch((e) =>
+        console.error('Error notificando admins sobre nuevo mensaje', e),
+      );
+    }
+
+    return message;
+  }
+
+  async getMessages(ticketId: string): Promise<Record<string, unknown>[]> {
+    const snapshot = await this.db
+      .collection('support_tickets')
+      .doc(ticketId)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .get();
+
+    const messages = snapshot.docs.map((d) => d.data());
+
+    // Generar URLs firmadas para los adjuntos
+    const bucket = admin.storage().bucket();
+    const processedMessages = await Promise.all(
+      messages.map(async (m) => {
+        if (m.attachmentPath) {
+          try {
+            const fileRef = bucket.file(m.attachmentPath as string);
+            const [url] = await fileRef.getSignedUrl({
+              action: 'read',
+              expires: Date.now() + 60 * 60 * 1000,
+            });
+            return { ...m, attachmentUrl: url };
+          } catch (e) {
+            console.error(
+              'Error generating signed URL for message attachment:',
+              e,
+            );
+          }
+        }
+        return m;
+      }),
+    );
+
+    return processedMessages;
   }
 }

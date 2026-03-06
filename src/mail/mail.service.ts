@@ -13,11 +13,13 @@ export interface MailOptions {
   html?: string;
   isNewProspect?: boolean;
   from?: string;
+  attachments?: any[];
 }
 
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter;
+  private fromAddress: string = '';
   private readonly logger = new Logger(MailService.name);
 
   constructor(
@@ -51,6 +53,10 @@ export class MailService {
             pass: smtpConfig.pass as string,
           },
         });
+        // Guardar el from del JSON para usarlo como remitente por defecto
+        this.fromAddress = smtpConfig.from
+          ? (smtpConfig.from as string)
+          : (smtpConfig.user as string);
         this.logger.log(
           `SMTP configurado desde archivo JSON: ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`,
         );
@@ -154,10 +160,13 @@ export class MailService {
       const mailOptions = {
         from:
           options.from ||
-          `"${this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando Full Stack Developer'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`,
+          (this.fromAddress
+            ? `"${this.configService.get<string>('COMPANY_NAME') || 'Soporte WebAstro'}" <${this.fromAddress}>`
+            : `"${this.configService.get<string>('COMPANY_NAME') || 'Soporte WebAstro'}" <${this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER')}>`),
         to: options.to,
         subject: options.subject,
         html: finalHtml,
+        attachments: options.attachments,
       };
 
       await this.transporter.sendMail(mailOptions);

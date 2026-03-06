@@ -83,9 +83,7 @@ export class FormsController {
 
   @SkipThrottle()
   @Post('admin/subscribers/cleanup-inactive')
-  cleanupInactiveSubscribers(
-    @Body('daysThreshold') daysThreshold: number,
-  ) {
+  cleanupInactiveSubscribers(@Body('daysThreshold') daysThreshold: number) {
     return this.formsService.cleanupInactiveSubscribers(daysThreshold ?? 7);
   }
 

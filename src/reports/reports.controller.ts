@@ -52,11 +52,14 @@ export class ReportsController {
     return this.reportsService.findAll();
   }
 
-  /** Admin/Client: obtener URL de descarga */
+  /** Admin/Client: obtener URL de descarga con verificación de propiedad */
   @Get(':id/download')
   @Roles('admin', 'client')
-  getDownloadUrl(@Param('id') id: string) {
-    return this.reportsService.getDownloadUrl(id);
+  async getDownloadUrl(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reportsService.getDownloadUrl(id, req.user!);
   }
 
   /** Solo Admin: eliminar informe */
