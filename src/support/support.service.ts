@@ -372,14 +372,13 @@ export class SupportService {
 
     const msgRef = docRef.collection('messages').doc();
     const now = new Date();
-    const message = {
+    const message: Record<string, any> = {
       id: msgRef.id,
       body: dto.body,
       senderRole: dto.senderRole,
       senderEmail,
       createdAt: now,
-      attachmentPath: undefined as string | undefined,
-      senderPhotoUrl: dto.senderPhotoUrl,
+      senderPhotoUrl: dto.senderPhotoUrl || null,
     };
 
     if (file) {
