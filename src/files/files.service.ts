@@ -2,36 +2,36 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-} from '@nestjs/common';
-import * as admin from 'firebase-admin';
-import { UploadFileDto } from './dto/upload-file.dto';
-import { FirebaseService } from '../firebase/firebase.service';
+} from '@nestjs/common'
+import * as admin from 'firebase-admin'
+import { UploadFileDto } from './dto/upload-file.dto'
+import { FirebaseService } from '../firebase/firebase.service'
 
 export interface FileRecord {
-  id: string;
-  ownerId: string;
-  title: string;
-  description: string;
-  fileName: string;
-  storagePath: string;
-  mimeType: string;
-  size: number;
-  isPublic: boolean;
-  createdAt: Date;
+  id: string
+  ownerId: string
+  title: string
+  description: string
+  fileName: string
+  storagePath: string
+  mimeType: string
+  size: number
+  isPublic: boolean
+  createdAt: Date
 }
 
 export interface StorageQuota {
-  usedBytes: number;
-  limitBytes: number;
-  remainingBytes: number;
-  usedFormatted: string;
-  limitFormatted: string;
+  usedBytes: number
+  limitBytes: number
+  remainingBytes: number
+  usedFormatted: string
+  limitFormatted: string
 }
 
 /** 5 GB default para clientes */
-const DEFAULT_STORAGE_LIMIT = 5 * 1024 * 1024 * 1024;
+const DEFAULT_STORAGE_LIMIT = 5 * 1024 * 1024 * 1024
 /** 30 GB para admin */
-const ADMIN_STORAGE_LIMIT = 30 * 1024 * 1024 * 1024;
+const ADMIN_STORAGE_LIMIT = 30 * 1024 * 1024 * 1024
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -44,16 +44,16 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain',
   'text/csv',
-];
+]
 
 @Injectable()
 export class FilesService {
-  private db: admin.firestore.Firestore;
-  private storage: ReturnType<typeof admin.storage>;
+  private db: admin.firestore.Firestore
+  private storage: ReturnType<typeof admin.storage>
 
   constructor(private readonly _firebase: FirebaseService) {
-    this.db = admin.firestore();
-    this.storage = admin.storage();
+    this.db = admin.firestore()
+    this.storage = admin.storage()
   }
 
   /** Cuota de almacenamiento por usuario */
@@ -64,18 +64,18 @@ export class FilesService {
     const snapshot = await this.db
       .collection('files')
       .where('ownerId', '==', uid)
-      .get();
+      .get()
 
     const usedBytes = snapshot.docs.reduce((acc, doc) => {
-      const d = doc.data() as FileRecord;
-      return acc + (d.size || 0);
-    }, 0);
+      const d = doc.data() as FileRecord
+      return acc + (d.size || 0)
+    }, 0)
 
-    let limitBytes = ADMIN_STORAGE_LIMIT;
+    let limitBytes = ADMIN_STORAGE_LIMIT
     if (role === 'client') {
-      const userDoc = await this.db.collection('users').doc(uid).get();
-      const data = userDoc.data() as Record<string, unknown> | undefined;
-      limitBytes = (data?.storageLimitBytes as number) ?? DEFAULT_STORAGE_LIMIT;
+      const userDoc = await this.db.collection('users').doc(uid).get()
+      const data = userDoc.data() as Record<string, unknown> | undefined
+      limitBytes = (data?.storageLimitBytes as number) ?? DEFAULT_STORAGE_LIMIT
     }
 
     return {
@@ -84,7 +84,7 @@ export class FilesService {
       remainingBytes: Math.max(0, limitBytes - usedBytes),
       usedFormatted: this.formatBytes(usedBytes),
       limitFormatted: this.formatBytes(limitBytes),
-    };
+    }
   }
 
   /** Subir archivo */
@@ -95,32 +95,32 @@ export class FilesService {
     role: 'admin' | 'client',
   ): Promise<FileRecord> {
     if (!file) {
-      throw new BadRequestException('No se recibió ningún archivo');
+      throw new BadRequestException('No se recibió ningún archivo')
     }
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException('Tipo de archivo no permitido');
+      throw new BadRequestException('Tipo de archivo no permitido')
     }
 
     // Verificar cuota
-    const quota = await this.getStorageQuota(uid, role);
+    const quota = await this.getStorageQuota(uid, role)
     if (file.size > quota.remainingBytes) {
       throw new BadRequestException(
         `Espacio insuficiente. Disponible: ` +
           `${quota.remainingBytes > 0 ? this.formatBytes(quota.remainingBytes) : '0 B'}, ` +
           `Archivo: ${this.formatBytes(file.size)}`,
-      );
+      )
     }
 
-    const docRef = this.db.collection('files').doc();
-    const storagePath = `files/${uid}/${docRef.id}_${file.originalname}`;
+    const docRef = this.db.collection('files').doc()
+    const storagePath = `files/${uid}/${docRef.id}_${file.originalname}`
 
-    const bucket = this.storage.bucket();
-    const fileRef = bucket.file(storagePath);
+    const bucket = this.storage.bucket()
+    const fileRef = bucket.file(storagePath)
     await fileRef.save(file.buffer, {
       metadata: { contentType: file.mimetype },
-    });
+    })
 
-    const now = new Date();
+    const now = new Date()
     const record: FileRecord = {
       id: docRef.id,
       ownerId: uid,
@@ -132,10 +132,10 @@ export class FilesService {
       size: file.size,
       isPublic: dto.isPublic === 'true',
       createdAt: now,
-    };
+    }
 
-    await docRef.set(record);
-    return record;
+    await docRef.set(record)
+    return record
   }
 
   /** Listar archivos del usuario */
@@ -144,9 +144,9 @@ export class FilesService {
       .collection('files')
       .where('ownerId', '==', ownerId)
       .orderBy('createdAt', 'desc')
-      .get();
+      .get()
 
-    return snapshot.docs.map((doc) => doc.data() as FileRecord);
+    return snapshot.docs.map((doc) => doc.data() as FileRecord)
   }
 
   /** Listar todos los archivos (admin) */
@@ -154,9 +154,9 @@ export class FilesService {
     const snapshot = await this.db
       .collection('files')
       .orderBy('createdAt', 'desc')
-      .get();
+      .get()
 
-    return snapshot.docs.map((doc) => doc.data() as FileRecord);
+    return snapshot.docs.map((doc) => doc.data() as FileRecord)
   }
 
   /** Obtener URL firmada de descarga */
@@ -165,25 +165,23 @@ export class FilesService {
     uid: string,
     isDownload: boolean = false,
   ): Promise<{ url: string; fileName: string }> {
-    const doc = await this.db.collection('files').doc(fileId).get();
+    const doc = await this.db.collection('files').doc(fileId).get()
 
     if (!doc.exists) {
-      throw new NotFoundException('Archivo no encontrado');
+      throw new NotFoundException('Archivo no encontrado')
     }
 
-    const record = doc.data() as FileRecord;
+    const record = doc.data() as FileRecord
 
     // Archivos privados solo pueden ser descargados por el dueño
     if (!record.isPublic && record.ownerId !== uid) {
-      throw new NotFoundException('Archivo no encontrado');
+      throw new NotFoundException('Archivo no encontrado')
     }
 
-    const bucket = this.storage.bucket();
-    const fileRef = bucket.file(record.storagePath);
+    const bucket = this.storage.bucket()
+    const fileRef = bucket.file(record.storagePath)
     // Si es público, caduca en 2100. Si es privado, en 15 minutos.
-    const expires = record.isPublic
-      ? '01-01-2100'
-      : Date.now() + 15 * 60 * 1000;
+    const expires = record.isPublic ? '01-01-2100' : Date.now() + 15 * 60 * 1000
 
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
@@ -191,40 +189,40 @@ export class FilesService {
       responseDisposition: isDownload
         ? `attachment; filename="${record.fileName}"`
         : 'inline',
-    });
+    })
 
-    return { url, fileName: record.fileName };
+    return { url, fileName: record.fileName }
   }
 
   /** Eliminar archivo */
   async deleteFile(fileId: string, uid: string): Promise<void> {
-    const doc = await this.db.collection('files').doc(fileId).get();
+    const doc = await this.db.collection('files').doc(fileId).get()
 
     if (!doc.exists) {
-      throw new NotFoundException('Archivo no encontrado');
+      throw new NotFoundException('Archivo no encontrado')
     }
 
-    const record = doc.data() as FileRecord;
+    const record = doc.data() as FileRecord
 
     if (record.ownerId !== uid) {
-      throw new NotFoundException('Archivo no encontrado');
+      throw new NotFoundException('Archivo no encontrado')
     }
 
     try {
-      const bucket = this.storage.bucket();
-      await bucket.file(record.storagePath).delete();
+      const bucket = this.storage.bucket()
+      await bucket.file(record.storagePath).delete()
     } catch (error) {
-      console.error('Error eliminando archivo:', error);
+      console.error('Error eliminando archivo:', error)
     }
 
-    await this.db.collection('files').doc(fileId).delete();
+    await this.db.collection('files').doc(fileId).delete()
   }
 
   private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    const val = bytes / Math.pow(1024, i);
-    return `${val.toFixed(i > 1 ? 2 : 0)} ${units[i]}`;
+    if (bytes === 0) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    const val = bytes / Math.pow(1024, i)
+    return `${val.toFixed(i > 1 ? 2 : 0)} ${units[i]}`
   }
 }

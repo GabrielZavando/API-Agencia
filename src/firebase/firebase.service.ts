@@ -1,57 +1,57 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as admin from 'firebase-admin';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as crypto from 'crypto';
-import { ContactDto } from '../forms/dto/contact.dto';
-import { SubscribeDto } from '../forms/dto/subscribe.dto';
+import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import * as admin from 'firebase-admin'
+import * as path from 'path'
+import * as fs from 'fs'
+import * as crypto from 'crypto'
+import { ContactDto } from '../forms/dto/contact.dto'
+import { SubscribeDto } from '../forms/dto/subscribe.dto'
 
 export interface ProspectRecord {
-  prospectId: string; // ID interno del prospecto (Firestore)
-  name: string;
-  email: string;
-  phone: string; // Siempre será un string (vacío o con teléfono)
-  createdAt: Date;
-  updatedAt: Date;
-  conversations: ConversationRecord[];
+  prospectId: string // ID interno del prospecto (Firestore)
+  name: string
+  email: string
+  phone: string // Siempre será un string (vacío o con teléfono)
+  createdAt: Date
+  updatedAt: Date
+  conversations: ConversationRecord[]
   // Campo para cuando se convierta en usuario autenticado
-  authUserId?: string; // Firebase Auth UID (cuando se registre)
-  status: 'prospect' | 'converted' | 'inactive';
+  authUserId?: string // Firebase Auth UID (cuando se registre)
+  status: 'prospect' | 'converted' | 'inactive'
 }
 
 export interface ConversationRecord {
-  conversationId: string;
-  incomingMessage: IncomingMessageRecord;
-  outgoingResponse: OutgoingResponseRecord;
-  timestamp: Date;
+  conversationId: string
+  incomingMessage: IncomingMessageRecord
+  outgoingResponse: OutgoingResponseRecord
+  timestamp: Date
 }
 
 export interface IncomingMessageRecord {
-  messageId: string;
-  content: string;
+  messageId: string
+  content: string
   meta: {
-    userAgent: string;
-    referrer?: string | null;
-    page: string;
-    ts: string;
-  };
-  receivedAt: Date;
+    userAgent: string
+    referrer?: string | null
+    page: string
+    ts: string
+  }
+  receivedAt: Date
 }
 
 export interface OutgoingResponseRecord {
-  responseId: string;
-  content: string;
-  sentAt: Date;
-  emailSent: boolean;
+  responseId: string
+  content: string
+  sentAt: Date
+  emailSent: boolean
 }
 
 @Injectable()
 export class FirebaseService {
-  private db: admin.firestore.Firestore;
+  private db: admin.firestore.Firestore
 
   constructor(private configService: ConfigService) {
-    this.initializeFirebase();
+    this.initializeFirebase()
   }
 
   private initializeFirebase() {
@@ -63,23 +63,23 @@ export class FirebaseService {
           process.cwd(),
           'config',
           'firebase-service-account.json',
-        );
+        )
 
         if (fs.existsSync(serviceAccountPath)) {
           // Usar archivo JSON
-          const fileContent = fs.readFileSync(serviceAccountPath, 'utf8');
+          const fileContent = fs.readFileSync(serviceAccountPath, 'utf8')
           const serviceAccount = JSON.parse(fileContent) as Record<
             string,
             string
-          >;
+          >
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             projectId: serviceAccount.project_id,
             storageBucket: `${serviceAccount.project_id}.firebasestorage.app`,
-          });
+          })
           console.log(
             `✅ Firebase inicializado con archivo JSON para proyecto: ${serviceAccount.project_id}`,
-          );
+          )
         } else {
           // Fallback: usar variables de entorno
           const serviceAccount = {
@@ -90,7 +90,7 @@ export class FirebaseService {
             clientEmail: this.configService.get<string>(
               'FIREBASE_CLIENT_EMAIL',
             ),
-          };
+          }
 
           // Validar que tenemos todas las credenciales necesarias
           if (
@@ -100,35 +100,35 @@ export class FirebaseService {
           ) {
             throw new Error(
               'Faltan credenciales de Firebase en las variables de entorno',
-            );
+            )
           }
 
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             projectId: String(serviceAccount.projectId),
             storageBucket: `${serviceAccount.projectId}.firebasestorage.app`,
-          });
+          })
 
           console.log(
             `✅ Firebase inicializado con variables de entorno para proyecto: ${serviceAccount.projectId}`,
-          );
+          )
         }
       } catch (error) {
-        console.error('Error inicializando Firebase:', error);
-        throw new Error('No se pudieron cargar las credenciales de Firebase');
+        console.error('Error inicializando Firebase:', error)
+        throw new Error('No se pudieron cargar las credenciales de Firebase')
       }
     }
 
-    this.db = admin.firestore();
+    this.db = admin.firestore()
 
     // Configurar settings de Firestore
     this.db.settings({
       timestampsInSnapshots: true,
-    });
+    })
   }
 
   public getDb(): admin.firestore.Firestore {
-    return this.db;
+    return this.db
   }
 
   async findProspectByEmail(email: string): Promise<ProspectRecord | null> {
@@ -137,17 +137,17 @@ export class FirebaseService {
         .collection('prospects')
         .where('email', '==', email)
         .limit(1)
-        .get();
+        .get()
 
       if (snapshot.empty) {
-        return null;
+        return null
       }
 
-      const doc = snapshot.docs[0];
-      return { prospectId: doc.id, ...doc.data() } as ProspectRecord;
+      const doc = snapshot.docs[0]
+      return { prospectId: doc.id, ...doc.data() } as ProspectRecord
     } catch (error) {
-      console.error('Error buscando prospecto:', error);
-      return null;
+      console.error('Error buscando prospecto:', error)
+      return null
     }
   }
 
@@ -156,27 +156,27 @@ export class FirebaseService {
       const snapshot = await this.db
         .collection('prospects')
         .orderBy('updatedAt', 'desc')
-        .get();
+        .get()
 
       return snapshot.docs.map((doc) => ({
         prospectId: doc.id,
         ...doc.data(),
-      })) as ProspectRecord[];
+      })) as ProspectRecord[]
     } catch (error) {
-      console.error('Error obteniendo todos los prospectos:', error);
-      throw new Error('Error al obtener los prospectos de Firebase');
+      console.error('Error obteniendo todos los prospectos:', error)
+      throw new Error('Error al obtener los prospectos de Firebase')
     }
   }
 
   async getProspectById(prospectId: string): Promise<ProspectRecord | null> {
     try {
-      const doc = await this.db.collection('prospects').doc(prospectId).get();
+      const doc = await this.db.collection('prospects').doc(prospectId).get()
 
-      if (!doc.exists) return null;
-      return { prospectId: doc.id, ...doc.data() } as ProspectRecord;
+      if (!doc.exists) return null
+      return { prospectId: doc.id, ...doc.data() } as ProspectRecord
     } catch (error) {
-      console.error('Error obteniendo prospecto por ID:', error);
-      return null;
+      console.error('Error obteniendo prospecto por ID:', error)
+      return null
     }
   }
 
@@ -186,11 +186,11 @@ export class FirebaseService {
   ): Promise<string> {
     try {
       // Generar IDs únicos
-      const prospectId = this.db.collection('prospects').doc().id;
-      const conversationId = this.db.collection('conversations').doc().id;
-      const messageId = this.db.collection('messages').doc().id;
-      const responseId = this.db.collection('responses').doc().id;
-      const now = new Date();
+      const prospectId = this.db.collection('prospects').doc().id
+      const conversationId = this.db.collection('conversations').doc().id
+      const messageId = this.db.collection('messages').doc().id
+      const responseId = this.db.collection('responses').doc().id
+      const now = new Date()
 
       const conversation: ConversationRecord = {
         conversationId,
@@ -207,7 +207,7 @@ export class FirebaseService {
           emailSent: false, // Se actualizará después del envío
         },
         timestamp: now,
-      };
+      }
 
       const prospectData: ProspectRecord = {
         prospectId,
@@ -218,13 +218,13 @@ export class FirebaseService {
         updatedAt: now,
         status: 'prospect',
         conversations: [conversation],
-      };
+      }
 
-      await this.db.collection('prospects').doc(prospectId).set(prospectData);
-      return prospectId;
+      await this.db.collection('prospects').doc(prospectId).set(prospectData)
+      return prospectId
     } catch (error) {
-      console.error('Error creando prospecto:', error);
-      throw new Error('Error creando prospecto en Firebase');
+      console.error('Error creando prospecto:', error)
+      throw new Error('Error creando prospecto en Firebase')
     }
   }
 
@@ -235,10 +235,10 @@ export class FirebaseService {
   ): Promise<string> {
     try {
       // Generar IDs únicos
-      const conversationId = this.db.collection('conversations').doc().id;
-      const messageId = this.db.collection('messages').doc().id;
-      const responseId = this.db.collection('responses').doc().id;
-      const now = new Date();
+      const conversationId = this.db.collection('conversations').doc().id
+      const messageId = this.db.collection('messages').doc().id
+      const responseId = this.db.collection('responses').doc().id
+      const now = new Date()
 
       const newConversation: ConversationRecord = {
         conversationId,
@@ -255,7 +255,7 @@ export class FirebaseService {
           emailSent: false, // Se actualizará después del envío
         },
         timestamp: now,
-      };
+      }
 
       await this.db
         .collection('prospects')
@@ -263,12 +263,12 @@ export class FirebaseService {
         .update({
           updatedAt: now,
           conversations: admin.firestore.FieldValue.arrayUnion(newConversation),
-        });
+        })
 
-      return conversationId;
+      return conversationId
     } catch (error) {
-      console.error('Error añadiendo conversación:', error);
-      throw new Error('Error añadiendo conversación en Firebase');
+      console.error('Error añadiendo conversación:', error)
+      throw new Error('Error añadiendo conversación en Firebase')
     }
   }
 
@@ -280,13 +280,13 @@ export class FirebaseService {
       const prospectDoc = await this.db
         .collection('prospects')
         .doc(prospectId)
-        .get();
+        .get()
 
       if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado');
+        throw new Error('Prospecto no encontrado')
       }
 
-      const prospectData = prospectDoc.data() as ProspectRecord;
+      const prospectData = prospectDoc.data() as ProspectRecord
 
       // Si el prospecto no tiene conversaciones previas, no podemos responder a nada
       // Esto no debería ocurrir bajo flujo normal, pero validamos
@@ -294,18 +294,18 @@ export class FirebaseService {
         !prospectData.conversations ||
         prospectData.conversations.length === 0
       ) {
-        throw new Error('El prospecto no tiene conversaciones para responder');
+        throw new Error('El prospecto no tiene conversaciones para responder')
       }
 
-      const conversationId = this.db.collection('conversations').doc().id;
-      const responseId = this.db.collection('responses').doc().id;
-      const now = new Date();
+      const conversationId = this.db.collection('conversations').doc().id
+      const responseId = this.db.collection('responses').doc().id
+      const now = new Date()
 
       // Creamos una nueva 'conversación' simulada que sólo tiene la respuesta saliente
       // Usaremos el último mensaje entrante como referencia, pero sin crear un mensaje nuevo
       const lastIncomingMessage =
         prospectData.conversations[prospectData.conversations.length - 1]
-          .incomingMessage;
+          .incomingMessage
 
       const newConversation: ConversationRecord = {
         conversationId,
@@ -317,7 +317,7 @@ export class FirebaseService {
           emailSent: false, // Se actualizará al enviar
         },
         timestamp: now,
-      };
+      }
 
       await this.db
         .collection('prospects')
@@ -325,12 +325,12 @@ export class FirebaseService {
         .update({
           updatedAt: now,
           conversations: admin.firestore.FieldValue.arrayUnion(newConversation),
-        });
+        })
 
-      return conversationId;
+      return conversationId
     } catch (error) {
-      console.error('Error añadiendo respuesta administrativa:', error);
-      throw new Error('Error añadiendo respuesta en Firebase');
+      console.error('Error añadiendo respuesta administrativa:', error)
+      throw new Error('Error añadiendo respuesta en Firebase')
     }
   }
 
@@ -343,13 +343,13 @@ export class FirebaseService {
       const prospectDoc = await this.db
         .collection('prospects')
         .doc(prospectId)
-        .get();
+        .get()
 
       if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado');
+        throw new Error('Prospecto no encontrado')
       }
 
-      const prospectData = prospectDoc.data() as ProspectRecord;
+      const prospectData = prospectDoc.data() as ProspectRecord
 
       // Actualizar el estado del email en la conversación específica
       const updatedConversations = prospectData.conversations.map((conv) => {
@@ -360,18 +360,18 @@ export class FirebaseService {
               ...conv.outgoingResponse,
               emailSent: true,
             },
-          };
+          }
         }
-        return conv;
-      });
+        return conv
+      })
 
       await this.db.collection('prospects').doc(prospectId).update({
         conversations: updatedConversations,
         updatedAt: new Date(),
-      });
+      })
     } catch (error) {
-      console.error('Error marcando email como enviado:', error);
-      throw new Error('Error actualizando estado del email');
+      console.error('Error marcando email como enviado:', error)
+      throw new Error('Error actualizando estado del email')
     }
   }
 
@@ -383,22 +383,22 @@ export class FirebaseService {
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
         testId: Math.random().toString(36).substring(7),
-      };
+      }
 
-      console.log('🔄 Probando conexión a Firebase...');
+      console.log('🔄 Probando conexión a Firebase...')
 
       // Crear documento de prueba
-      const docRef = await this.db.collection('connection_tests').add(testData);
-      console.log(`✅ Documento de prueba creado con ID: ${docRef.id}`);
+      const docRef = await this.db.collection('connection_tests').add(testData)
+      console.log(`✅ Documento de prueba creado con ID: ${docRef.id}`)
 
       // Leer el documento creado
-      const doc = await docRef.get();
-      const docData = doc.data() as Record<string, unknown>;
-      console.log('📖 Datos leídos:', docData);
+      const doc = await docRef.get()
+      const docData = doc.data() as Record<string, unknown>
+      console.log('📖 Datos leídos:', docData)
 
       // Eliminar el documento de prueba
-      await docRef.delete();
-      console.log('🗑️ Documento de prueba eliminado');
+      await docRef.delete()
+      console.log('🗑️ Documento de prueba eliminado')
 
       return {
         success: true,
@@ -407,12 +407,12 @@ export class FirebaseService {
         documentId: docRef.id,
         data: docData,
         timestamp: new Date().toISOString(),
-      };
+      }
     } catch (error) {
-      console.error('❌ Error en prueba de Firebase:', error);
+      console.error('❌ Error en prueba de Firebase:', error)
       throw new Error(
         `Error conectando a Firebase: ${(error as Error).message}`,
-      );
+      )
     }
   }
 
@@ -420,16 +420,16 @@ export class FirebaseService {
   async saveSubscriber(subscribeDto: SubscribeDto): Promise<string> {
     try {
       // Comprobar si ya existe
-      const existing = await this.findSubscriberByEmail(subscribeDto.email);
+      const existing = await this.findSubscriberByEmail(subscribeDto.email)
       if (existing) {
         // Si existe (sea pending o confirmed), retornar el id existente
-        return existing.subscriberId;
+        return existing.subscriberId
       }
 
-      const now = new Date();
-      const docRef = this.db.collection('subscribers').doc();
+      const now = new Date()
+      const docRef = this.db.collection('subscribers').doc()
       // Generar token único para Double Opt-In (64 chars hex)
-      const confirmationToken = crypto.randomBytes(32).toString('hex');
+      const confirmationToken = crypto.randomBytes(32).toString('hex')
 
       const data = {
         subscriberId: docRef.id,
@@ -440,13 +440,13 @@ export class FirebaseService {
         status: 'pending', // Pendiente de confirmación via email
         confirmationToken,
         confirmedAt: null,
-      };
+      }
 
-      await docRef.set(data);
-      return docRef.id;
+      await docRef.set(data)
+      return docRef.id
     } catch (error) {
-      console.error('Error guardando suscriptor:', error);
-      throw new Error('Error guardando suscriptor en Firebase');
+      console.error('Error guardando suscriptor:', error)
+      throw new Error('Error guardando suscriptor en Firebase')
     }
   }
 
@@ -458,17 +458,17 @@ export class FirebaseService {
         .collection('subscribers')
         .where('email', '==', email)
         .limit(1)
-        .get();
+        .get()
 
-      if (snapshot.empty) return null;
-      const doc = snapshot.docs[0];
+      if (snapshot.empty) return null
+      const doc = snapshot.docs[0]
       return {
         subscriberId: doc.id,
         email: (doc.data() as Record<string, unknown>).email as string,
-      };
+      }
     } catch (error) {
-      console.error('Error buscando suscriptor:', error);
-      return null;
+      console.error('Error buscando suscriptor:', error)
+      return null
     }
   }
 
@@ -477,35 +477,35 @@ export class FirebaseService {
       const snapshot = await this.db
         .collection('subscribers')
         .orderBy('createdAt', 'desc')
-        .get();
+        .get()
 
       return snapshot.docs.map((doc) => ({
         subscriberId: doc.id,
         ...doc.data(),
-      }));
+      }))
     } catch (error) {
-      console.error('Error obteniendo todos los suscriptores:', error);
-      throw new Error('Error al obtener los suscriptores de Firebase');
+      console.error('Error obteniendo todos los suscriptores:', error)
+      throw new Error('Error al obtener los suscriptores de Firebase')
     }
   }
 
   // Eliminar suscriptor de la colección 'subscribers'
   async removeSubscriber(email: string): Promise<boolean> {
     try {
-      const subscriber = await this.findSubscriberByEmail(email);
+      const subscriber = await this.findSubscriberByEmail(email)
       if (!subscriber) {
-        return false; // Suscriptor no encontrado
+        return false // Suscriptor no encontrado
       }
 
       await this.db
         .collection('subscribers')
         .doc(subscriber.subscriberId)
-        .delete();
-      console.log(`\uD83D\uDDD1\uFE0F Suscriptor eliminado: ${email}`);
-      return true;
+        .delete()
+      console.log(`\uD83D\uDDD1\uFE0F Suscriptor eliminado: ${email}`)
+      return true
     } catch (error) {
-      console.error('Error eliminando suscriptor:', error);
-      throw new Error('Error eliminando suscriptor de Firebase');
+      console.error('Error eliminando suscriptor:', error)
+      throw new Error('Error eliminando suscriptor de Firebase')
     }
   }
 
@@ -517,13 +517,13 @@ export class FirebaseService {
       const doc = await this.db
         .collection('subscribers')
         .doc(subscriberId)
-        .get();
-      if (!doc.exists) return null;
-      const data = doc.data() as Record<string, unknown>;
-      return (data.confirmationToken as string) ?? null;
+        .get()
+      if (!doc.exists) return null
+      const data = doc.data() as Record<string, unknown>
+      return (data.confirmationToken as string) ?? null
     } catch (error) {
-      console.error('Error obteniendo token de confirmación:', error);
-      return null;
+      console.error('Error obteniendo token de confirmación:', error)
+      return null
     }
   }
 
@@ -537,28 +537,28 @@ export class FirebaseService {
         .where('confirmationToken', '==', token)
         .where('status', '==', 'pending')
         .limit(1)
-        .get();
+        .get()
 
       if (snapshot.empty) {
-        return { success: false };
+        return { success: false }
       }
 
-      const doc = snapshot.docs[0];
-      const data = doc.data() as Record<string, unknown>;
-      const now = new Date();
+      const doc = snapshot.docs[0]
+      const data = doc.data() as Record<string, unknown>
+      const now = new Date()
 
       await doc.ref.update({
         status: 'confirmed',
         confirmedAt: now,
         updatedAt: now,
         confirmationToken: null, // Invalidar token ya usado
-      });
+      })
 
-      console.log(`\u2705 Suscriptor confirmado: ${data['email'] as string}`);
-      return { success: true, email: data['email'] as string };
+      console.log(`\u2705 Suscriptor confirmado: ${data['email'] as string}`)
+      return { success: true, email: data['email'] as string }
     } catch (error) {
-      console.error('Error confirmando suscriptor:', error);
-      return { success: false };
+      console.error('Error confirmando suscriptor:', error)
+      return { success: false }
     }
   }
 
@@ -567,21 +567,21 @@ export class FirebaseService {
     subscriberId: string,
   ): Promise<string | null> {
     try {
-      const crypto = await import('crypto');
-      const newToken = crypto.randomBytes(32).toString('hex');
-      const now = new Date();
+      const crypto = await import('crypto')
+      const newToken = crypto.randomBytes(32).toString('hex')
+      const now = new Date()
 
       await this.db.collection('subscribers').doc(subscriberId).update({
         confirmationToken: newToken,
         status: 'pending',
         reconfirmationSentAt: now,
         updatedAt: now,
-      });
+      })
 
-      return newToken;
+      return newToken
     } catch (error) {
-      console.error('Error generando token de re-confirmación:', error);
-      return null;
+      console.error('Error generando token de re-confirmación:', error)
+      return null
     }
   }
 
@@ -591,6 +591,6 @@ export class FirebaseService {
       status: 'inactive',
       inactivatedAt: new Date(),
       updatedAt: new Date(),
-    });
+    })
   }
 }

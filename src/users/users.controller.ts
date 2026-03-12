@@ -10,18 +10,18 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UsersService } from './users.service';
-import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
-import { Roles } from '../auth/roles.decorator';
-import { Request as ExpressRequest } from 'express';
+} from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { CreateUserDto } from './dto/create-user.dto'
+import { UpdateUserDto } from './dto/update-user.dto'
+import { UsersService } from './users.service'
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
+import { Roles } from '../auth/roles.decorator'
+import { Request as ExpressRequest } from 'express'
 
 // Define the custom request type
 interface AuthRequest extends ExpressRequest {
-  user: { uid: string };
+  user: { uid: string }
 }
 
 @Controller('users')
@@ -32,20 +32,20 @@ export class UsersController {
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async findAll() {
-    return this.usersService.findAll();
+    return this.usersService.findAll()
   }
 
   @Post('register')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async register(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+    return this.usersService.create(createUserDto)
   }
 
   @Get('profile')
   @UseGuards(FirebaseAuthGuard)
   async getProfile(@Request() req: AuthRequest) {
-    return this.usersService.findOne(req.user.uid);
+    return this.usersService.findOne(req.user.uid)
   }
 
   @Patch('profile')
@@ -57,21 +57,21 @@ export class UsersController {
     updateData: { displayName?: string; phone?: string; description?: string },
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
-    return this.usersService.updateProfile(req.user.uid, updateData, avatar);
+    return this.usersService.updateProfile(req.user.uid, updateData, avatar)
   }
 
   @Post('set-admin-role')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async setAdminRole(@Body() body: { uid: string }) {
-    return this.usersService.setAdminRole(body.uid);
+    return this.usersService.setAdminRole(body.uid)
   }
 
   @Get(':id')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+    return this.usersService.findOne(id)
   }
 
   @Patch(':id')
@@ -81,12 +81,12 @@ export class UsersController {
     return this.usersService.updateUser(
       id,
       updateUserDto as Record<string, unknown>,
-    );
+    )
   }
   @Delete(':id')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
   async remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+    return this.usersService.remove(id)
   }
 }

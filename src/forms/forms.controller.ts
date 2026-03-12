@@ -6,11 +6,11 @@ import {
   Query,
   Param,
   Redirect,
-} from '@nestjs/common';
-import { ContactDto } from './dto/contact.dto';
-import { SubscribeDto } from './dto/subscribe.dto';
-import { FormsService } from './forms.service';
-import { Throttle, SkipThrottle } from '@nestjs/throttler';
+} from '@nestjs/common'
+import { ContactDto } from './dto/contact.dto'
+import { SubscribeDto } from './dto/subscribe.dto'
+import { FormsService } from './forms.service'
+import { Throttle, SkipThrottle } from '@nestjs/throttler'
 
 @Controller('forms')
 export class FormsController {
@@ -19,18 +19,18 @@ export class FormsController {
   @Throttle({ short: { ttl: 900_000, limit: 5 } }) // 5 req / 15 min por IP
   @Post('contact')
   handleContact(@Body() contactDto: ContactDto) {
-    return this.formsService.handleContact(contactDto);
+    return this.formsService.handleContact(contactDto)
   }
 
   @Throttle({ short: { ttl: 600_000, limit: 3 } }) // 3 req / 10 min por IP
   @Post('subscribe')
   handleSubscribe(@Body() subscribeDto: SubscribeDto) {
-    return this.formsService.handleSubscribe(subscribeDto);
+    return this.formsService.handleSubscribe(subscribeDto)
   }
 
   @Post('unsubscribe')
   handleUnsubscribe(@Query('email') email: string) {
-    return this.formsService.handleUnsubscribe(email);
+    return this.formsService.handleUnsubscribe(email)
   }
 
   // --- Endpoints de Administración ---
@@ -38,19 +38,19 @@ export class FormsController {
   @SkipThrottle()
   @Get('admin/subscribers')
   getSubscribers() {
-    return this.formsService.getAllSubscribers();
+    return this.formsService.getAllSubscribers()
   }
 
   @SkipThrottle()
   @Get('admin/prospects')
   getProspects() {
-    return this.formsService.getAllProspects();
+    return this.formsService.getAllProspects()
   }
 
   @SkipThrottle()
   @Get('admin/prospects/:id')
   getProspectById(@Param('id') id: string) {
-    return this.formsService.getProspectById(id);
+    return this.formsService.getProspectById(id)
   }
 
   // Double Opt-In: confirmación de suscripción por token
@@ -58,11 +58,11 @@ export class FormsController {
   @Get('verify-subscription/:token')
   @Redirect()
   async verifySubscription(@Param('token') token: string) {
-    const result = await this.formsService.verifySubscription(token);
+    const result = await this.formsService.verifySubscription(token)
     if (result.success) {
-      return { url: '/suscripcion-confirmada?status=ok' };
+      return { url: '/suscripcion-confirmada?status=ok' }
     }
-    return { url: '/suscripcion-confirmada?status=error' };
+    return { url: '/suscripcion-confirmada?status=error' }
   }
 
   @Post('admin/prospects/:id/reply')
@@ -70,7 +70,7 @@ export class FormsController {
     @Param('id') id: string,
     @Body('replyContent') replyContent: string,
   ) {
-    return this.formsService.adminReplyToProspect(id, replyContent);
+    return this.formsService.adminReplyToProspect(id, replyContent)
   }
 
   // --- Campaña de Re-confirmación y Limpieza ---
@@ -78,19 +78,19 @@ export class FormsController {
   @SkipThrottle()
   @Post('admin/subscribers/reconfirmation-campaign')
   runReconfirmationCampaign() {
-    return this.formsService.runReconfirmationCampaign();
+    return this.formsService.runReconfirmationCampaign()
   }
 
   @SkipThrottle()
   @Post('admin/subscribers/cleanup-inactive')
   cleanupInactiveSubscribers(@Body('daysThreshold') daysThreshold: number) {
-    return this.formsService.cleanupInactiveSubscribers(daysThreshold ?? 7);
+    return this.formsService.cleanupInactiveSubscribers(daysThreshold ?? 7)
   }
 
   @SkipThrottle()
   @Get('admin/subscribers/export')
   exportSubscribers() {
-    return this.formsService.exportSubscribers();
+    return this.formsService.exportSubscribers()
   }
 
   // --- Endpoints de Diagnóstico ---
@@ -98,25 +98,25 @@ export class FormsController {
   @Get('test-firebase')
   async testFirebase() {
     try {
-      const testResult = await this.formsService.testFirebaseConnection();
+      const testResult = await this.formsService.testFirebaseConnection()
       return {
         success: true,
         message: 'Conexión a Firebase exitosa',
         details: testResult,
-      };
+      }
     } catch (error) {
       return {
         success: false,
         message: 'Error conectando a Firebase',
         error: (error as Error).message,
-      };
+      }
     }
   }
 
   @Get('test-smtp')
   async testSMTP() {
-    const testResult = await this.formsService.testSMTPConnection();
-    return testResult;
+    const testResult = await this.formsService.testSMTPConnection()
+    return testResult
   }
 
   @Get('status')
@@ -138,6 +138,6 @@ export class FormsController {
         testSMTP: 'GET /forms/test-smtp',
         status: 'GET /forms/status',
       },
-    };
+    }
   }
 }

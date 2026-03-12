@@ -3,32 +3,32 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
-} from '@nestjs/common';
-import * as admin from 'firebase-admin';
-import { CreateReportDto } from './dto/create-report.dto';
-import { FirebaseService } from '../firebase/firebase.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { MailService } from '../mail/mail.service';
-import { UsersService } from '../users/users.service';
+} from '@nestjs/common'
+import * as admin from 'firebase-admin'
+import { CreateReportDto } from './dto/create-report.dto'
+import { FirebaseService } from '../firebase/firebase.service'
+import { NotificationsService } from '../notifications/notifications.service'
+import { MailService } from '../mail/mail.service'
+import { UsersService } from '../users/users.service'
 
 export interface ReportRecord {
-  id: string;
-  clientId: string;
-  title: string;
-  description: string;
-  fileName: string;
-  storagePath: string;
-  mimeType: string;
-  size: number;
-  projectId?: string;
-  projectName?: string;
-  createdAt: Date;
+  id: string
+  clientId: string
+  title: string
+  description: string
+  fileName: string
+  storagePath: string
+  mimeType: string
+  size: number
+  projectId?: string
+  projectName?: string
+  createdAt: Date
 }
 
 @Injectable()
 export class ReportsService {
-  private db: admin.firestore.Firestore;
-  private storage: ReturnType<typeof admin.storage>;
+  private db: admin.firestore.Firestore
+  private storage: ReturnType<typeof admin.storage>
 
   constructor(
     private readonly _firebase: FirebaseService,
@@ -36,8 +36,8 @@ export class ReportsService {
     private readonly mailService: MailService,
     private readonly usersService: UsersService,
   ) {
-    this.db = admin.firestore();
-    this.storage = admin.storage();
+    this.db = admin.firestore()
+    this.storage = admin.storage()
   }
 
   /** Admin sube un informe PDF para un cliente */
@@ -46,19 +46,19 @@ export class ReportsService {
     dto: CreateReportDto,
   ): Promise<ReportRecord> {
     if (!file || file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('El archivo debe ser un PDF válido');
+      throw new BadRequestException('El archivo debe ser un PDF válido')
     }
 
-    const docRef = this.db.collection('reports').doc();
-    const storagePath = `reports/${dto.clientId}/${docRef.id}_${file.originalname}`;
+    const docRef = this.db.collection('reports').doc()
+    const storagePath = `reports/${dto.clientId}/${docRef.id}_${file.originalname}`
 
-    const bucket = this.storage.bucket();
-    const fileRef = bucket.file(storagePath);
+    const bucket = this.storage.bucket()
+    const fileRef = bucket.file(storagePath)
     await fileRef.save(file.buffer, {
       metadata: { contentType: 'application/pdf' },
-    });
+    })
 
-    const now = new Date();
+    const now = new Date()
     const report: ReportRecord = {
       id: docRef.id,
       clientId: dto.clientId,
@@ -71,9 +71,9 @@ export class ReportsService {
       projectId: dto.projectId,
       projectName: dto.projectName,
       createdAt: now,
-    };
+    }
 
-    await docRef.set(report);
+    await docRef.set(report)
 
     // 1. Crear notificación en el dashboard
     try {
@@ -83,17 +83,17 @@ export class ReportsService {
         message: `Has recibido el informe: ${dto.title}${dto.projectName ? ` para el proyecto ${dto.projectName}` : ''}.`,
         link: '/dashboard/informes',
         read: false,
-      });
+      })
     } catch (error) {
-      console.error('Error creando notificación de informe:', error);
+      console.error('Error creando notificación de informe:', error)
     }
 
     // 2. Enviar correo con el PDF adjunto
     try {
       const user = (await this.usersService.findOne(dto.clientId)) as {
-        email: string;
-        displayName?: string;
-      };
+        email: string
+        displayName?: string
+      }
       if (user && user.email) {
         await this.mailService.sendMail({
           to: user.email,
@@ -122,13 +122,13 @@ export class ReportsService {
               contentType: 'application/pdf',
             },
           ],
-        });
+        })
       }
     } catch (error) {
-      console.error('Error enviando correo de informe:', error);
+      console.error('Error enviando correo de informe:', error)
     }
 
-    return report;
+    return report
   }
 
   async findByClient(clientId: string): Promise<ReportRecord[]> {
@@ -136,18 +136,18 @@ export class ReportsService {
       .collection('reports')
       .where('clientId', '==', clientId)
       .orderBy('createdAt', 'desc')
-      .get();
+      .get()
 
-    return snapshot.docs.map((doc) => doc.data() as ReportRecord);
+    return snapshot.docs.map((doc) => doc.data() as ReportRecord)
   }
 
   async findAll(): Promise<ReportRecord[]> {
     const snapshot = await this.db
       .collection('reports')
       .orderBy('createdAt', 'desc')
-      .get();
+      .get()
 
-    return snapshot.docs.map((doc) => doc.data() as ReportRecord);
+    return snapshot.docs.map((doc) => doc.data() as ReportRecord)
   }
 
   async getDownloadUrl(
@@ -155,23 +155,23 @@ export class ReportsService {
     user: { uid: string; role?: string },
     isDownload: boolean = false,
   ): Promise<{ url: string; fileName: string }> {
-    const doc = await this.db.collection('reports').doc(reportId).get();
+    const doc = await this.db.collection('reports').doc(reportId).get()
 
     if (!doc.exists) {
-      throw new NotFoundException('Informe no encontrado');
+      throw new NotFoundException('Informe no encontrado')
     }
 
-    const report = doc.data() as ReportRecord;
+    const report = doc.data() as ReportRecord
 
     // Verificación de propiedad (solo para clientes)
     if (user.role !== 'admin' && report.clientId !== user.uid) {
       throw new ForbiddenException(
         'No tienes permiso para acceder a este informe',
-      );
+      )
     }
 
-    const bucket = this.storage.bucket();
-    const fileRef = bucket.file(report.storagePath);
+    const bucket = this.storage.bucket()
+    const fileRef = bucket.file(report.storagePath)
 
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
@@ -179,27 +179,27 @@ export class ReportsService {
       responseDisposition: isDownload
         ? `attachment; filename="${report.fileName}"`
         : 'inline',
-    });
+    })
 
-    return { url, fileName: report.fileName };
+    return { url, fileName: report.fileName }
   }
 
   async deleteReport(reportId: string): Promise<void> {
-    const doc = await this.db.collection('reports').doc(reportId).get();
+    const doc = await this.db.collection('reports').doc(reportId).get()
 
     if (!doc.exists) {
-      throw new NotFoundException('Informe no encontrado');
+      throw new NotFoundException('Informe no encontrado')
     }
 
-    const report = doc.data() as ReportRecord;
+    const report = doc.data() as ReportRecord
 
     try {
-      const bucket = this.storage.bucket();
-      await bucket.file(report.storagePath).delete();
+      const bucket = this.storage.bucket()
+      await bucket.file(report.storagePath).delete()
     } catch (error) {
-      console.error('Error eliminando archivo de Storage:', error);
+      console.error('Error eliminando archivo de Storage:', error)
     }
 
-    await this.db.collection('reports').doc(reportId).delete();
+    await this.db.collection('reports').doc(reportId).delete()
   }
 }

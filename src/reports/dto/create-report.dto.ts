@@ -1,21 +1,21 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator'
 
 export class CreateReportDto {
   @IsString()
-  clientId: string;
+  clientId: string
 
   @IsString()
-  title: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
+  title: string
 
   @IsOptional()
   @IsString()
-  projectId?: string;
+  description?: string
 
   @IsOptional()
   @IsString()
-  projectName?: string;
+  projectId?: string
+
+  @IsOptional()
+  @IsString()
+  projectName?: string
 }

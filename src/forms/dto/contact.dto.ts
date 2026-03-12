@@ -5,45 +5,45 @@ import {
   IsString,
   IsISO8601,
   ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+} from 'class-validator'
+import { Type } from 'class-transformer'
 
 class MetaDto {
   @IsString()
-  userAgent: string;
+  userAgent: string
 
   @IsOptional()
   @IsString()
-  referrer?: string | null;
+  referrer?: string | null
 
   @IsString()
-  page: string;
+  page: string
 
   @IsISO8601()
-  ts: string;
+  ts: string
 }
 
 export class ContactDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name: string
 
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email: string
 
   @IsString()
-  phone: string; // Obligatorio pero puede ser string vacío
+  phone: string // Obligatorio pero puede ser string vacío
 
   @IsNotEmpty()
   @IsString()
-  message: string;
+  message: string
 
   @ValidateNested()
   @Type(() => MetaDto)
-  meta: MetaDto;
+  meta: MetaDto
 
   @IsOptional()
   @IsString()
-  turnstileToken?: string;
+  turnstileToken?: string
 }

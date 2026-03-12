@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { MailService } from './mail.service';
-import { TemplatesModule } from '../templates/templates.module';
+import { Module } from '@nestjs/common'
+import { MailService } from './mail.service'
+import { TemplatesModule } from '../templates/templates.module'
 
 @Module({
   imports: [TemplatesModule],

@@ -1,41 +1,41 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AIProvider, AIContext } from '../interfaces/ai.interface';
+import { Injectable } from '@nestjs/common'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { AIProvider, AIContext } from '../interfaces/ai.interface'
 
 @Injectable()
 export class GeminiProvider implements AIProvider {
-  name = 'Google Gemini';
-  private client: GoogleGenerativeAI;
+  name = 'Google Gemini'
+  private client: GoogleGenerativeAI
 
   constructor() {
-    this.client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
+    this.client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
   }
 
   async generateResponse(prompt: string, context?: AIContext): Promise<string> {
     try {
       const model = this.client.getGenerativeModel({
         model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-      });
+      })
 
-      const systemPrompt = this.buildSystemPrompt(context);
-      const fullPrompt = `${systemPrompt}\n\nConsulta del prospecto: ${prompt}`;
+      const systemPrompt = this.buildSystemPrompt(context)
+      const fullPrompt = `${systemPrompt}\n\nConsulta del prospecto: ${prompt}`
 
-      const result = await model.generateContent(fullPrompt);
-      const response = result.response;
+      const result = await model.generateContent(fullPrompt)
+      const response = result.response
 
-      return response.text() || 'Error generando respuesta';
+      return response.text() || 'Error generando respuesta'
     } catch (error) {
-      console.error('Error en Gemini:', error);
-      throw new Error('Error generando respuesta con Gemini');
+      console.error('Error en Gemini:', error)
+      throw new Error('Error generando respuesta con Gemini')
     }
   }
 
   private buildSystemPrompt(context?: AIContext): string {
     if (!context) {
-      return 'Actúa como un experto en atención al cliente, respondiendo de manera profesional y orientada a soluciones.';
+      return 'Actúa como un experto en atención al cliente, respondiendo de manera profesional y orientada a soluciones.'
     }
 
-    const { companyInfo, isReturningProspect, prospectName } = context;
+    const { companyInfo, isReturningProspect, prospectName } = context
 
     return `Eres el asistente virtual especializado en atención al cliente de ${companyInfo.name}.
 
@@ -60,6 +60,6 @@ PARÁMETROS DE COMUNICACIÓN:
 - Extensión ideal: 150-300 palabras
 - Omite saludos iniciales (gestionados por template)
 
-Crea una respuesta que posicione a la empresa como la solución ideal y motive la continuidad del diálogo.`;
+Crea una respuesta que posicione a la empresa como la solución ideal y motive la continuidad del diálogo.`
   }
 }

@@ -1,12 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { ContactDto } from './dto/contact.dto';
-import { SubscribeDto } from './dto/subscribe.dto';
-import { FirebaseService, ProspectRecord } from '../firebase/firebase.service';
-import { MailService } from '../mail/mail.service';
+import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { ContactDto } from './dto/contact.dto'
+import { SubscribeDto } from './dto/subscribe.dto'
+import { FirebaseService, ProspectRecord } from '../firebase/firebase.service'
+import { MailService } from '../mail/mail.service'
 // Librerías anti-spam
-import disposableDomains from 'disposable-email-domains';
-import { validate } from 'deep-email-validator';
+import disposableDomains from 'disposable-email-domains'
+import { validate } from 'deep-email-validator'
 
 @Injectable()
 export class FormsService {
@@ -21,9 +21,9 @@ export class FormsService {
   // ================================================
 
   private isDisposableDomain(email: string): boolean {
-    const domain = email.split('@')[1]?.toLowerCase();
-    if (!domain) return true;
-    return (disposableDomains as string[]).includes(domain);
+    const domain = email.split('@')[1]?.toLowerCase()
+    if (!domain) return true
+    return (disposableDomains as string[]).includes(domain)
   }
 
   private async validateMxRecords(email: string): Promise<boolean> {
@@ -36,16 +36,16 @@ export class FormsService {
         validateTypo: false,
         validateDisposable: false,
         validateSMTP: false,
-      });
-      return result.valid;
+      })
+      return result.valid
     } catch {
-      return true; // Permisivo si falla el lookup DNS
+      return true // Permisivo si falla el lookup DNS
     }
   }
 
   private async verifyTurnstileToken(token: string): Promise<boolean> {
-    const secret = this.configService.get<string>('TURNSTILE_SECRET_KEY');
-    if (!secret) return true; // Permisivo si no está configurado (dev local)
+    const secret = this.configService.get<string>('TURNSTILE_SECRET_KEY')
+    if (!secret) return true // Permisivo si no está configurado (dev local)
     try {
       const res = await fetch(
         'https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -54,11 +54,11 @@ export class FormsService {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ secret, response: token }),
         },
-      );
-      const data = (await res.json()) as { success: boolean };
-      return data.success;
+      )
+      const data = (await res.json()) as { success: boolean }
+      return data.success
     } catch {
-      return true; // Permisivo si Cloudflare no responde
+      return true // Permisivo si Cloudflare no responde
     }
   }
 
@@ -70,13 +70,13 @@ export class FormsService {
       if (contactDto.turnstileToken) {
         const turnstileOk = await this.verifyTurnstileToken(
           contactDto.turnstileToken,
-        );
+        )
         if (!turnstileOk) {
           return {
             success: false,
             message:
               'Verificación de seguridad fallida. Recarga la página e inténtalo de nuevo.',
-          };
+          }
         }
       }
 
@@ -86,45 +86,45 @@ export class FormsService {
           success: false,
           message:
             'Por favor usa un correo electrónico permanente. No aceptamos correos temporales.',
-        };
+        }
       }
 
       // 0c. Registros MX (el dominio del email existe y recibe correos)
-      const mxOk = await this.validateMxRecords(contactDto.email);
+      const mxOk = await this.validateMxRecords(contactDto.email)
       if (!mxOk) {
         return {
           success: false,
           message:
             'El correo electrónico no parece válido. Verifica que esté escrito correctamente.',
-        };
+        }
       }
 
       // 1. Recibir formulario (ya validado por el DTO)
 
       // 2. Buscar prospecto
-      const existingProspect = await this.findProspect(contactDto.email);
+      const existingProspect = await this.findProspect(contactDto.email)
 
       // 3. Generar respuesta personalizada con IA
       const responseContent = await this.generateResponse(
         contactDto,
         existingProspect,
-      );
+      )
 
-      let prospectId: string;
-      let conversationId: string;
+      let prospectId: string
+      let conversationId: string
 
       if (!existingProspect) {
         // 4a. Crear nuevo prospecto con primera conversación
-        prospectId = await this.storeNewProspect(contactDto, responseContent);
-        conversationId = 'first_conversation'; // Se genera internamente
+        prospectId = await this.storeNewProspect(contactDto, responseContent)
+        conversationId = 'first_conversation' // Se genera internamente
       } else {
         // 4b. Agregar nueva conversación a prospecto existente
-        prospectId = existingProspect.prospectId;
+        prospectId = existingProspect.prospectId
         conversationId = await this.storeNewConversation(
           prospectId,
           contactDto,
           responseContent,
-        );
+        )
       }
 
       // 5. Enviar respuesta por correo
@@ -132,18 +132,18 @@ export class FormsService {
         contactDto,
         responseContent,
         !existingProspect,
-      );
+      )
 
       // 6. Enviar notificación al administrador
       const adminNotified = await this.sendAdminNotificationEmail(
         contactDto,
         responseContent,
         !existingProspect,
-      );
+      )
 
       // 7. Marcar email como enviado en Firebase
       if (emailSent) {
-        await this.firebaseService.markEmailAsSent(prospectId, conversationId);
+        await this.firebaseService.markEmailAsSent(prospectId, conversationId)
       }
 
       return {
@@ -154,20 +154,20 @@ export class FormsService {
         emailSent,
         adminNotified,
         isNewProspect: !existingProspect,
-      };
+      }
     } catch (error) {
-      console.error('Error procesando formulario:', error);
+      console.error('Error procesando formulario:', error)
       return {
         success: false,
         message: 'Error procesando el formulario',
         error: (error as Error).message,
-      };
+      }
     }
   }
 
   // Método para buscar prospectos
   private async findProspect(email: string): Promise<ProspectRecord | null> {
-    return await this.firebaseService.findProspectByEmail(email);
+    return await this.firebaseService.findProspectByEmail(email)
   }
 
   // Método para almacenar nuevo prospecto
@@ -178,7 +178,7 @@ export class FormsService {
     return await this.firebaseService.createProspectWithConversation(
       contactDto,
       responseContent,
-    );
+    )
   }
 
   // Método para guardar nueva conversación
@@ -191,7 +191,7 @@ export class FormsService {
       prospectId,
       contactDto,
       responseContent,
-    );
+    )
   }
 
   // Método para generar respuesta personalizada con IA
@@ -215,24 +215,24 @@ export class FormsService {
       if (existingProspect) {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
-        );
+        )
       } else {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
-        );
+        )
       }
     } catch (error) {
-      console.error('Error generando respuesta:', error);
+      console.error('Error generando respuesta:', error)
 
       // Fallback a respuesta estática
       if (existingProspect) {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
-        );
+        )
       } else {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
-        );
+        )
       }
     }
   }
@@ -246,11 +246,11 @@ export class FormsService {
     try {
       const templateName = isNewProspect
         ? 'welcome-prospect'
-        : 'returning-prospect';
+        : 'returning-prospect'
 
       const subject = isNewProspect
         ? `Gracias por contactarnos, ${contactDto.name}`
-        : `¡Qué gusto verte de nuevo, ${contactDto.name}!`;
+        : `¡Qué gusto verte de nuevo, ${contactDto.name}!`
 
       return await this.mailService.sendMail({
         to: contactDto.email,
@@ -261,10 +261,10 @@ export class FormsService {
           message: contactDto.message,
           responseContent,
         },
-      });
+      })
     } catch (error) {
-      console.error('Error enviando email:', error);
-      return false;
+      console.error('Error enviando email:', error)
+      return false
     }
   }
 
@@ -277,7 +277,7 @@ export class FormsService {
     try {
       const adminEmail =
         this.configService.get<string>('COMPANY_EMAIL') ||
-        'contacto@gabrielzavando.cl';
+        'contacto@gabrielzavando.cl'
 
       return await this.mailService.sendMail({
         to: adminEmail,
@@ -328,10 +328,10 @@ export class FormsService {
             </p>
           </div>
         `,
-      });
+      })
     } catch (error) {
-      console.error('Error enviando notificación administrativa:', error);
-      return false;
+      console.error('Error enviando notificación administrativa:', error)
+      return false
     }
   }
 
@@ -342,7 +342,7 @@ export class FormsService {
     try {
       const adminEmail =
         this.configService.get<string>('COMPANY_EMAIL') ||
-        'contacto@gabrielzavando.cl';
+        'contacto@gabrielzavando.cl'
 
       return await this.mailService.sendMail({
         to: adminEmail,
@@ -386,10 +386,10 @@ export class FormsService {
             </p>
           </div>
         `,
-      });
+      })
     } catch (error) {
-      console.error('Error enviando notificación de suscripción:', error);
-      return false;
+      console.error('Error enviando notificación de suscripción:', error)
+      return false
     }
   }
 
@@ -400,10 +400,10 @@ export class FormsService {
         to: email,
         subject: '¡Bienvenido/a a mi newsletter! 🎉',
         templateName: 'subscriber-welcome',
-      });
+      })
     } catch (error) {
-      console.error('Error enviando email de bienvenida:', error);
-      return false;
+      console.error('Error enviando email de bienvenida:', error)
+      return false
     }
   }
 
@@ -411,19 +411,19 @@ export class FormsService {
   async handleUnsubscribe(email: string) {
     try {
       // Verificar si existe el suscriptor
-      const existing = await this.firebaseService.findSubscriberByEmail(email);
+      const existing = await this.firebaseService.findSubscriberByEmail(email)
       if (!existing) {
         return {
           success: true,
           message: 'El email no estaba suscrito o ya fue eliminado',
           wasSubscribed: false,
-        };
+        }
       }
 
-      const removed = await this.firebaseService.removeSubscriber(email);
+      const removed = await this.firebaseService.removeSubscriber(email)
 
       // Enviar email de confirmación de desuscripción
-      const emailSent = await this.sendUnsubscribeConfirmationEmail(email);
+      const emailSent = await this.sendUnsubscribeConfirmationEmail(email)
 
       return {
         success: true,
@@ -431,14 +431,14 @@ export class FormsService {
         wasSubscribed: true,
         removed,
         emailSent,
-      };
+      }
     } catch (error) {
-      console.error('Error procesando desuscripción:', error);
+      console.error('Error procesando desuscripción:', error)
       return {
         success: false,
         message: 'Error procesando la desuscripción',
         error: (error as Error).message,
-      };
+      }
     }
   }
 
@@ -451,23 +451,23 @@ export class FormsService {
         to: email,
         subject: 'Confirmación de desuscripción - Newsletter',
         templateName: 'unsubscribe-confirmation',
-      });
+      })
     } catch (error) {
       console.error(
         'Error enviando email de confirmación de desuscripción:',
         error,
-      );
-      return false;
+      )
+      return false
     }
   }
 
   // Método para probar la conexión a Firebase
   async testFirebaseConnection() {
-    return await this.firebaseService.testConnection();
+    return await this.firebaseService.testConnection()
   }
 
   async testSMTPConnection() {
-    return this.mailService.testConnection();
+    return this.mailService.testConnection()
   }
 
   // Manejo de suscripciones: guarda email + meta en colección 'subscribers'
@@ -480,13 +480,13 @@ export class FormsService {
       if (subscribeDto.turnstileToken) {
         const turnstileOk = await this.verifyTurnstileToken(
           subscribeDto.turnstileToken,
-        );
+        )
         if (!turnstileOk) {
           return {
             success: false,
             message:
               'Verificación de seguridad fallida. Recarga la página e inténtalo de nuevo.',
-          };
+          }
         }
       }
 
@@ -496,23 +496,23 @@ export class FormsService {
           success: false,
           message:
             'Por favor usa un correo permanente. No aceptamos correos temporales.',
-        };
+        }
       }
 
       // 3. Registros MX
-      const mxOk = await this.validateMxRecords(subscribeDto.email);
+      const mxOk = await this.validateMxRecords(subscribeDto.email)
       if (!mxOk) {
         return {
           success: false,
           message:
             'El correo no parece válido. Verifica que esté escrito correctamente.',
-        };
+        }
       }
 
       // 4. Verificar si ya existe
       const existing = await this.firebaseService.findSubscriberByEmail(
         subscribeDto.email,
-      );
+      )
       if (existing) {
         return {
           success: true,
@@ -520,20 +520,20 @@ export class FormsService {
           message:
             'El correo ya está suscrito. Revisa tu bandeja para confirmar si está pendiente.',
           subscriberId: existing.subscriberId,
-        };
+        }
       }
 
       // 5. Guardar suscriptor en estado 'pending' con token de confirmación
       const subscriberId =
-        await this.firebaseService.saveSubscriber(subscribeDto);
+        await this.firebaseService.saveSubscriber(subscribeDto)
 
       // 6. Obtener el token generado para enviarlo en el email
       const confirmationToken =
-        await this.firebaseService.getSubscriberConfirmationToken(subscriberId);
+        await this.firebaseService.getSubscriberConfirmationToken(subscriberId)
 
       // 7. Enviar email de confirmación (Double Opt-In)
       if (confirmationToken) {
-        await this.sendDoubleOptInEmail(subscribeDto.email, confirmationToken);
+        await this.sendDoubleOptInEmail(subscribeDto.email, confirmationToken)
       }
 
       return {
@@ -543,30 +543,30 @@ export class FormsService {
         message:
           '\u00a1Casi listo! Te enviamos un correo de confirmación. Haz clic en el enlace para activar tu suscripción.',
         subscriberId,
-      };
+      }
     } catch (error) {
-      console.error('Error registrando suscripción:', error);
+      console.error('Error registrando suscripción:', error)
       return {
         success: false,
         message: 'Error registrando la suscripción',
         error: (error as Error).message,
-      };
+      }
     }
   }
 
   // Obtener todos los prospectos
   async getAllProspects(): Promise<ProspectRecord[]> {
-    return await this.firebaseService.getAllProspects();
+    return await this.firebaseService.getAllProspects()
   }
 
   // Obtener un prospecto por ID
   async getProspectById(prospectId: string): Promise<ProspectRecord | null> {
-    return await this.firebaseService.getProspectById(prospectId);
+    return await this.firebaseService.getProspectById(prospectId)
   }
 
   // Obtener todos los suscriptores
   async getAllSubscribers(): Promise<any[]> {
-    return await this.firebaseService.getAllSubscribers();
+    return await this.firebaseService.getAllSubscribers()
   }
 
   // Responder administrativamente a un prospecto
@@ -576,18 +576,15 @@ export class FormsService {
       const conversationId = await this.firebaseService.addAdminReplyToProspect(
         prospectId,
         replyContent,
-      );
+      )
 
       // 2. Obtener los datos del prospecto para enviar el correo
-      const db = this.firebaseService.getDb();
-      const prospectDoc = await db
-        .collection('prospects')
-        .doc(prospectId)
-        .get();
+      const db = this.firebaseService.getDb()
+      const prospectDoc = await db.collection('prospects').doc(prospectId).get()
       if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado al intentar enviar el correo');
+        throw new Error('Prospecto no encontrado al intentar enviar el correo')
       }
-      const prospectData = prospectDoc.data() as ProspectRecord;
+      const prospectData = prospectDoc.data() as ProspectRecord
 
       // 3. Reconstruir un ContactDto simplificado para la plantilla de correo
       const contactDto: ContactDto = {
@@ -600,18 +597,18 @@ export class FormsService {
           page: 'AdminPanel',
           ts: new Date().toISOString(),
         },
-      };
+      }
 
       // 4. Enviar email al prospecto (simil a sendResponseEmail pero tratándolo como recurrente)
       const emailSent = await this.sendResponseEmail(
         contactDto,
         replyContent,
         false, // Forzamos false para usar plantilla 'returning-prospect' u otra si se desea
-      );
+      )
 
       // 5. Marcar como enviado si el correo salió exitoso
       if (emailSent) {
-        await this.firebaseService.markEmailAsSent(prospectId, conversationId);
+        await this.firebaseService.markEmailAsSent(prospectId, conversationId)
       }
 
       return {
@@ -619,14 +616,14 @@ export class FormsService {
         message: 'Respuesta enviada correctamente',
         conversationId,
         emailSent,
-      };
+      }
     } catch (error) {
-      console.error('Error enviando respuesta de administrador:', error);
+      console.error('Error enviando respuesta de administrador:', error)
       return {
         success: false,
         message: 'Error enviando respuesta de administrador',
         error: (error as Error).message,
-      };
+      }
     }
   }
 
@@ -634,7 +631,7 @@ export class FormsService {
   async verifySubscription(
     token: string,
   ): Promise<{ success: boolean; email?: string }> {
-    return await this.firebaseService.confirmSubscriber(token);
+    return await this.firebaseService.confirmSubscriber(token)
   }
 
   // Email de confirmación para Double Opt-In
@@ -645,15 +642,15 @@ export class FormsService {
     try {
       const websiteUrl =
         this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl';
+        'https://gabrielzavando.cl'
       // La URL puede ser absoluta (prod) o relativa si usas NestJS como proxy
-      const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`;
+      const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
       const fromEmail =
         this.configService.get<string>('SMTP_FROM_EMAIL') ||
-        'contacto@gabrielzavando.cl';
+        'contacto@gabrielzavando.cl'
       const fromName =
-        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando';
+        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando'
 
       return await this.mailService.sendMail({
         to: email,
@@ -689,10 +686,10 @@ export class FormsService {
             </p>
           </div>
         `,
-      });
+      })
     } catch (error) {
-      console.error('Error enviando email de confirmación:', error);
-      return false;
+      console.error('Error enviando email de confirmación:', error)
+      return false
     }
   }
 
@@ -701,51 +698,51 @@ export class FormsService {
   // ================================================
 
   async runReconfirmationCampaign(): Promise<{
-    sent: number;
-    skipped: number;
-    errors: number;
-    details: string[];
+    sent: number
+    skipped: number
+    errors: number
+    details: string[]
   }> {
-    const rawSubs = await this.firebaseService.getAllSubscribers();
-    const subscribers = rawSubs as Record<string, unknown>[];
+    const rawSubs = await this.firebaseService.getAllSubscribers()
+    const subscribers = rawSubs as Record<string, unknown>[]
 
     // Enviar a todos excepto a los ya confirmados
-    const targets = subscribers.filter((s) => s['status'] !== 'confirmed');
+    const targets = subscribers.filter((s) => s['status'] !== 'confirmed')
 
-    let sent = 0;
-    let skipped = 0;
-    let errors = 0;
-    const details: string[] = [];
+    let sent = 0
+    let skipped = 0
+    let errors = 0
+    const details: string[] = []
 
     for (const sub of targets) {
-      const email = sub['email'] as string;
+      const email = sub['email'] as string
       try {
         // Generar nuevo token de re-confirmación
-        const subId = sub['subscriberId'] as string;
+        const subId = sub['subscriberId'] as string
         const newToken =
-          await this.firebaseService.refreshReconfirmationToken(subId);
+          await this.firebaseService.refreshReconfirmationToken(subId)
 
         if (!newToken) {
-          skipped++;
-          details.push(`⚠️ ${email}: sin ID válido`);
-          continue;
+          skipped++
+          details.push(`⚠️ ${email}: sin ID válido`)
+          continue
         }
 
-        const ok = await this.sendReconfirmationEmail(email, newToken);
+        const ok = await this.sendReconfirmationEmail(email, newToken)
         if (ok) {
-          sent++;
-          details.push(`✅ ${email}: email enviado`);
+          sent++
+          details.push(`✅ ${email}: email enviado`)
         } else {
-          errors++;
-          details.push(`❌ ${email}: fallo al enviar`);
+          errors++
+          details.push(`❌ ${email}: fallo al enviar`)
         }
       } catch (err) {
-        errors++;
-        details.push(`❌ ${email}: ${(err as Error).message}`);
+        errors++
+        details.push(`❌ ${email}: ${(err as Error).message}`)
       }
     }
 
-    return { sent, skipped, errors, details };
+    return { sent, skipped, errors, details }
   }
 
   // Email de re-confirmación (campaña de limpieza)
@@ -756,14 +753,14 @@ export class FormsService {
     try {
       const websiteUrl =
         this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl';
-      const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`;
+        'https://gabrielzavando.cl'
+      const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
       const fromEmail =
         this.configService.get<string>('SMTP_FROM_EMAIL') ||
-        'contacto@gabrielzavando.cl';
+        'contacto@gabrielzavando.cl'
       const fromName =
-        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando';
+        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando'
 
       return await this.mailService.sendMail({
         to: email,
@@ -803,9 +800,9 @@ export class FormsService {
             </p>
           </div>
         `,
-      });
+      })
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -814,42 +811,42 @@ export class FormsService {
   // ================================================
 
   async cleanupInactiveSubscribers(daysThreshold = 7): Promise<{
-    marked: number;
-    total: number;
-    details: string[];
+    marked: number
+    total: number
+    details: string[]
   }> {
-    const rawCandidates = await this.firebaseService.getAllSubscribers();
-    const subscribers = rawCandidates as Record<string, unknown>[];
-    const cutoff = Date.now() - daysThreshold * 24 * 60 * 60 * 1000;
+    const rawCandidates = await this.firebaseService.getAllSubscribers()
+    const subscribers = rawCandidates as Record<string, unknown>[]
+    const cutoff = Date.now() - daysThreshold * 24 * 60 * 60 * 1000
 
     // Candidatos: pending/active con reconfirmación enviada antes del umbral
     const candidates = subscribers.filter((s) => {
-      if (s['status'] === 'confirmed') return false;
-      const reconfAt = s['reconfirmationSentAt'];
-      if (!reconfAt) return false;
+      if (s['status'] === 'confirmed') return false
+      const reconfAt = s['reconfirmationSentAt']
+      if (!reconfAt) return false
       const ts =
         typeof reconfAt === 'object' && '_seconds' in reconfAt
           ? (reconfAt as { _seconds: number })._seconds * 1000
-          : new Date(reconfAt as string).getTime();
-      return ts < cutoff;
-    });
+          : new Date(reconfAt as string).getTime()
+      return ts < cutoff
+    })
 
-    const details: string[] = [];
-    let marked = 0;
+    const details: string[] = []
+    let marked = 0
 
     for (const sub of candidates) {
-      const id = sub['subscriberId'] as string;
-      const email = sub['email'] as string;
+      const id = sub['subscriberId'] as string
+      const email = sub['email'] as string
       try {
-        await this.firebaseService.markSubscriberInactive(id);
-        marked++;
-        details.push(`🗑️ ${email}: marcado como inactivo`);
+        await this.firebaseService.markSubscriberInactive(id)
+        marked++
+        details.push(`🗑️ ${email}: marcado como inactivo`)
       } catch {
-        details.push(`⚠️ ${email}: error al marcar`);
+        details.push(`⚠️ ${email}: error al marcar`)
       }
     }
 
-    return { marked, total: subscribers.length, details };
+    return { marked, total: subscribers.length, details }
   }
 
   // ================================================
@@ -857,16 +854,16 @@ export class FormsService {
   // ================================================
 
   async exportSubscribers(): Promise<{
-    count: number;
-    subscribers: Record<string, unknown>[];
+    count: number
+    subscribers: Record<string, unknown>[]
   }> {
-    const all = await this.firebaseService.getAllSubscribers();
+    const all = await this.firebaseService.getAllSubscribers()
     const clean = (all as Record<string, unknown>[]).map((s) => ({
       email: s['email'],
       status: s['status'] ?? 'active',
       createdAt: s['createdAt'],
       confirmedAt: s['confirmedAt'] ?? null,
-    }));
-    return { count: clean.length, subscribers: clean };
+    }))
+    return { count: clean.length, subscribers: clean }
   }
 }

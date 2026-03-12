@@ -1,23 +1,23 @@
-import { IsString, IsOptional, IsIn, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsNotEmpty } from 'class-validator'
 
 export class CreateTicketDto {
   @IsString()
   @IsNotEmpty()
-  subject: string;
+  subject: string
 
   @IsString()
   @IsNotEmpty()
-  message: string;
+  message: string
 
   @IsOptional()
   @IsIn(['low', 'medium', 'high'])
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'low' | 'medium' | 'high'
 
   @IsString()
   @IsNotEmpty()
-  projectId: string;
+  projectId: string
 
   @IsString()
   @IsNotEmpty()
-  projectName: string;
+  projectName: string
 }

@@ -1,14 +1,14 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator'
 
 export class UploadFileDto {
   @IsString()
-  title: string;
+  title: string
 
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string
 
   @IsOptional()
   @IsString()
-  isPublic?: string;
+  isPublic?: string
 }

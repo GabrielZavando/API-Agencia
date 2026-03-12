@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { BlogCategoriesController } from './blog-categories.controller';
-import { BlogCategoriesService } from './blog-categories.service';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { Test, TestingModule } from '@nestjs/testing'
+import { BlogCategoriesController } from './blog-categories.controller'
+import { BlogCategoriesService } from './blog-categories.service'
 
 describe('BlogCategoriesController', () => {
-  let controller: BlogCategoriesController;
+  let controller: BlogCategoriesController
 
   const mockService = {
     create: vi.fn(),
@@ -12,7 +12,7 @@ describe('BlogCategoriesController', () => {
     findOne: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
-  };
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,12 +23,12 @@ describe('BlogCategoriesController', () => {
           useValue: mockService,
         },
       ],
-    }).compile();
+    }).compile()
 
-    controller = module.get<BlogCategoriesController>(BlogCategoriesController);
-  });
+    controller = module.get<BlogCategoriesController>(BlogCategoriesController)
+  })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-});
+    expect(controller).toBeDefined()
+  })
+})

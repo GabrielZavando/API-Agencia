@@ -10,15 +10,15 @@ import {
   UseInterceptors,
   UploadedFile,
   Body,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ReportsService } from './reports.service';
-import { CreateReportDto } from './dto/create-report.dto';
+} from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { ReportsService } from './reports.service'
+import { CreateReportDto } from './dto/create-report.dto'
 import {
   FirebaseAuthGuard,
   AuthenticatedRequest,
-} from '../auth/firebase-auth.guard';
-import { Roles } from '../auth/roles.decorator';
+} from '../auth/firebase-auth.guard'
+import { Roles } from '../auth/roles.decorator'
 
 @Controller('reports')
 @UseGuards(FirebaseAuthGuard)
@@ -33,7 +33,7 @@ export class ReportsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateReportDto,
   ) {
-    return this.reportsService.uploadReport(file, dto);
+    return this.reportsService.uploadReport(file, dto)
   }
 
   /** Admin: listar todos / Cliente: listar los suyos */
@@ -44,12 +44,12 @@ export class ReportsController {
     @Query('clientId') clientId?: string,
   ) {
     if (req.user?.role === 'client') {
-      return this.reportsService.findByClient(req.user.uid);
+      return this.reportsService.findByClient(req.user.uid)
     }
     if (clientId) {
-      return this.reportsService.findByClient(clientId);
+      return this.reportsService.findByClient(clientId)
     }
-    return this.reportsService.findAll();
+    return this.reportsService.findAll()
   }
 
   /** Admin/Client: obtener URL de descarga con verificación de propiedad */
@@ -60,14 +60,14 @@ export class ReportsController {
     @Req() req: AuthenticatedRequest,
     @Query('download') download?: string,
   ) {
-    const isDownload = download === 'true';
-    return this.reportsService.getDownloadUrl(id, req.user!, isDownload);
+    const isDownload = download === 'true'
+    return this.reportsService.getDownloadUrl(id, req.user!, isDownload)
   }
 
   /** Solo Admin: eliminar informe */
   @Delete(':id')
   @Roles('admin')
   deleteReport(@Param('id') id: string) {
-    return this.reportsService.deleteReport(id);
+    return this.reportsService.deleteReport(id)
   }
 }

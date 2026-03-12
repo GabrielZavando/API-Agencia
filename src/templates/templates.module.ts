@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { TemplateService } from './template.service';
+import { Module } from '@nestjs/common'
+import { TemplateService } from './template.service'
 
 @Module({
   providers: [TemplateService],

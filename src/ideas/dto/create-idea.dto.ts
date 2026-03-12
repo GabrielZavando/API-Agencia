@@ -1,15 +1,15 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator'
 
 export class CreateIdeaDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name: string
 
   @IsString()
   @IsNotEmpty()
-  explanation: string;
+  explanation: string
 
   @IsString()
   @IsOptional()
-  clientId?: string;
+  clientId?: string
 }

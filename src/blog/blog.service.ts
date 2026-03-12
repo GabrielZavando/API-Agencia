@@ -1,26 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import * as admin from 'firebase-admin';
-import { FirebaseService } from '../firebase/firebase.service';
-import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
+import { Injectable, NotFoundException } from '@nestjs/common'
+import * as admin from 'firebase-admin'
+import { FirebaseService } from '../firebase/firebase.service'
+import { CreatePostDto } from './dto/create-post.dto'
+import { UpdatePostDto } from './dto/update-post.dto'
 
 @Injectable()
 export class BlogService {
-  private collection: admin.firestore.CollectionReference;
+  private collection: admin.firestore.CollectionReference
 
   constructor(private readonly firebaseService: FirebaseService) {
-    this.collection = admin.firestore().collection('posts');
+    this.collection = admin.firestore().collection('posts')
   }
 
   async create(createPostDto: CreatePostDto) {
-    const { slug } = createPostDto;
+    const { slug } = createPostDto
     // Verificar si el slug ya existe
-    const existing = await this.collection.where('slug', '==', slug).get();
+    const existing = await this.collection.where('slug', '==', slug).get()
     if (!existing.empty) {
-      throw new Error('Slug already exists');
+      throw new Error('Slug already exists')
     }
 
-    const docRef = this.collection.doc();
+    const docRef = this.collection.doc()
     const post = {
       id: docRef.id,
       ...createPostDto,
@@ -33,74 +33,74 @@ export class BlogService {
       coverImage: createPostDto.coverImage || null,
       author: createPostDto.author || null,
       category: createPostDto.category || null,
-    };
+    }
 
-    await docRef.set(post);
-    return post;
+    await docRef.set(post)
+    return post
   }
 
   async findAll(publishedOnly = false) {
     const query: admin.firestore.Query = this.collection.orderBy(
       'createdAt',
       'desc',
-    );
+    )
 
-    const snapshot = await query.get();
-    let docs = snapshot.docs.map((doc) => doc.data());
+    const snapshot = await query.get()
+    let docs = snapshot.docs.map((doc) => doc.data())
 
     if (publishedOnly) {
       docs = docs.filter((doc) => {
-        const data = doc as Record<string, unknown>;
-        return data.published === true;
-      });
+        const data = doc as Record<string, unknown>
+        return data.published === true
+      })
     }
 
-    return docs;
+    return docs
   }
 
   async findOne(id: string) {
-    const doc = await this.collection.doc(id).get();
+    const doc = await this.collection.doc(id).get()
     if (!doc.exists) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
+      throw new NotFoundException(`Post with ID ${id} not found`)
     }
-    return doc.data();
+    return doc.data()
   }
 
   async findBySlug(slug: string) {
     const snapshot = await this.collection
       .where('slug', '==', slug)
       .limit(1)
-      .get();
+      .get()
     if (snapshot.empty) {
-      throw new NotFoundException(`Post with slug ${slug} not found`);
+      throw new NotFoundException(`Post with slug ${slug} not found`)
     }
-    return snapshot.docs[0].data();
+    return snapshot.docs[0].data()
   }
 
   async update(id: string, updatePostDto: UpdatePostDto) {
-    const docRef = this.collection.doc(id);
-    const doc = await docRef.get();
+    const docRef = this.collection.doc(id)
+    const doc = await docRef.get()
     if (!doc.exists) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
+      throw new NotFoundException(`Post with ID ${id} not found`)
     }
 
     const updateData: Record<string, unknown> = {
       ...(updatePostDto as Record<string, unknown>),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
+    }
 
     if (updatePostDto.publishedAt !== undefined) {
       updateData.publishedAt = updatePostDto.publishedAt
         ? new Date(updatePostDto.publishedAt)
-        : null;
+        : null
     }
 
-    await docRef.update(updateData);
-    return { id, ...updateData };
+    await docRef.update(updateData)
+    return { id, ...updateData }
   }
 
   async remove(id: string) {
-    await this.collection.doc(id).delete();
-    return { id, deleted: true };
+    await this.collection.doc(id).delete()
+    return { id, deleted: true }
   }
 }

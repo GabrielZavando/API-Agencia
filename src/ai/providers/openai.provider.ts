@@ -1,21 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import OpenAI from 'openai';
-import { AIProvider, AIContext } from '../interfaces/ai.interface';
+import { Injectable } from '@nestjs/common'
+import OpenAI from 'openai'
+import { AIProvider, AIContext } from '../interfaces/ai.interface'
 
 @Injectable()
 export class OpenAIProvider implements AIProvider {
-  name = 'OpenAI GPT';
-  private client: OpenAI;
+  name = 'OpenAI GPT'
+  private client: OpenAI
 
   constructor() {
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-    });
+    })
   }
 
   async generateResponse(prompt: string, context?: AIContext): Promise<string> {
     try {
-      const systemPrompt = this.buildSystemPrompt(context);
+      const systemPrompt = this.buildSystemPrompt(context)
 
       const completion = await this.client.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
@@ -25,23 +25,23 @@ export class OpenAIProvider implements AIProvider {
         ],
         max_tokens: 500,
         temperature: 0.7,
-      });
+      })
 
       return (
         completion.choices[0]?.message?.content || 'Error generando respuesta'
-      );
+      )
     } catch (error) {
-      console.error('Error en OpenAI:', error);
-      throw new Error('Error generando respuesta con OpenAI');
+      console.error('Error en OpenAI:', error)
+      throw new Error('Error generando respuesta con OpenAI')
     }
   }
 
   private buildSystemPrompt(context?: AIContext): string {
     if (!context) {
-      return 'Eres un asistente que ayuda a responder consultas de prospectos de manera profesional y amigable.';
+      return 'Eres un asistente que ayuda a responder consultas de prospectos de manera profesional y amigable.'
     }
 
-    const { companyInfo, isReturningProspect, prospectName } = context;
+    const { companyInfo, isReturningProspect, prospectName } = context
 
     return `Eres un asistente de atención al cliente para ${companyInfo.name}.
 
@@ -67,6 +67,6 @@ INSTRUCCIONES:
 8. La respuesta debe ser entre 150-300 palabras
 9. No uses saludo, ya que será parte de una plantilla HTML
 
-Genera una respuesta personalizada que conecte emocionalmente con el prospecto.`;
+Genera una respuesta personalizada que conecte emocionalmente con el prospecto.`
   }
 }

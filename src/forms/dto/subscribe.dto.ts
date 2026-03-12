@@ -4,33 +4,33 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+} from 'class-validator'
+import { Type } from 'class-transformer'
 
 class SubscribeMetaDto {
   @IsString()
-  userAgent: string;
+  userAgent: string
 
   @IsOptional()
   @IsString()
-  referrer?: string | null;
+  referrer?: string | null
 
   @IsString()
-  page: string;
+  page: string
 
   @IsISO8601()
-  ts: string; // ISO-8601 desde el frontend
+  ts: string // ISO-8601 desde el frontend
 }
 
 export class SubscribeDto {
   @IsEmail()
-  email: string;
+  email: string
 
   @ValidateNested()
   @Type(() => SubscribeMetaDto)
-  meta: SubscribeMetaDto;
+  meta: SubscribeMetaDto
 
   @IsOptional()
   @IsString()
-  turnstileToken?: string;
+  turnstileToken?: string
 }

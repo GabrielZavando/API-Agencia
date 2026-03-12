@@ -1,19 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ProjectsController } from './projects.controller';
-import { ProjectsService } from './projects.service';
-import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
-import { AuthenticatedRequest } from '../auth/firebase-auth.guard';
+import { Test, TestingModule } from '@nestjs/testing'
+import { ProjectsController } from './projects.controller'
+import { ProjectsService } from './projects.service'
+import { CreateProjectDto } from './dto/create-project.dto'
+import { UpdateProjectDto } from './dto/update-project.dto'
+import { AuthenticatedRequest } from '../auth/firebase-auth.guard'
 
 describe('ProjectsController', () => {
-  let controller: ProjectsController;
+  let controller: ProjectsController
   let mockProjectsService: Record<
     keyof Pick<
       ProjectsService,
       'create' | 'findAllByClient' | 'findOne' | 'update' | 'remove'
     >,
     jest.Mock
-  >;
+  >
 
   beforeEach(async () => {
     mockProjectsService = {
@@ -22,19 +22,19 @@ describe('ProjectsController', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
-    };
+    }
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProjectsController],
       providers: [{ provide: ProjectsService, useValue: mockProjectsService }],
-    }).compile();
+    }).compile()
 
-    controller = module.get<ProjectsController>(ProjectsController);
-  });
+    controller = module.get<ProjectsController>(ProjectsController)
+  })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
+    expect(controller).toBeDefined()
+  })
 
   describe('create', () => {
     it('should create a project', async () => {
@@ -43,103 +43,101 @@ describe('ProjectsController', () => {
         name: 'Test',
         clientId: 'client1',
         monthlyTicketLimit: 10,
-      };
-      const expectedResult = { id: '1', ...dto };
-      mockProjectsService.create.mockResolvedValue(expectedResult);
+      }
+      const expectedResult = { id: '1', ...dto }
+      mockProjectsService.create.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.create(dto);
+      const result = await controller.create(dto)
 
       // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.create).toHaveBeenCalledWith(dto);
-    });
-  });
+      expect(result).toEqual(expectedResult)
+      expect(mockProjectsService.create).toHaveBeenCalledWith(dto)
+    })
+  })
 
   describe('findMyProjects', () => {
     it('should find projects for the current authenticated user', async () => {
       // Arrange
       const req = {
         user: { uid: 'client1' },
-      } as unknown as AuthenticatedRequest;
-      const expectedResult = [{ id: '1', name: 'Test', clientId: 'client1' }];
-      mockProjectsService.findAllByClient.mockResolvedValue(expectedResult);
+      } as unknown as AuthenticatedRequest
+      const expectedResult = [{ id: '1', name: 'Test', clientId: 'client1' }]
+      mockProjectsService.findAllByClient.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.findMyProjects(req);
+      const result = await controller.findMyProjects(req)
 
       // Assert
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(expectedResult)
       expect(mockProjectsService.findAllByClient).toHaveBeenCalledWith(
         'client1',
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('findAllByClient', () => {
     it('should find projects for a specific client id', async () => {
       // Arrange
-      const clientId = 'client1';
-      const expectedResult = [{ id: '1', name: 'Test', clientId }];
-      mockProjectsService.findAllByClient.mockResolvedValue(expectedResult);
+      const clientId = 'client1'
+      const expectedResult = [{ id: '1', name: 'Test', clientId }]
+      mockProjectsService.findAllByClient.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.findAllByClient(clientId);
+      const result = await controller.findAllByClient(clientId)
 
       // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.findAllByClient).toHaveBeenCalledWith(
-        clientId,
-      );
-    });
-  });
+      expect(result).toEqual(expectedResult)
+      expect(mockProjectsService.findAllByClient).toHaveBeenCalledWith(clientId)
+    })
+  })
 
   describe('findOne', () => {
     it('should find a single project by id', async () => {
       // Arrange
-      const id = '1';
-      const expectedResult = { id, name: 'Test', clientId: 'client1' };
-      mockProjectsService.findOne.mockResolvedValue(expectedResult);
+      const id = '1'
+      const expectedResult = { id, name: 'Test', clientId: 'client1' }
+      mockProjectsService.findOne.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.findOne(id);
+      const result = await controller.findOne(id)
 
       // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.findOne).toHaveBeenCalledWith(id);
-    });
-  });
+      expect(result).toEqual(expectedResult)
+      expect(mockProjectsService.findOne).toHaveBeenCalledWith(id)
+    })
+  })
 
   describe('update', () => {
     it('should update a project', async () => {
       // Arrange
-      const id = '1';
-      const dto: UpdateProjectDto = { name: 'Updated' };
-      const expectedResult = { id, name: 'Updated', clientId: 'client1' };
-      mockProjectsService.update.mockResolvedValue(expectedResult);
+      const id = '1'
+      const dto: UpdateProjectDto = { name: 'Updated' }
+      const expectedResult = { id, name: 'Updated', clientId: 'client1' }
+      mockProjectsService.update.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.update(id, dto);
+      const result = await controller.update(id, dto)
 
       // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.update).toHaveBeenCalledWith(id, dto);
-    });
-  });
+      expect(result).toEqual(expectedResult)
+      expect(mockProjectsService.update).toHaveBeenCalledWith(id, dto)
+    })
+  })
 
   describe('remove', () => {
     it('should remove a project', async () => {
       // Arrange
-      const id = '1';
-      const expectedResult = { success: true };
-      mockProjectsService.remove.mockResolvedValue(expectedResult);
+      const id = '1'
+      const expectedResult = { success: true }
+      mockProjectsService.remove.mockResolvedValue(expectedResult)
 
       // Act
-      const result = await controller.remove(id);
+      const result = await controller.remove(id)
 
       // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.remove).toHaveBeenCalledWith(id);
-    });
-  });
-});
+      expect(result).toEqual(expectedResult)
+      expect(mockProjectsService.remove).toHaveBeenCalledWith(id)
+    })
+  })
+})

@@ -1,8 +1,8 @@
 export class UpdateUserDto {
-  email?: string;
-  password?: string;
-  displayName?: string;
-  role?: string;
-  storageLimitGb?: number;
-  monthlyTicketLimit?: number;
+  email?: string
+  password?: string
+  displayName?: string
+  role?: string
+  storageLimitGb?: number
+  monthlyTicketLimit?: number
 }
