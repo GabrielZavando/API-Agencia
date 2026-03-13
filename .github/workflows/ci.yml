@@ -32,8 +32,8 @@ jobs:
         working-directory: ./Api
 
       - name: Run Critical Unit Tests
-        # Priorizamos rutas críticas de negocio
-        run: pnpm test -- --coverage
+        # Priorizamos rutas críticas de negocio (Vitest habilitado)
+        run: pnpm test
         working-directory: ./Api
 
       - name: Build Project
@@ -47,10 +47,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Security Audit
-        uses: openai/openai-security-review-action@v1
+      - name: Claude Security Review
+        uses: anthropic/claude-code-security-review@v1
         with:
-          openai-key: ${{ secrets.OPENAI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           path: './Api'
-          model: 'gpt-4o'
