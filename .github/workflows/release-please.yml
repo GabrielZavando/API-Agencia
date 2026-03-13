@@ -29,4 +29,4 @@ jobs:
           # para generar el resumen ejecutivo de la versión.
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: 'gpt-5.4' # Modelo avanzado solicitado
+          OPENAI_MODEL: 'gpt-4o' # Corregido

@@ -4,26 +4,26 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 
 // Mock firebase-admin
-const mockDoc = jest.fn()
-const mockSet = jest.fn()
-const mockGet = jest.fn()
-const mockDelete = jest.fn()
-const mockWhere = jest.fn()
-const mockOrderBy = jest.fn()
-const mockSave = jest.fn()
-const mockGetSignedUrl = jest.fn()
-const mockBucketFile = jest.fn()
+const mockDoc = vi.fn()
+const mockSet = vi.fn()
+const mockGet = vi.fn()
+const mockDelete = vi.fn()
+const mockWhere = vi.fn()
+const mockOrderBy = vi.fn()
+const mockSave = vi.fn()
+const mockGetSignedUrl = vi.fn()
+const mockBucketFile = vi.fn()
 
-jest.mock('firebase-admin', () => ({
-  firestore: jest.fn(() => ({
-    collection: jest.fn(() => ({
+vi.mock('firebase-admin', () => ({
+  firestore: vi.fn(() => ({
+    collection: vi.fn(() => ({
       doc: mockDoc,
       where: mockWhere,
       orderBy: mockOrderBy,
     })),
   })),
-  storage: jest.fn(() => ({
-    bucket: jest.fn(() => ({
+  storage: vi.fn(() => ({
+    bucket: vi.fn(() => ({
       file: mockBucketFile,
     })),
   })),
@@ -33,7 +33,7 @@ describe('ReportsService', () => {
   let service: ReportsService
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     mockDoc.mockReturnValue({
       id: 'report-123',
@@ -47,7 +47,7 @@ describe('ReportsService', () => {
     })
 
     mockOrderBy.mockReturnValue({
-      get: jest.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({
         docs: [],
       }),
     })
@@ -55,7 +55,7 @@ describe('ReportsService', () => {
     mockBucketFile.mockReturnValue({
       save: mockSave,
       getSignedUrl: mockGetSignedUrl,
-      delete: jest.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
     })
 
     const module: TestingModule = await Test.createTestingModule({

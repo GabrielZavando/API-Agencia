@@ -5,29 +5,29 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 
 describe('ProjectsService', () => {
   let service: ProjectsService
-  let mockFirebaseService: { getDb: jest.Mock }
-  let mockFirestore: { collection: jest.Mock }
+  let mockFirebaseService: { getDb: vi.Mock }
+  let mockFirestore: { collection: vi.Mock }
   let mockCollection: {
-    doc: jest.Mock
-    where: jest.Mock
-    orderBy: jest.Mock
-    get: jest.Mock
+    doc: vi.Mock
+    where: vi.Mock
+    orderBy: vi.Mock
+    get: vi.Mock
   }
   let mockDocRef: {
     id: string
-    set: jest.Mock
-    get: jest.Mock
-    update: jest.Mock
-    delete: jest.Mock
+    set: vi.Mock
+    get: vi.Mock
+    update: vi.Mock
+    delete: vi.Mock
   }
 
   beforeEach(async () => {
     mockDocRef = {
       id: 'test-project-id',
-      set: jest.fn().mockResolvedValue(true),
-      get: jest.fn(),
-      update: jest.fn().mockResolvedValue(true),
-      delete: jest.fn().mockResolvedValue(true),
+      set: vi.fn().mockResolvedValue(true),
+      get: vi.fn(),
+      update: vi.fn().mockResolvedValue(true),
+      delete: vi.fn().mockResolvedValue(true),
     }
 
     const mockQuerySnapshot = {
@@ -38,18 +38,18 @@ describe('ProjectsService', () => {
     }
 
     mockCollection = {
-      doc: jest.fn().mockReturnValue(mockDocRef),
-      where: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      get: jest.fn().mockResolvedValue(mockQuerySnapshot),
+      doc: vi.fn().mockReturnValue(mockDocRef),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      get: vi.fn().mockResolvedValue(mockQuerySnapshot),
     }
 
     mockFirestore = {
-      collection: jest.fn().mockReturnValue(mockCollection),
+      collection: vi.fn().mockReturnValue(mockCollection),
     }
 
     mockFirebaseService = {
-      getDb: jest.fn().mockReturnValue(mockFirestore),
+      getDb: vi.fn().mockReturnValue(mockFirestore),
     }
 
     const module: TestingModule = await Test.createTestingModule({

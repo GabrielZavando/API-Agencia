@@ -12,19 +12,19 @@ describe('FormsService', () => {
 
   beforeEach(async () => {
     firebaseService = {
-      getAllProspects: jest.fn(),
-      getAllSubscribers: jest.fn(),
-      addAdminReplyToProspect: jest.fn(),
-      getDb: jest.fn(),
-      markEmailAsSent: jest.fn(),
+      getAllProspects: vi.fn(),
+      getAllSubscribers: vi.fn(),
+      addAdminReplyToProspect: vi.fn(),
+      getDb: vi.fn(),
+      markEmailAsSent: vi.fn(),
     }
 
     mailService = {
-      sendMail: jest.fn(),
+      sendMail: vi.fn(),
     }
 
     configService = {
-      get: jest.fn(),
+      get: vi.fn(),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -37,7 +37,7 @@ describe('FormsService', () => {
     }).compile()
 
     service = module.get<FormsService>(FormsService)
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('should be defined', () => {
@@ -82,12 +82,12 @@ describe('FormsService', () => {
       )
 
       // Mockear Firestore getDb
-      const mockGet = jest.fn().mockResolvedValue({
+      const mockGet = vi.fn().mockResolvedValue({
         exists: true,
         data: () => prospectData,
       })
-      const mockDoc = jest.fn().mockReturnValue({ get: mockGet })
-      const mockCollection = jest.fn().mockReturnValue({ doc: mockDoc })
+      const mockDoc = vi.fn().mockReturnValue({ get: mockGet })
+      const mockCollection = vi.fn().mockReturnValue({ doc: mockDoc })
       ;(firebaseService.getDb as any).mockReturnValue({
         collection: mockCollection,
       })
@@ -134,11 +134,11 @@ describe('FormsService', () => {
       )
 
       // Mockear Firestore getDb - false
-      const mockGet = jest.fn().mockResolvedValue({
+      const mockGet = vi.fn().mockResolvedValue({
         exists: false,
       })
-      const mockDoc = jest.fn().mockReturnValue({ get: mockGet })
-      const mockCollection = jest.fn().mockReturnValue({ doc: mockDoc })
+      const mockDoc = vi.fn().mockReturnValue({ get: mockGet })
+      const mockCollection = vi.fn().mockReturnValue({ doc: mockDoc })
       ;(firebaseService.getDb as any).mockReturnValue({
         collection: mockCollection,
       })

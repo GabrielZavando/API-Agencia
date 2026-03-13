@@ -53,4 +53,4 @@ jobs:
           openai-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: './Api'
-          model: 'gpt-5.4'
+          model: 'gpt-4o'

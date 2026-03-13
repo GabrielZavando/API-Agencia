@@ -12,16 +12,16 @@ describe('ProjectsController', () => {
       ProjectsService,
       'create' | 'findAllByClient' | 'findOne' | 'update' | 'remove'
     >,
-    jest.Mock
+    vi.Mock
   >
 
   beforeEach(async () => {
     mockProjectsService = {
-      create: jest.fn(),
-      findAllByClient: jest.fn(),
-      findOne: jest.fn(),
-      update: jest.fn(),
-      remove: jest.fn(),
+      create: vi.fn(),
+      findAllByClient: vi.fn(),
+      findOne: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
     }
 
     const module: TestingModule = await Test.createTestingModule({

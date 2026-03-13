@@ -10,14 +10,14 @@ describe('FormsController', () => {
   let service: FormsService
 
   const mockFormsService = {
-    handleContact: jest.fn(),
-    handleSubscribe: jest.fn(),
-    handleUnsubscribe: jest.fn(),
-    testFirebaseConnection: jest.fn(),
-    testSMTPConnection: jest.fn(),
-    getAllSubscribers: jest.fn(),
-    getAllProspects: jest.fn(),
-    adminReplyToProspect: jest.fn(),
+    handleContact: vi.fn(),
+    handleSubscribe: vi.fn(),
+    handleUnsubscribe: vi.fn(),
+    testFirebaseConnection: vi.fn(),
+    testSMTPConnection: vi.fn(),
+    getAllSubscribers: vi.fn(),
+    getAllProspects: vi.fn(),
+    adminReplyToProspect: vi.fn(),
   }
 
   beforeEach(async () => {
@@ -34,7 +34,7 @@ describe('FormsController', () => {
     controller = module.get<FormsController>(FormsController)
     service = module.get<FormsService>(FormsService)
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('should be defined', () => {

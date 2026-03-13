@@ -6,16 +6,16 @@ import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 
 // Mock firebase-admin
-const mockDoc = jest.fn()
-const mockSet = jest.fn()
-const mockGet = jest.fn()
-const mockUpdate = jest.fn()
-const mockWhere = jest.fn()
-const mockOrderBy = jest.fn()
+const mockDoc = vi.fn()
+const mockSet = vi.fn()
+const mockGet = vi.fn()
+const mockUpdate = vi.fn()
+const mockWhere = vi.fn()
+const mockOrderBy = vi.fn()
 
-jest.mock('firebase-admin', () => ({
-  firestore: jest.fn(() => ({
-    collection: jest.fn(() => ({
+vi.mock('firebase-admin', () => ({
+  firestore: vi.fn(() => ({
+    collection: vi.fn(() => ({
       doc: mockDoc,
       where: mockWhere,
       orderBy: mockOrderBy,
@@ -27,7 +27,7 @@ describe('SupportService', () => {
   let service: SupportService
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     mockDoc.mockReturnValue({
       id: 'ticket-123',
@@ -43,20 +43,20 @@ describe('SupportService', () => {
     })
 
     // Mock de where().get() para cuota
-    const fakeWhere = jest.fn()
+    const fakeWhere = vi.fn()
     const whereChain = {
       where: fakeWhere,
-      get: jest.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({
         size: 0,
         docs: [],
-        forEach: jest.fn((cb: (doc: any) => void) => ([] as any[]).forEach(cb)),
+        forEach: vi.fn((cb: (doc: any) => void) => ([] as any[]).forEach(cb)),
       }),
     }
     fakeWhere.mockReturnValue(whereChain)
     mockWhere.mockReturnValue(whereChain)
 
     mockOrderBy.mockReturnValue({
-      get: jest.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({
         docs: [],
       }),
     })
@@ -68,7 +68,7 @@ describe('SupportService', () => {
           provide: FirebaseService,
           useValue: {
             db: {
-              collection: jest.fn(() => ({
+              collection: vi.fn(() => ({
                 doc: mockDoc,
                 where: mockWhere,
                 orderBy: mockOrderBy,
@@ -79,13 +79,13 @@ describe('SupportService', () => {
         {
           provide: MailService,
           useValue: {
-            sendMail: jest.fn().mockResolvedValue(true),
+            sendMail: vi.fn().mockResolvedValue(true),
           },
         },
         {
           provide: 'ConfigService',
           useValue: {
-            get: jest.fn(),
+            get: vi.fn(),
           },
         },
       ],
@@ -144,13 +144,13 @@ describe('SupportService', () => {
 
     it('debe rechazar si se excede la cuota', async () => {
       // Simular que ya usó 2 tickets
-      const fakeWhere = jest.fn()
+      const fakeWhere = vi.fn()
       const whereChain = {
         where: fakeWhere,
-        get: jest.fn().mockResolvedValue({
+        get: vi.fn().mockResolvedValue({
           size: 2,
           docs: [{}, {}],
-          forEach: jest.fn((cb: (doc: any) => void) =>
+          forEach: vi.fn((cb: (doc: any) => void) =>
             [
               { data: () => ({ createdAt: new Date() }) },
               { data: () => ({ createdAt: new Date() }) },
