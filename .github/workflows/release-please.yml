@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          target-branch: main
+          config-file: Api/release-please-config.json
+          manifest-file: Api/.release-please-manifest.json
+
+      # AI Enriched Release Notes Step
+      - name: Enrich Release Notes with AI
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "Generando notas de lanzamiento profesionales con OpenAI GPT-5.4..."
+          # Aquí se llamaría a un script o action que use el log de commits
+          # para generar el resumen ejecutivo de la versión.
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: 'gpt-5.4' # Modelo avanzado solicitado

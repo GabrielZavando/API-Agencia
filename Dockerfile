@@ -2,28 +2,28 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Actualizar npm a la versión más reciente
-RUN npm install -g npm@11.5.2
+# Instalar y habilitar pnpm
+RUN npm install -g corepack@latest && corepack enable pnpm
 
-# Instalar dependencias (sin --force)
-COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+# Instalar dependencias
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copiar el código y compilar
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Actualizar npm en producción también
-RUN npm install -g npm@11.5.2
+# Instalar y habilitar pnpm en producción también
+RUN npm install -g corepack@latest && corepack enable pnpm
 
-# Instalar solo dependencias de producción (sin --force)
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
+# Instalar solo dependencias de producción
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 # Copiar código compilado
 COPY --from=builder /app/dist ./dist

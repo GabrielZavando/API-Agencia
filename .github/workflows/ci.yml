@@ -1,0 +1,50 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Linter and Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ./Api
+
+      - name: Run Linter
+        run: pnpm lint
+        working-directory: ./Api
+
+      - name: Security Scan (SecOps)
+        uses: openai/openai-security-review-action@v1
+        with:
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: './Api'
+          model: 'gpt-5.4' # Modelo avanzado solicitado
+
+      - name: Run Critical Unit Tests
+        # Priorizamos rutas críticas de negocio
+        run: pnpm test -- --coverage
+        working-directory: ./Api
+
+      - name: Build Project
+        run: pnpm build
+        working-directory: ./Api
