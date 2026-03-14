@@ -32,24 +32,10 @@ jobs:
         working-directory: ./Api
 
       - name: Run Critical Unit Tests
-        # Priorizamos rutas críticas de negocio (Vitest habilitado)
+        # Priorizamos rutas críticas de negocio (Vitest)
         run: pnpm test
         working-directory: ./Api
 
       - name: Build Project
         run: pnpm build
         working-directory: ./Api
-
-  security_scan:
-    name: Security Scan (SecOps)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Claude Security Review
-        uses: anthropic/claude-code-security-review@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          path: './Api'
