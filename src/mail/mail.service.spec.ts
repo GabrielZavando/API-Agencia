@@ -1,15 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { MailService } from './mail.service'
+import { ConfigService } from '@nestjs/config'
+import { TemplateService } from '../templates/template.service'
 
 describe('MailService', () => {
   let service: MailService
+  let mockConfigService: Partial<ConfigService>
+  let mockTemplateService: Partial<TemplateService>
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [MailService],
-    }).compile()
+  beforeEach(() => {
+    mockConfigService = {
+      get: vi.fn((key: string) => {
+        if (key === 'SMTP_PORT') return '465'
+        return ''
+      }),
+    }
+    mockTemplateService = {
+      getEmailTemplate: vi.fn().mockResolvedValue('<html></html>'),
+    }
 
-    service = module.get<MailService>(MailService)
+    service = new MailService(
+      mockConfigService as ConfigService,
+      mockTemplateService as TemplateService,
+    )
   })
 
   it('should be defined', () => {

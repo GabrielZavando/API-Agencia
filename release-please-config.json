@@ -1,0 +1,8 @@
+{
+  "packages": {
+    "Api": {
+      "release-type": "node",
+      "package-name": "api"
+    }
+  }
+}

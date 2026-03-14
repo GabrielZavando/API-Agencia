@@ -1,21 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { SupportService } from './support.service'
 import { BadRequestException, NotFoundException } from '@nestjs/common'
-
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 // Mock firebase-admin
-const mockDoc = jest.fn()
-const mockSet = jest.fn()
-const mockGet = jest.fn()
-const mockUpdate = jest.fn()
-const mockWhere = jest.fn()
-const mockOrderBy = jest.fn()
+const mockDoc = vi.fn()
+const mockSet = vi.fn()
+const mockGet = vi.fn()
+const mockUpdate = vi.fn()
+const mockWhere = vi.fn()
+const mockOrderBy = vi.fn()
 
-jest.mock('firebase-admin', () => ({
-  firestore: jest.fn(() => ({
-    collection: jest.fn(() => ({
+vi.mock('firebase-admin', () => ({
+  firestore: vi.fn(() => ({
+    collection: vi.fn(() => ({
       doc: mockDoc,
       where: mockWhere,
       orderBy: mockOrderBy,
@@ -25,9 +24,12 @@ jest.mock('firebase-admin', () => ({
 
 describe('SupportService', () => {
   let service: SupportService
+  let mockFirebaseService: any
+  let mockMailService: any
+  let mockNotificationsService: any
 
-  beforeEach(async () => {
-    jest.clearAllMocks()
+  beforeEach(() => {
+    vi.clearAllMocks()
 
     mockDoc.mockReturnValue({
       id: 'ticket-123',
@@ -43,55 +45,47 @@ describe('SupportService', () => {
     })
 
     // Mock de where().get() para cuota
-    const fakeWhere = jest.fn()
+    const fakeWhere = vi.fn()
     const whereChain = {
       where: fakeWhere,
-      get: jest.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({
         size: 0,
         docs: [],
-        forEach: jest.fn((cb: (doc: any) => void) => ([] as any[]).forEach(cb)),
+        forEach: vi.fn((cb: any) => [].forEach(cb)),
       }),
     }
     fakeWhere.mockReturnValue(whereChain)
     mockWhere.mockReturnValue(whereChain)
 
     mockOrderBy.mockReturnValue({
-      get: jest.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({
         docs: [],
       }),
     })
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SupportService,
-        {
-          provide: FirebaseService,
-          useValue: {
-            db: {
-              collection: jest.fn(() => ({
-                doc: mockDoc,
-                where: mockWhere,
-                orderBy: mockOrderBy,
-              })),
-            },
-          },
-        },
-        {
-          provide: MailService,
-          useValue: {
-            sendMail: jest.fn().mockResolvedValue(true),
-          },
-        },
-        {
-          provide: 'ConfigService',
-          useValue: {
-            get: jest.fn(),
-          },
-        },
-      ],
-    }).compile()
+    mockFirebaseService = {
+      getDb: vi.fn().mockReturnValue({
+        collection: vi.fn(() => ({
+          doc: mockDoc,
+          where: mockWhere,
+          orderBy: mockOrderBy,
+        })),
+      }),
+    }
 
-    service = module.get<SupportService>(SupportService)
+    mockMailService = {
+      sendMail: vi.fn().mockResolvedValue(true),
+    }
+
+    mockNotificationsService = {
+      createNotification: vi.fn().mockResolvedValue(true),
+    }
+
+    service = new SupportService(
+      mockFirebaseService as FirebaseService,
+      mockMailService as MailService,
+      mockNotificationsService as NotificationsService,
+    )
   })
 
   it('debe estar definido', () => {
@@ -99,12 +93,12 @@ describe('SupportService', () => {
   })
 
   describe('getTicketQuota', () => {
-    it('debe retornar límite por defecto de 2', async () => {
+    it('debe retornar límite por defecto de 3', async () => {
       const quota = await service.getTicketQuota('user-1')
 
-      expect(quota.limit).toBe(2)
+      expect(quota.limit).toBe(3)
       expect(quota.used).toBe(0)
-      expect(quota.remaining).toBe(2)
+      expect(quota.remaining).toBe(3)
     })
 
     it('debe usar el límite personalizado del usuario', async () => {
@@ -143,19 +137,19 @@ describe('SupportService', () => {
     })
 
     it('debe rechazar si se excede la cuota', async () => {
-      // Simular que ya usó 2 tickets
-      const fakeWhere = jest.fn()
+      // Simular que ya usó 3 tickets
+      const fakeWhere = vi.fn()
+      const mockDocs = [
+        { data: () => ({ createdAt: new Date() }) },
+        { data: () => ({ createdAt: new Date() }) },
+        { data: () => ({ createdAt: new Date() }) },
+      ]
       const whereChain = {
         where: fakeWhere,
-        get: jest.fn().mockResolvedValue({
-          size: 2,
-          docs: [{}, {}],
-          forEach: jest.fn((cb: (doc: any) => void) =>
-            [
-              { data: () => ({ createdAt: new Date() }) },
-              { data: () => ({ createdAt: new Date() }) },
-            ].forEach(cb),
-          ),
+        get: vi.fn().mockResolvedValue({
+          size: 3,
+          docs: mockDocs,
+          forEach: (cb: any) => mockDocs.forEach(cb),
         }),
       }
       fakeWhere.mockReturnValue(whereChain)
@@ -191,6 +185,9 @@ describe('SupportService', () => {
           id: 'ticket-123',
           status: 'resolved',
           adminResponse: 'Resuelto',
+          clientId: 'user-1',
+          clientEmail: 'user@test.com',
+          subject: 'Test',
         }),
       })
 
