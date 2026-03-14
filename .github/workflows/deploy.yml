@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }} ./Api
+          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }} .
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }}
 
       - name: Deploy to Cloud Run
