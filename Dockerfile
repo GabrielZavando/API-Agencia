@@ -25,14 +25,8 @@ RUN npm install -g corepack@latest && corepack enable pnpm
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
-# Copiar código compilado
+# Copiar código compilado (incluye assets como templates gracias a nest-cli.json)
 COPY --from=builder /app/dist ./dist
-
-# Copiar solo assets necesarios en runtime (templates)
-COPY --from=builder /app/src/templates ./dist/templates
-
-# Copiar archivos de configuración
-COPY --from=builder /app/config ./config
 
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && \
