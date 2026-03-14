@@ -31,7 +31,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe())
 
   // Cloud Run espera que la aplicación escuche el puerto indicado en PORT (usualmente 8080)
-  await app.listen(process.env.PORT ?? 8080)
+  // Es vital escuchar en '0.0.0.0' para ser accesible desde fuera del contenedor
+  await app.listen(process.env.PORT ?? 8080, '0.0.0.0')
 }
 bootstrap().catch((err: unknown) => {
   console.error('Error during bootstrap', err)
