@@ -21,21 +21,17 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: ./Api
 
       - name: Run Linter
         run: pnpm lint
-        working-directory: ./Api
 
       - name: Run Critical Unit Tests
         # Priorizamos rutas críticas de negocio (Vitest)
         run: pnpm test
-        working-directory: ./Api
 
       - name: Build Project
         run: pnpm build
-        working-directory: ./Api
