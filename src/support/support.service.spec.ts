@@ -1,9 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { SupportService } from './support.service'
 import { BadRequestException, NotFoundException } from '@nestjs/common'
-
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 // Mock firebase-admin
 const mockDoc = vi.fn()
@@ -25,8 +24,11 @@ vi.mock('firebase-admin', () => ({
 
 describe('SupportService', () => {
   let service: SupportService
+  let mockFirebaseService: any
+  let mockMailService: any
+  let mockNotificationsService: any
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
 
     mockDoc.mockReturnValue({
@@ -61,37 +63,29 @@ describe('SupportService', () => {
       }),
     })
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SupportService,
-        {
-          provide: FirebaseService,
-          useValue: {
-            db: {
-              collection: vi.fn(() => ({
-                doc: mockDoc,
-                where: mockWhere,
-                orderBy: mockOrderBy,
-              })),
-            },
-          },
-        },
-        {
-          provide: MailService,
-          useValue: {
-            sendMail: vi.fn().mockResolvedValue(true),
-          },
-        },
-        {
-          provide: 'ConfigService',
-          useValue: {
-            get: vi.fn(),
-          },
-        },
-      ],
-    }).compile()
+    mockFirebaseService = {
+      getDb: vi.fn().mockReturnValue({
+        collection: vi.fn(() => ({
+          doc: mockDoc,
+          where: mockWhere,
+          orderBy: mockOrderBy,
+        })),
+      }),
+    }
 
-    service = module.get<SupportService>(SupportService)
+    mockMailService = {
+      sendMail: vi.fn().mockResolvedValue(true),
+    }
+
+    mockNotificationsService = {
+      createNotification: vi.fn().mockResolvedValue(true),
+    }
+
+    service = new SupportService(
+      mockFirebaseService as FirebaseService,
+      mockMailService as MailService,
+      mockNotificationsService as NotificationsService,
+    )
   })
 
   it('debe estar definido', () => {
@@ -99,7 +93,7 @@ describe('SupportService', () => {
   })
 
   describe('getTicketQuota', () => {
-    it('debe retornar límite por defecto de 2', async () => {
+    it('debe retornar límite por defecto de 3', async () => {
       const quota = await service.getTicketQuota('user-1')
 
       expect(quota.limit).toBe(3)
@@ -143,7 +137,7 @@ describe('SupportService', () => {
     })
 
     it('debe rechazar si se excede la cuota', async () => {
-      // Simular que ya usó 2 tickets
+      // Simular que ya usó 3 tickets
       const fakeWhere = vi.fn()
       const mockDocs = [
         { data: () => ({ createdAt: new Date() }) },
@@ -191,6 +185,9 @@ describe('SupportService', () => {
           id: 'ticket-123',
           status: 'resolved',
           adminResponse: 'Resuelto',
+          clientId: 'user-1',
+          clientEmail: 'user@test.com',
+          subject: 'Test',
         }),
       })
 
