@@ -37,6 +37,10 @@ jobs:
           service: api
           region: us-central1
           image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }}
-          # if your deployment requires environment variables from secrets, you add them here:
-          # env_vars: |
-          #   DATABASE_URL=${{ secrets.DATABASE_URL }}
+          env_vars: |
+            FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+            FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+            FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            NODE_ENV=production
