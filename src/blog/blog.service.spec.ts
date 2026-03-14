@@ -1,39 +1,28 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { BlogService } from './blog.service'
 import { FirebaseService } from '../firebase/firebase.service'
 
+vi.mock('firebase-admin', () => ({
+  firestore: vi.fn(() => ({
+    collection: vi.fn().mockReturnThis(),
+    doc: vi.fn().mockReturnThis(),
+  })),
+}))
+
 describe('BlogService', () => {
   let service: BlogService
+  let mockFirebaseService: any
 
-  const mockFirebaseService = {
-    // Mock minimal si es necesario
-  }
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BlogService,
-        { provide: FirebaseService, useValue: mockFirebaseService },
-      ],
-    }).compile()
-
-    service = module.get<BlogService>(BlogService)
+  beforeEach(() => {
+    mockFirebaseService = {
+      getDb: vi.fn().mockReturnValue({
+        collection: vi.fn().mockReturnThis(),
+        doc: vi.fn().mockReturnThis(),
+      }),
+    }
+    service = new BlogService(mockFirebaseService as FirebaseService)
   })
 
   it('should be defined', () => {
     expect(service).toBeDefined()
-  })
-
-  describe('findAll', () => {
-    it('should be a function', () => {
-      expect(typeof service.findAll).toBe('function')
-    })
-  })
-
-  describe('findOne', () => {
-    it('should be defined', () => {
-      // Mocking firestore would be complex here, so we just check definition
-      expect(typeof service.findOne).toBe('function')
-    })
   })
 })

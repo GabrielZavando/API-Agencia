@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// Usamos globales de vitest configurados en vitest.config.ts
 import { NotificationsService } from './notifications.service'
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotFoundException } from '@nestjs/common'

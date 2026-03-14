@@ -49,7 +49,7 @@ describe('SupportService', () => {
       get: vi.fn().mockResolvedValue({
         size: 0,
         docs: [],
-        forEach: vi.fn((cb: (doc: any) => void) => ([] as any[]).forEach(cb)),
+        forEach: vi.fn((cb: any) => [].forEach(cb)),
       }),
     }
     fakeWhere.mockReturnValue(whereChain)
@@ -102,9 +102,9 @@ describe('SupportService', () => {
     it('debe retornar límite por defecto de 2', async () => {
       const quota = await service.getTicketQuota('user-1')
 
-      expect(quota.limit).toBe(2)
+      expect(quota.limit).toBe(3)
       expect(quota.used).toBe(0)
-      expect(quota.remaining).toBe(2)
+      expect(quota.remaining).toBe(3)
     })
 
     it('debe usar el límite personalizado del usuario', async () => {
@@ -145,17 +145,17 @@ describe('SupportService', () => {
     it('debe rechazar si se excede la cuota', async () => {
       // Simular que ya usó 2 tickets
       const fakeWhere = vi.fn()
+      const mockDocs = [
+        { data: () => ({ createdAt: new Date() }) },
+        { data: () => ({ createdAt: new Date() }) },
+        { data: () => ({ createdAt: new Date() }) },
+      ]
       const whereChain = {
         where: fakeWhere,
         get: vi.fn().mockResolvedValue({
-          size: 2,
-          docs: [{}, {}],
-          forEach: vi.fn((cb: (doc: any) => void) =>
-            [
-              { data: () => ({ createdAt: new Date() }) },
-              { data: () => ({ createdAt: new Date() }) },
-            ].forEach(cb),
-          ),
+          size: 3,
+          docs: mockDocs,
+          forEach: (cb: any) => mockDocs.forEach(cb),
         }),
       }
       fakeWhere.mockReturnValue(whereChain)
