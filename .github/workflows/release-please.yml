@@ -15,8 +15,8 @@ jobs:
         id: release
         with:
           target-branch: master
-          config-file: Api/release-please-config.json
-          manifest-file: Api/.release-please-manifest.json
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
       - name: Enrich Release Notes with AI
         if: ${{ steps.release.outputs.release_created }}
