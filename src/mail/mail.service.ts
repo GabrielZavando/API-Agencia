@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { TemplateService } from '../templates/template.service'
 import * as nodemailer from 'nodemailer'
+import { companyConfig } from '../config/company.config'
 
 export type MailAccount = 'CONTACT' | 'SUPPORT'
 
@@ -87,47 +88,21 @@ export class MailService {
   // Helper para variables compartidas en todas las plantillas
   public getBaseVariables(email: string) {
     return {
-      companyName:
-        this.configService.get<string>('COMPANY_NAME') ||
-        'Gabriel Zavando Full Stack Developer',
-      logoUrl:
-        this.clean(this.configService.get<string>('LOGO_URL')) ||
-        'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-      websiteUrl:
-        this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl',
-      address:
-        this.configService.get<string>('COMPANY_ADDRESS') || 'Viña del Mar',
-      phone:
-        this.configService.get<string>('COMPANY_PHONE') || '+56 9 641 65 631',
-      email:
-        this.configService.get<string>('COMPANY_EMAIL') ||
-        'contacto@gabrielzavando.cl',
-      linkedinUrl:
-        this.configService.get<string>('LINKEDIN_URL') ||
-        'https://linkedin.com/in/gabrielzavando',
-      githubUrl:
-        this.configService.get<string>('GITHUB_URL') ||
-        'https://github.com/gabrielzavando',
-      instagramUrl:
-        this.configService.get<string>('INSTAGRAM_URL') ||
-        'https://instagram.com/gabrielzavando',
-      youtubeUrl:
-        this.configService.get<string>('YOUTUBE_URL') ||
-        'https://www.youtube.com/@gabrielzavando',
-      linkedinIconUrl:
-        this.clean(this.configService.get<string>('LINKEDIN_ICON_URL')) ||
-        'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
-      instagramIconUrl:
-        this.clean(this.configService.get<string>('INSTAGRAM_ICON_URL')) ||
-        'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
-      githubIconUrl:
-        this.clean(this.configService.get<string>('GITHUB_ICON_URL')) ||
-        'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
-      youtubeIconUrl:
-        this.clean(this.configService.get<string>('YOUTUBE_ICON_URL')) ||
-        'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
-      unsubscribeUrl: `${this.configService.get<string>('WEBSITE_URL') || 'https://gabrielzavando.cl'}/unsubscribe?email=${email}`,
+      companyName: companyConfig.name,
+      logoUrl: companyConfig.logoUrl,
+      websiteUrl: companyConfig.websiteUrl,
+      address: companyConfig.address,
+      phone: companyConfig.phone,
+      email: companyConfig.email,
+      linkedinUrl: companyConfig.social.linkedinUrl,
+      githubUrl: companyConfig.social.githubUrl,
+      instagramUrl: companyConfig.social.instagramUrl,
+      youtubeUrl: companyConfig.social.youtubeUrl,
+      linkedinIconUrl: companyConfig.social.linkedinIconUrl,
+      instagramIconUrl: companyConfig.social.instagramIconUrl,
+      githubIconUrl: companyConfig.social.githubIconUrl,
+      youtubeIconUrl: companyConfig.social.youtubeIconUrl,
+      unsubscribeUrl: `${companyConfig.websiteUrl}/unsubscribe?email=${email}`,
     }
   }
 
@@ -163,8 +138,7 @@ export class MailService {
         )
       }
 
-      const companyName =
-        this.configService.get<string>('COMPANY_NAME') || 'WebAstro'
+      const companyName = companyConfig.name
       const displayName =
         account === 'SUPPORT' ? `Soporte ${companyName}` : companyName
 

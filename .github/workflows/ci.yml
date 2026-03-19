@@ -9,6 +9,7 @@ jobs:
   test:
     name: Run Linter and Tests
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -22,6 +23,7 @@ jobs:
         uses: pnpm/action-setup@v3
         with:
           version: 10
+          run_install: false
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -30,7 +32,6 @@ jobs:
         run: pnpm lint
 
       - name: Run Critical Unit Tests
-        # Priorizamos rutas críticas de negocio (Vitest)
         run: pnpm test
 
       - name: Build Project

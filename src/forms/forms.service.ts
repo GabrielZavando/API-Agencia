@@ -4,6 +4,7 @@ import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
 import { FirebaseService, ProspectRecord } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
+import { companyConfig } from '../config/company.config'
 // Librerías anti-spam
 import disposableDomains from 'disposable-email-domains'
 import { validate } from 'deep-email-validator'
@@ -275,9 +276,7 @@ export class FormsService {
     isNewProspect: boolean,
   ): Promise<boolean> {
     try {
-      const adminEmail =
-        this.configService.get<string>('COMPANY_EMAIL') ||
-        'contacto@gabrielzavando.cl'
+      const adminEmail = companyConfig.email
 
       return await this.mailService.sendMail({
         to: adminEmail,
@@ -340,9 +339,7 @@ export class FormsService {
     subscribeDto: SubscribeDto,
   ): Promise<boolean> {
     try {
-      const adminEmail =
-        this.configService.get<string>('COMPANY_EMAIL') ||
-        'contacto@gabrielzavando.cl'
+      const adminEmail = companyConfig.email
 
       return await this.mailService.sendMail({
         to: adminEmail,
@@ -640,17 +637,14 @@ export class FormsService {
     token: string,
   ): Promise<boolean> {
     try {
-      const websiteUrl =
-        this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl'
+      const websiteUrl = companyConfig.websiteUrl
       // La URL puede ser absoluta (prod) o relativa si usas NestJS como proxy
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
       const fromEmail =
         this.configService.get<string>('SMTP_FROM_EMAIL') ||
         'contacto@gabrielzavando.cl'
-      const fromName =
-        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando'
+      const fromName = companyConfig.name
 
       return await this.mailService.sendMail({
         to: email,
@@ -751,16 +745,13 @@ export class FormsService {
     token: string,
   ): Promise<boolean> {
     try {
-      const websiteUrl =
-        this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl'
+      const websiteUrl = companyConfig.websiteUrl
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
       const fromEmail =
         this.configService.get<string>('SMTP_FROM_EMAIL') ||
         'contacto@gabrielzavando.cl'
-      const fromName =
-        this.configService.get<string>('COMPANY_NAME') || 'Gabriel Zavando'
+      const fromName = companyConfig.name
 
       return await this.mailService.sendMail({
         to: email,
