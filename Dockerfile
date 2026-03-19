@@ -2,36 +2,27 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Instalar y habilitar pnpm
 RUN npm install -g corepack@latest && corepack enable pnpm
 
-# Instalar dependencias (incluyendo devDependencies para el build)
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# Copiar el código y compilar
 COPY . .
-RUN pnpm run build && ls -la dist/
+RUN rm -f tsconfig.build.tsbuildinfo && pnpm run build && ls -la dist/
 
 # Production stage
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Instalar y habilitar pnpm en producción también
 RUN npm install -g corepack@latest && corepack enable pnpm
 
-# Instalar solo dependencias de producción
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
-# Copiar código compilado desde la etapa builder
 COPY --from=builder /app/dist ./dist
-
-# Verificar que el archivo principal existe
 RUN ls -la dist/
 
-# Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 USER nestjs
