@@ -8,6 +8,7 @@ import { FirebaseService } from '../firebase/firebase.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { ConfigService } from '@nestjs/config'
 import { MailService } from '../mail/mail.service'
+import { companyConfig } from '../config/company.config'
 
 @Injectable()
 export class UsersService {
@@ -126,11 +127,8 @@ export class UsersService {
   ) {
     try {
       // Usaremos un HTML directo en caso de no haber un template específico aún
-      const websiteUrl =
-        this.configService.get<string>('WEBSITE_URL') ||
-        'https://gabrielzavando.cl'
-      const companyName =
-        this.configService.get<string>('COMPANY_NAME') || 'Agencia Digital'
+      const websiteUrl = companyConfig.websiteUrl
+      const companyName = companyConfig.name
 
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

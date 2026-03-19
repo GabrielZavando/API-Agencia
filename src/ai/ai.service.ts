@@ -11,6 +11,7 @@ import {
 } from './interfaces/ai.interface'
 import { ContactDto } from '../forms/dto/contact.dto'
 import { ProspectRecord } from '../firebase/firebase.service'
+import { companyConfig } from '../config/company.config'
 
 @Injectable()
 export class AIService {
@@ -105,17 +106,11 @@ export class AIService {
     existingProspect?: ProspectRecord,
   ): AIContext {
     const companyInfo: CompanyInfo = {
-      name: process.env.COMPANY_NAME || 'Tu Empresa',
-      description:
-        process.env.COMPANY_DESCRIPTION ||
-        'Empresa líder en soluciones innovadoras',
-      services: (
-        process.env.COMPANY_SERVICES || 'consultoría,desarrollo,soporte'
-      ).split(','),
-      values: (
-        process.env.COMPANY_VALUES || 'calidad,innovación,confianza'
-      ).split(','),
-      tone: (process.env.COMPANY_TONE as CompanyInfo['tone']) || 'professional',
+      name: companyConfig.name,
+      description: companyConfig.description,
+      services: companyConfig.services.split(','),
+      values: companyConfig.values.split(','),
+      tone: companyConfig.tone,
     }
 
     return {

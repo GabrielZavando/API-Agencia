@@ -1,42 +1,69 @@
 name: Deploy to Cloud Run
 
 on:
-  push:
-    branches:
-      - master
+  pull_request:
+    branches: [master]
+    types: [closed]
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+
+    env:
+      PROJECT_ID: agenciadigital-445923
+      REGION: us-central1
+      SERVICE_NAME: nestjs-api
+      REGISTRY: us-central1-docker.pkg.dev
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Authenticate with Google Cloud
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: projects/201828783555/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions-sa@agenciadigital-445923.iam.gserviceaccount.com
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Configure Docker
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      - name: Build and Push Docker Image
+      - name: Build and Push image
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }} .
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }}
+          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/nestjs-api/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: api
-          region: us-central1
-          image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/api-repo/api-image:${{ github.sha }}
-          # if your deployment requires environment variables from secrets, you add them here:
-          # env_vars: |
-          #   DATABASE_URL=${{ secrets.DATABASE_URL }}
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-secrets="FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest" \
+            --set-secrets="SMTP_HOST=SMTP_HOST:latest" \
+            --set-secrets="SMTP_PORT=SMTP_PORT:latest" \
+            --set-secrets="SMTP_SECURE=SMTP_SECURE:latest" \
+            --set-secrets="SMTP_USER=SMTP_USER:latest" \
+            --set-secrets="SMTP_PASS=SMTP_PASS:latest" \
+            --set-secrets="SMTP_FROM_EMAIL=SMTP_FROM_EMAIL:latest" \
+            --set-secrets="SMTP_SUPPORT_USER=SMTP_SUPPORT_USER:latest" \
+            --set-secrets="SMTP_SUPPORT_PASS=SMTP_SUPPORT_PASS:latest" \
+            --set-secrets="SMTP_SUPPORT_FROM_EMAIL=SMTP_SUPPORT_FROM_EMAIL:latest" \
+            --set-secrets="ALLOWED_ORIGINS=ALLOWED_ORIGINS:latest" \
+            --set-secrets="DEFAULT_AI_PROVIDER=DEFAULT_AI_PROVIDER:latest" \
+            --set-secrets="OPENAI_API_KEY=OPENAI_API_KEY:latest" \
+            --set-secrets="NODE_ENV=NODE_ENV:latest" \
+            --set-secrets="PORT=PORT:latest" \
+            --set-secrets="TURNSTILE_SECRET_KEY=TURNSTILE_SECRET_KEY:latest" \
+            --min-instances=0 \
+            --max-instances=10 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=60
