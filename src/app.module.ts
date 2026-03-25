@@ -20,6 +20,7 @@ import { AuthModule } from './auth/auth.module'
 import { BlogCategoriesModule } from './blog-categories/blog-categories.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { IdeasModule } from './ideas/ideas.module'
+import { SystemConfigModule } from './system-config/system-config.module'
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { IdeasModule } from './ideas/ideas.module'
     BlogCategoriesModule,
     NotificationsModule,
     IdeasModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [

@@ -75,7 +75,7 @@ export class FirebaseService {
             serviceAccount.project_id,
           )
 
-          // Opción 2: variable de entorno FIREBASE_SERVICE_ACCOUNT (producción)
+          // Opción 2: variable de entorno FIREBASE_SERVICE_ACCOUNT (JSON entero)
         } else if (this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT')) {
           const json = this.configService.get<string>(
             'FIREBASE_SERVICE_ACCOUNT',
@@ -83,6 +83,27 @@ export class FirebaseService {
           serviceAccount = JSON.parse(json) as Record<string, string>
           console.log(
             '✅ Firebase inicializado con FIREBASE_SERVICE_ACCOUNT para proyecto:',
+            serviceAccount.project_id,
+          )
+          // Opción 3: Variables individuales por entorno (Docker/env)
+        } else if (
+          this.configService.get<string>('FIREBASE_PROJECT_ID') &&
+          this.configService.get<string>('FIREBASE_PRIVATE_KEY') &&
+          this.configService.get<string>('FIREBASE_CLIENT_EMAIL')
+        ) {
+          serviceAccount = {
+            project_id: this.configService.get<string>('FIREBASE_PROJECT_ID')!,
+            // Docker env_file no parsea los retornos de línea adecuadamente a veces
+            private_key: this.configService
+              .get<string>('FIREBASE_PRIVATE_KEY')!
+              .replace(/\\n/g, '\n')
+              .replace(/"/g, ''),
+            client_email: this.configService.get<string>(
+              'FIREBASE_CLIENT_EMAIL',
+            )!,
+          }
+          console.log(
+            '✅ Firebase inicializado con variables individuales para proyecto:',
             serviceAccount.project_id,
           )
         } else {
