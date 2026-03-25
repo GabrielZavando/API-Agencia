@@ -51,6 +51,7 @@ describe('SupportService', () => {
       get: vi.fn().mockResolvedValue({
         size: 0,
         docs: [],
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         forEach: vi.fn((cb: any) => [].forEach(cb)),
       }),
     }
@@ -149,6 +150,7 @@ describe('SupportService', () => {
         get: vi.fn().mockResolvedValue({
           size: 3,
           docs: mockDocs,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           forEach: (cb: any) => mockDocs.forEach(cb),
         }),
       }

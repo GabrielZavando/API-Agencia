@@ -12,5 +12,6 @@
   ],
   "compilerOptions": {
     "rootDir": "src"
-  }
+  },
+  "include": ["src/**/*"]
 }

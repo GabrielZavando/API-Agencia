@@ -1,38 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Protección de la colección de Informes (Reports)
+
+    // ============================================================
+    // COLECCIÓN: Reports (Informes)
+    // - Admin: lectura y escritura total
+    // - Cliente autenticado: solo puede leer sus propios informes
+    // ============================================================
     match /reports/{reportId} {
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         resource.data.clientId == request.auth.uid
       );
-      allow write: if request.auth != null && 
+      allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Protección de la colección de Ideas (Buzón)
+    // ============================================================
+    // COLECCIÓN: Ideas (Buzón de ideas)
+    // - Admin: lectura, actualización y eliminación
+    // - Usuario autenticado: puede leer sus propias ideas y crear nuevas
+    //   (con validación de campos obligatorios y que clientId sea el propio uid)
+    // ============================================================
     match /ideas/{ideaId} {
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         resource.data.clientId == request.auth.uid
       );
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && 
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['title', 'description', 'clientId'])
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Protección de la colección de Usuarios
+    // ============================================================
+    // COLECCIÓN: Users (Usuarios)
+    // - El propio usuario puede leer/escribir su perfil
+    // - Admin puede leer/escribir cualquier usuario
+    // ============================================================
     match /users/{userId} {
       allow read, write: if request.auth != null && (
-        request.auth.uid == userId || 
+        request.auth.uid == userId ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 
-    // Fallback para administradores en otras colecciones (como blog-posts, tickets, etc.)
+    // ============================================================
+    // FALLBACK: Cualquier otra colección (blog-posts, tickets, etc.)
+    // Solo accesible por administradores autenticados.
+    // Deniega implícitamente cualquier acceso no autenticado.
+    // ============================================================
     match /{document=**} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
