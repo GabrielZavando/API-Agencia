@@ -3,27 +3,25 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { BlogCategoriesService } from './blog-categories.service'
 import { FirebaseService } from '../firebase/firebase.service'
 
+// Importar mocks centralizados
+import { mockCollection } from '../../test/mocks/firebase-admin'
+
 describe('BlogCategoriesService', () => {
   let service: BlogCategoriesService
 
-  const mockFirebaseService = {
-    // mock methods
-  }
-
   beforeEach(async () => {
-    // Mock admin.firestore
-    vi.mock('firebase-admin', () => ({
-      firestore: () => ({
-        collection: vi.fn(),
-      }),
-    }))
+    vi.clearAllMocks()
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BlogCategoriesService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService,
+          useValue: {
+            getDb: vi.fn(() => ({
+              collection: mockCollection,
+            })),
+          },
         },
       ],
     }).compile()
@@ -31,11 +29,7 @@ describe('BlogCategoriesService', () => {
     service = module.get<BlogCategoriesService>(BlogCategoriesService)
   })
 
-  it('should be defined', () => {
-    // Arrange
-    const definedService = service
-
-    // Act & Assert
-    expect(definedService).toBeDefined()
+  it('debe estar definido', () => {
+    expect(service).toBeDefined()
   })
 })

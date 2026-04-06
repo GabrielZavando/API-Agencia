@@ -4,15 +4,8 @@ import { CreateIdeaDto } from './dto/create-idea.dto'
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { UsersService } from '../users/users.service'
-
-export interface IdeaRecord {
-  id: string
-  name: string
-  explanation: string
-  imageUrl?: string
-  clientId: string
-  createdAt: Date
-}
+import { IdeaResponseDto } from './dto/idea-response.dto'
+import { IdeaRecord } from './interfaces/idea.interface'
 
 @Injectable()
 export class IdeasService {
@@ -24,15 +17,26 @@ export class IdeasService {
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
   ) {
-    this.db = admin.firestore()
+    this.db = this._firebase.getDb()
     this.storage = admin.storage()
+  }
+
+  private mapIdeaToDto(data: IdeaRecord): IdeaResponseDto {
+    return {
+      id: data.id,
+      name: data.name,
+      explanation: data.explanation,
+      imageUrl: data.imageUrl || '',
+      clientId: data.clientId,
+      createdAt: data.createdAt,
+    }
   }
 
   async createIdea(
     dto: CreateIdeaDto,
     clientId: string,
     file?: Express.Multer.File,
-  ): Promise<IdeaRecord> {
+  ): Promise<IdeaResponseDto> {
     const docRef = this.db.collection('ideas').doc()
     let imageUrl: string | undefined
 
@@ -45,63 +49,64 @@ export class IdeasService {
         metadata: { contentType: file.mimetype },
       })
 
-      // Generar URL firmada o pública. Usaremos pública para visualización simple.
-      // O firmada si prefieres privacidad total. Por ahora, firmada (1 año).
       const [url] = await fileRef.getSignedUrl({
         action: 'read',
-        expires: '03-09-2491', // Fecha lejana
+        expires: '03-09-2491',
       })
       imageUrl = url
     }
 
-    const idea: IdeaRecord = {
+    const ideaData: IdeaRecord = {
       id: docRef.id,
       name: dto.name,
       explanation: dto.explanation,
       imageUrl,
       clientId,
-      createdAt: new Date(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }
 
-    await docRef.set(idea)
+    await docRef.set(ideaData)
 
-    // Notificar a los administradores
     try {
       const admins = await this.usersService.findAdmins()
-      const notificationPromises = admins.map((admin: { uid: string }) =>
-        this.notificationsService.createNotification({
-          title: '💡 Nueva idea recibida',
-          message: `El cliente ha enviado una nueva idea: "${idea.name}"`,
-          userId: admin.uid,
-          link: '/admin/ideas',
-          read: false,
-        }),
+      const notificationPromises = admins.map(
+        (adminUser: { id?: string; uid?: string }) =>
+          this.notificationsService.create(
+            adminUser.id || adminUser.uid || '',
+            '💡 Nueva idea recibida',
+            `El cliente ha enviado una nueva idea: "${ideaData.name}"`,
+            'info',
+            '/admin/ideas',
+          ),
       )
       await Promise.all(notificationPromises)
     } catch (error) {
       console.error('Error enviando notificaciones a administradores:', error)
-      // No bloqueamos el retorno si fallan las notificaciones
     }
 
-    return idea
+    return this.mapIdeaToDto(ideaData)
   }
 
-  async findAll(): Promise<IdeaRecord[]> {
+  async findAll(): Promise<IdeaResponseDto[]> {
     const snapshot = await this.db
       .collection('ideas')
       .orderBy('createdAt', 'desc')
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as IdeaRecord)
+    return snapshot.docs.map((doc) =>
+      this.mapIdeaToDto(doc.data() as IdeaRecord),
+    )
   }
 
-  async findByClient(clientId: string): Promise<IdeaRecord[]> {
+  async findByClient(clientId: string): Promise<IdeaResponseDto[]> {
     const snapshot = await this.db
       .collection('ideas')
       .where('clientId', '==', clientId)
       .orderBy('createdAt', 'desc')
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as IdeaRecord)
+    return snapshot.docs.map((doc) =>
+      this.mapIdeaToDto(doc.data() as IdeaRecord),
+    )
   }
 }

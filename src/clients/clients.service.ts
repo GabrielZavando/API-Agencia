@@ -1,26 +1,52 @@
 import { Injectable } from '@nestjs/common'
 import * as admin from 'firebase-admin'
+import { ClientResponseDto } from './dto/client-response.dto'
 import { FirebaseService } from '../firebase/firebase.service'
+import { RawUserRecord } from './interfaces/client.interface'
 
 @Injectable()
 export class ClientsService {
-  private usersCollection: admin.firestore.CollectionReference
+  private db: admin.firestore.Firestore
 
   constructor(private readonly firebaseService: FirebaseService) {
-    this.usersCollection = admin.firestore().collection('users')
+    this.db = this.firebaseService.getDb()
   }
 
-  async findAll(): Promise<Record<string, any>[]> {
-    const query = this
-      .usersCollection as admin.firestore.Query<admin.firestore.DocumentData>
-    const snapshot = await query.where('role', '==', 'client').get()
-    return snapshot.docs.map((doc) => doc.data() as Record<string, any>)
+  private mapDocumentToDto(
+    doc: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData>,
+  ): ClientResponseDto {
+    const data = doc.data() as RawUserRecord
+    return {
+      id: doc.id,
+      email: data.email,
+      displayName: data.displayName || data.name || '',
+      photoURL: data.photoURL || '',
+      role: data.role,
+      phoneNumber: data.phoneNumber || '',
+      companyName: data.companyName || '',
+      createdAt: data.createdAt,
+    }
   }
 
-  async findOne(uid: string): Promise<Record<string, any> | null> {
-    const doc = await this.usersCollection.doc(uid).get()
-    return doc.exists ? (doc.data() as Record<string, any>) : null
+  async findAll(): Promise<ClientResponseDto[]> {
+    const snapshot = await this.db
+      .collection('users')
+      .where('role', '==', 'client')
+      .get()
+    return snapshot.docs.map((doc) => this.mapDocumentToDto(doc))
   }
-  // Crear cliente (User + Role) se hace via Auth/UsersController,
-  // pero aquí podríamos añadir métodos para actualizar datos de perfil de empresa
+
+  async findAssignable(): Promise<ClientResponseDto[]> {
+    const snapshot = await this.db
+      .collection('users')
+      .where('role', 'in', ['client', 'admin'])
+      .get()
+    return snapshot.docs.map((doc) => this.mapDocumentToDto(doc))
+  }
+
+  async findOne(uid: string): Promise<ClientResponseDto | null> {
+    const doc = await this.db.collection('users').doc(uid).get()
+    if (!doc.exists) return null
+    return this.mapDocumentToDto(doc)
+  }
 }

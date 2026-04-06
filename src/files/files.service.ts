@@ -6,32 +6,14 @@ import {
 import * as admin from 'firebase-admin'
 import { UploadFileDto } from './dto/upload-file.dto'
 import { FirebaseService } from '../firebase/firebase.service'
-
-export interface FileRecord {
-  id: string
-  ownerId: string
-  title: string
-  description: string
-  fileName: string
-  storagePath: string
-  mimeType: string
-  size: number
-  isPublic: boolean
-  createdAt: Date
-}
-
-export interface StorageQuota {
-  usedBytes: number
-  limitBytes: number
-  remainingBytes: number
-  usedFormatted: string
-  limitFormatted: string
-}
+import { FileResponseDto, StorageQuotaDto } from './dto/file-response.dto'
 
 /** 5 GB default para clientes */
 const DEFAULT_STORAGE_LIMIT = 5 * 1024 * 1024 * 1024
 /** 30 GB para admin */
 const ADMIN_STORAGE_LIMIT = 30 * 1024 * 1024 * 1024
+
+import { RawFileRecord, RawUserRecord } from './interfaces/file.interface'
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -52,30 +34,46 @@ export class FilesService {
   private storage: ReturnType<typeof admin.storage>
 
   constructor(private readonly _firebase: FirebaseService) {
-    this.db = admin.firestore()
+    this.db = this._firebase.getDb()
     this.storage = admin.storage()
+  }
+
+  private mapFileToDto(doc: admin.firestore.DocumentSnapshot): FileResponseDto {
+    const data = doc.data() as RawFileRecord
+    return {
+      id: doc.id,
+      ownerId: data.ownerId,
+      title: data.title,
+      description: data.description,
+      fileName: data.fileName,
+      storagePath: data.storagePath,
+      mimeType: data.mimeType,
+      size: data.size,
+      isPublic: data.isPublic,
+      createdAt: data.createdAt,
+    }
   }
 
   /** Cuota de almacenamiento por usuario */
   async getStorageQuota(
     uid: string,
     role: 'admin' | 'client',
-  ): Promise<StorageQuota> {
+  ): Promise<StorageQuotaDto> {
     const snapshot = await this.db
       .collection('files')
       .where('ownerId', '==', uid)
       .get()
 
     const usedBytes = snapshot.docs.reduce((acc, doc) => {
-      const d = doc.data() as FileRecord
+      const d = doc.data() as RawFileRecord
       return acc + (d.size || 0)
     }, 0)
 
     let limitBytes = ADMIN_STORAGE_LIMIT
     if (role === 'client') {
       const userDoc = await this.db.collection('users').doc(uid).get()
-      const data = userDoc.data() as Record<string, unknown> | undefined
-      limitBytes = (data?.storageLimitBytes as number) ?? DEFAULT_STORAGE_LIMIT
+      const data = userDoc.data() as RawUserRecord | undefined
+      limitBytes = data?.storageLimitBytes ?? DEFAULT_STORAGE_LIMIT
     }
 
     return {
@@ -93,7 +91,7 @@ export class FilesService {
     dto: UploadFileDto,
     uid: string,
     role: 'admin' | 'client',
-  ): Promise<FileRecord> {
+  ): Promise<FileResponseDto> {
     if (!file) {
       throw new BadRequestException('No se recibió ningún archivo')
     }
@@ -120,9 +118,7 @@ export class FilesService {
       metadata: { contentType: file.mimetype },
     })
 
-    const now = new Date()
-    const record: FileRecord = {
-      id: docRef.id,
+    const recordData = {
       ownerId: uid,
       title: dto.title || file.originalname,
       description: dto.description || '',
@@ -131,32 +127,33 @@ export class FilesService {
       mimeType: file.mimetype,
       size: file.size,
       isPublic: dto.isPublic === 'true',
-      createdAt: now,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }
 
-    await docRef.set(record)
-    return record
+    await docRef.set(recordData)
+    const saved = await docRef.get()
+    return this.mapFileToDto(saved)
   }
 
   /** Listar archivos del usuario */
-  async findByOwner(ownerId: string): Promise<FileRecord[]> {
+  async findByOwner(ownerId: string): Promise<FileResponseDto[]> {
     const snapshot = await this.db
       .collection('files')
       .where('ownerId', '==', ownerId)
       .orderBy('createdAt', 'desc')
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as FileRecord)
+    return snapshot.docs.map((doc) => this.mapFileToDto(doc))
   }
 
   /** Listar todos los archivos (admin) */
-  async findAll(): Promise<FileRecord[]> {
+  async findAll(): Promise<FileResponseDto[]> {
     const snapshot = await this.db
       .collection('files')
       .orderBy('createdAt', 'desc')
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as FileRecord)
+    return snapshot.docs.map((doc) => this.mapFileToDto(doc))
   }
 
   /** Obtener URL firmada de descarga */
@@ -171,7 +168,7 @@ export class FilesService {
       throw new NotFoundException('Archivo no encontrado')
     }
 
-    const record = doc.data() as FileRecord
+    const record = doc.data() as RawFileRecord
 
     // Archivos privados solo pueden ser descargados por el dueño
     if (!record.isPublic && record.ownerId !== uid) {
@@ -202,7 +199,7 @@ export class FilesService {
       throw new NotFoundException('Archivo no encontrado')
     }
 
-    const record = doc.data() as FileRecord
+    const record = doc.data() as RawFileRecord
 
     if (record.ownerId !== uid) {
       throw new NotFoundException('Archivo no encontrado')

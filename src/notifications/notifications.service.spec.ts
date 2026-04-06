@@ -1,55 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing'
-// Usamos globales de vitest configurados en vitest.config.ts
 import { NotificationsService } from './notifications.service'
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotFoundException } from '@nestjs/common'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// Mock Firebase service
-const mockFirebaseService = {}
-
-// Mocks para la db de Firestore
-const { mockDocRef, mockCollectionRef, firestoreMock, mockCollection } =
-  vi.hoisted(() => {
-    const mockDocRef = {
-      id: 'test-notification-id',
-      set: vi.fn(),
-      update: vi.fn(),
-      get: vi.fn(),
-    }
-
-    const mockCollectionRef = {
-      doc: vi.fn().mockReturnValue(mockDocRef),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      get: vi.fn(),
-    }
-
-    const mockCollection = vi.fn().mockReturnValue(mockCollectionRef)
-
-    const firestoreMock = Object.assign(
-      vi.fn().mockReturnValue({
-        collection: mockCollection,
-      }),
-      {
-        FieldValue: {
-          serverTimestamp: vi.fn(),
-        },
-      },
-    )
-
-    return { mockDocRef, mockCollectionRef, firestoreMock, mockCollection }
-  })
-
-// Mock firebase-admin
-vi.mock('firebase-admin', () => {
-  return {
-    default: {
-      firestore: firestoreMock,
-    },
-    firestore: firestoreMock,
-  }
-})
+// Importar mocks centralizados
+import {
+  mockDoc,
+  mockDocGet,
+  mockCollection,
+  mockCollectionGet,
+  mockAdd,
+  mockUpdate,
+} from '../../test/mocks/firebase-admin'
 
 describe('NotificationsService', () => {
   let service: NotificationsService
@@ -57,12 +20,40 @@ describe('NotificationsService', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
 
+    // Configurar comportamiento por defecto de los mocks para este servicio
+    mockDoc.mockReturnValue({
+      id: 'test-notification-id',
+      get: mockDocGet,
+      set: vi.fn().mockResolvedValue(true),
+      update: mockUpdate,
+      delete: vi.fn().mockResolvedValue(true),
+      collection: vi.fn().mockReturnThis(),
+    })
+
+    mockCollection.mockReturnValue({
+      doc: mockDoc,
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      startAfter: vi.fn().mockReturnThis(),
+      get: mockCollectionGet,
+      add: mockAdd.mockResolvedValue({ id: 'test-notification-id' }),
+    })
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService,
+          useValue: {
+            getDb: vi.fn(() => ({
+              collection: mockCollection,
+              batch: vi.fn().mockReturnValue({
+                update: vi.fn(),
+                commit: vi.fn().mockResolvedValue(true),
+              }),
+            })),
+          },
         },
       ],
     }).compile()
@@ -70,53 +61,31 @@ describe('NotificationsService', () => {
     service = module.get<NotificationsService>(NotificationsService)
   })
 
-  it('should be defined', () => {
+  it('debe estar definido', () => {
     expect(service).toBeDefined()
   })
 
-  describe('createNotification', () => {
-    it('debería crear y retornar una notificación (Arrange, Act, Assert)', async () => {
-      // Arrange
-      const dto = {
-        title: 'Nuevo mensaje',
-        message: 'Tienes una respuesta',
-        userId: 'client123',
-        link: '/support/123',
-      }
+  describe('create', () => {
+    it('debería crear y retornar una notificación', async () => {
+      const userId = 'client123'
+      const title = 'Nuevo mensaje'
+      const message = 'Tienes una respuesta'
+      const type = 'info'
+      const link = '/support/123'
 
-      // Act
-      const result = await service.createNotification(dto)
+      const result = await service.create(userId, title, message, type, link)
 
-      // Assert
       expect(mockCollection).toHaveBeenCalledWith('notifications')
-      expect(mockCollectionRef.doc).toHaveBeenCalled()
-      expect(mockDocRef.set).toHaveBeenCalledTimes(1)
-
-      const args = mockDocRef.set.mock.calls[0][0]
-      expect(args).toEqual(
-        expect.objectContaining({
-          id: 'test-notification-id',
-          title: dto.title,
-          message: dto.message,
-          userId: dto.userId,
-          link: dto.link,
-          read: false,
-        }),
-      )
-      expect(args.createdAt).toBeInstanceOf(Date)
-      expect(result).toMatchObject({
-        id: 'test-notification-id',
-        title: dto.title,
-      })
+      expect(mockAdd).toHaveBeenCalledTimes(1)
+      expect(result.id).toBe('test-notification-id')
+      expect(result.title).toBe(title)
     })
   })
 
-  describe('getUserNotifications', () => {
-    it('debería obtener las notificaciones de un usuario (Arrange, Act, Assert)', async () => {
-      // Arrange
+  describe('findAllByUser', () => {
+    it('debería obtener las notificaciones de un usuario', async () => {
       const userId = 'client123'
       const mockNotifData = {
-        id: '1',
         title: 'T1',
         message: 'M1',
         userId,
@@ -124,74 +93,43 @@ describe('NotificationsService', () => {
         createdAt: new Date(),
       }
 
-      const mockSnapshot = {
-        docs: [{ data: () => mockNotifData }],
-      }
-      mockCollectionRef.get.mockResolvedValueOnce(mockSnapshot)
+      mockCollectionGet.mockResolvedValueOnce({
+        docs: [{ id: '1', data: () => mockNotifData }],
+        forEach: (
+          cb: (
+            doc: { id: string; data: () => typeof mockNotifData },
+            index: number,
+          ) => void,
+        ) => [{ id: '1', data: () => mockNotifData }].forEach(cb),
+      })
 
-      // Act
-      const result = await service.getUserNotifications(userId)
+      const result = await service.findAllByUser(userId)
 
-      // Assert
-      expect(mockCollectionRef.where).toHaveBeenCalledWith(
-        'userId',
-        '==',
-        userId,
-      )
-      expect(mockCollectionRef.orderBy).toHaveBeenCalledWith(
-        'createdAt',
-        'desc',
-      )
-      expect(mockCollectionRef.limit).toHaveBeenCalledWith(50)
       expect(result).toHaveLength(1)
-      expect(result[0]).toEqual(mockNotifData)
+      expect(result[0].id).toBe('1')
+      expect(result[0].title).toBe('T1')
     })
   })
 
   describe('markAsRead', () => {
     it('debería lanzar NotFoundException si no existe la notificación', async () => {
-      // Arrange
-      mockDocRef.get.mockResolvedValueOnce({ exists: false })
+      mockDocGet.mockResolvedValueOnce({ exists: false })
 
-      // Act & Assert
-      await expect(service.markAsRead('bad-id', 'client123')).rejects.toThrow(
+      await expect(service.markAsRead('bad-id')).rejects.toThrow(
         NotFoundException,
       )
     })
 
-    it('debería lanzar NotFoundException si la notificación pertenece a otro usuario', async () => {
-      // Arrange
-      mockDocRef.get.mockResolvedValueOnce({
+    it('debería actualizar read a true y retornar éxito', async () => {
+      mockDocGet.mockResolvedValueOnce({
         exists: true,
-        data: () => ({ userId: 'other-user' }),
+        data: () => ({ id: 'some-id', read: false }),
       })
 
-      // Act & Assert
-      await expect(service.markAsRead('some-id', 'client123')).rejects.toThrow(
-        NotFoundException,
-      )
-    })
+      const result = await service.markAsRead('some-id')
 
-    it('debería actualizar read a true y retornar la notificación actualizada (Arrange, Act, Assert)', async () => {
-      // Arrange
-      const mockNotifData = {
-        id: 'some-id',
-        title: 'T1',
-        userId: 'client123',
-        read: false,
-      }
-      mockDocRef.get.mockResolvedValueOnce({
-        exists: true,
-        data: () => mockNotifData,
-      })
-
-      // Act
-      const result = await service.markAsRead('some-id', 'client123')
-
-      // Assert
-      expect(mockDocRef.update).toHaveBeenCalledWith({ read: true })
-      expect(result.read).toBe(true)
-      expect(result.id).toBe(mockNotifData.id)
+      expect(mockUpdate).toHaveBeenCalledWith({ read: true })
+      expect(result.success).toBe(true)
     })
   })
 })

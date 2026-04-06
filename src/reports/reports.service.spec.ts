@@ -30,7 +30,7 @@ describe('ReportsService', () => {
       findOne: vi.fn(),
     }
     mockNotificationsService = {
-      createNotification: vi.fn(),
+      create: vi.fn().mockResolvedValue({ id: 'test-notif-id' }),
     }
     mockMailService = {
       sendMail: vi.fn(),

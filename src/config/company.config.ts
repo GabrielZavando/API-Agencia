@@ -1,5 +1,5 @@
 export const companyConfig = {
-  name: 'Gabriel Zavando Full Stack Developer',
+  name: 'Gabriel Zavando | Full Stack Developer',
   description: 'Transformación digital para empresas que quieren crecer',
   address: 'Viña del Mar',
   phone: '+56 9 641 65 631',
@@ -11,20 +11,22 @@ export const companyConfig = {
   tone: 'professional' as const,
   websiteUrl: 'https://gabrielzavando.cl',
   logoUrl:
-    'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/logo-medium.png',
-  servicesUrl: 'https://l1nq.com/vkSUa',
+    'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/src/assets/img/logo-medium.png',
+  servicesUrl: 'https://gabrielzavando.cl/#servicios',
   social: {
     linkedinUrl: 'https://linkedin.com/in/gabrielzavando',
     instagramUrl: 'https://instagram.com/gabrielzavando',
     githubUrl: 'https://github.com/gabrielzavando',
     youtubeUrl: 'https://www.youtube.com/@gabrielzavando',
     linkedinIconUrl:
-      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/linkedin_icon.png',
+      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/src/assets/icons/linkedin_icon.png',
     instagramIconUrl:
-      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/instagram_icon.png',
+      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/src/assets/icons/instagram_icon.png',
     githubIconUrl:
-      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/github_icon.png',
+      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/src/assets/icons/github_icon.png',
     youtubeIconUrl:
-      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/youtube_icon.png',
+      'https://raw.githubusercontent.com/GabrielZavando/WebAgenciaAstro/main/src/assets/icons/youtube_icon.png',
   },
+  calendlyUrl: 'https://calendly.com/gabrielzavando/30min',
+  blogUrl: 'https://gabrielzavando.cl/blog',
 }

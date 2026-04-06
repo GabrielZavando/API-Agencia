@@ -8,10 +8,12 @@ import {
   AIProviderType,
   AIResponse,
   CompanyInfo,
+  ConversationSummary,
 } from './interfaces/ai.interface'
 import { ContactDto } from '../forms/dto/contact.dto'
-import { ProspectRecord } from '../firebase/firebase.service'
+import { ProspectRecord } from '../forms/interfaces/forms.interface'
 import { companyConfig } from '../config/company.config'
+
 
 @Injectable()
 export class AIService {
@@ -56,7 +58,7 @@ export class AIService {
       console.error(`Error con proveedor ${provider.name}:`, error)
 
       // Fallback a otro proveedor si falla el principal
-      if (providerType !== this.defaultProvider) {
+      if (providerType && providerType !== this.defaultProvider) {
         console.log('Intentando con proveedor por defecto...')
         return this.generateProspectResponse(
           contactDto,
@@ -130,7 +132,11 @@ export class AIService {
   ): string {
     let prompt = `Consulta: "${contactDto.message}"`
 
-    if (existingProspect && existingProspect.conversations.length > 0) {
+    if (
+      existingProspect &&
+      existingProspect.conversations &&
+      existingProspect.conversations.length > 0
+    ) {
       const lastConversation =
         existingProspect.conversations[
           existingProspect.conversations.length - 1
@@ -141,7 +147,9 @@ export class AIService {
     return prompt
   }
 
-  private extractConversationSummaries(prospect?: ProspectRecord): any[] {
+  private extractConversationSummaries(
+    prospect?: ProspectRecord,
+  ): ConversationSummary[] {
     if (!prospect || !prospect.conversations) return []
 
     return prospect.conversations.slice(-3).map((conv) => ({
@@ -187,7 +195,7 @@ export class AIService {
     const mockContactDto: ContactDto = {
       name: 'Test User',
       email: 'test@test.com',
-      phone: '', // Agregar campo phone vacío
+      phone: '',
       message: testMessage,
       meta: {
         userAgent: 'test',

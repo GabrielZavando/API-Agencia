@@ -17,12 +17,8 @@ import { UpdateUserDto } from './dto/update-user.dto'
 import { UsersService } from './users.service'
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
 import { Roles } from '../auth/roles.decorator'
-import { Request as ExpressRequest } from 'express'
-
-// Define the custom request type
-interface AuthRequest extends ExpressRequest {
-  user: { uid: string }
-}
+import { UserResponseDto } from './dto/user-response.dto'
+import { AuthRequest } from '../common/interfaces/auth.interface'
 
 @Controller('users')
 export class UsersController {
@@ -31,20 +27,22 @@ export class UsersController {
   @Get()
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async findAll() {
+  async findAll(): Promise<UserResponseDto[]> {
     return this.usersService.findAll()
   }
 
   @Post('register')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async register(@Body() createUserDto: CreateUserDto) {
+  async register(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
     return this.usersService.create(createUserDto)
   }
 
   @Get('profile')
   @UseGuards(FirebaseAuthGuard)
-  async getProfile(@Request() req: AuthRequest) {
+  async getProfile(@Request() req: AuthRequest): Promise<UserResponseDto> {
     return this.usersService.findOne(req.user.uid)
   }
 
@@ -56,37 +54,43 @@ export class UsersController {
     @Body()
     updateData: { displayName?: string; phone?: string; description?: string },
     @UploadedFile() avatar?: Express.Multer.File,
-  ) {
+  ): Promise<UserResponseDto> {
     return this.usersService.updateProfile(req.user.uid, updateData, avatar)
   }
 
   @Post('set-admin-role')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async setAdminRole(@Body() body: { uid: string }) {
+  async setAdminRole(
+    @Body() body: { uid: string },
+  ): Promise<{ message: string }> {
     return this.usersService.setAdminRole(body.uid)
   }
 
   @Get(':id')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.findOne(id)
   }
 
   @Patch(':id')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
     return this.usersService.updateUser(
       id,
       updateUserDto as Record<string, unknown>,
     )
   }
+
   @Delete(':id')
   @UseGuards(FirebaseAuthGuard)
   @Roles('admin')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.usersService.remove(id)
   }
 }

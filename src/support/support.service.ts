@@ -10,27 +10,9 @@ import { AddMessageDto } from './dto/add-message.dto'
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 import { NotificationsService } from '../notifications/notifications.service'
-
-export interface TicketRecord {
-  id: string
-  clientId: string
-  clientEmail: string
-  subject: string
-  message: string
-  priority: 'low' | 'medium' | 'high'
-  status: 'open' | 'in-progress' | 'resolved'
-  adminResponse: string
-  projectId: string
-  projectName: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface TicketQuota {
-  used: number
-  limit: number
-  remaining: number
-}
+import { TicketResponseDto } from './dto/ticket-response.dto'
+import { MessageResponseDto } from './dto/message-response.dto'
+import { TicketQuota } from './interfaces/support.interface'
 
 const DEFAULT_MONTHLY_LIMIT = 3
 
@@ -38,29 +20,72 @@ const DEFAULT_MONTHLY_LIMIT = 3
 export class SupportService {
   private db: admin.firestore.Firestore
 
-  // Inyectar FirebaseService garantiza que Firebase
-  // esté inicializado antes de usarlo
   constructor(
     private readonly _firebase: FirebaseService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
   ) {
-    this.db = admin.firestore()
+    this.db = this._firebase.getDb()
+  }
+
+  private mapTicketToDto(
+    doc: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData>,
+  ): TicketResponseDto {
+    const data = doc.data() || {}
+    return {
+      id: doc.id,
+      clientId: data.clientId as string,
+      clientEmail: data.clientEmail as string,
+      subject: (data.subject as string) || '',
+      message: (data.message as string) || '',
+      priority: (data.priority as 'low' | 'medium' | 'high') || 'medium',
+      status: (data.status as 'open' | 'in-progress' | 'resolved') || 'open',
+      adminResponse: (data.adminResponse as string) || '',
+      projectId: (data.projectId as string) || '',
+      projectName: (data.projectName as string) || '',
+      attachmentPath: data.attachmentPath as string,
+      createdAt: data.createdAt as
+        | admin.firestore.Timestamp
+        | admin.firestore.FieldValue
+        | string
+        | number,
+      updatedAt: data.updatedAt as
+        | admin.firestore.Timestamp
+        | admin.firestore.FieldValue
+        | string
+        | number,
+    }
+  }
+
+  private mapMessageToDto(
+    doc: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData>,
+  ): MessageResponseDto {
+    const data = doc.data() || {}
+    return {
+      id: doc.id,
+      body: (data.body as string) || '',
+      senderRole: (data.senderRole as 'client' | 'admin') || 'client',
+      senderEmail: (data.senderEmail as string) || '',
+      senderPhotoUrl: data.senderPhotoUrl as string,
+      attachmentPath: data.attachmentPath as string,
+      createdAt: data.createdAt as
+        | admin.firestore.Timestamp
+        | admin.firestore.FieldValue
+        | string
+        | number,
+    }
   }
 
   async getTicketQuota(projectId: string): Promise<TicketQuota> {
-    // Obtener límite del proyecto
     const projectDoc = await this.db.collection('projects').doc(projectId).get()
-
     if (!projectDoc.exists) {
       throw new NotFoundException('Proyecto no encontrado')
     }
 
-    const projectData = projectDoc.data() as Record<string, unknown>
+    const projectData = projectDoc.data()
     const limit =
       (projectData?.monthlyTicketLimit as number) ?? DEFAULT_MONTHLY_LIMIT
 
-    // Contar tickets del mes actual para el proyecto
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
@@ -72,15 +97,17 @@ export class SupportService {
     let used = 0
     snapshot.forEach((doc) => {
       const data = doc.data()
-      const createdAt = (data.createdAt as unknown as admin.firestore.Timestamp)
-        .toMillis
-        ? (data.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(data.createdAt as string | number | Date).getTime()
-
-      if (createdAt >= startOfMonth.getTime()) {
+      const createdAt = data.createdAt as
+        | admin.firestore.Timestamp
+        | admin.firestore.FieldValue
+        | string
+        | number
+      const millis = this.getMillis(createdAt)
+      if (millis >= startOfMonth.getTime()) {
         used++
       }
     })
+
     return {
       used,
       limit,
@@ -88,13 +115,30 @@ export class SupportService {
     }
   }
 
+  private getMillis(date: unknown): number {
+    if (!date) return 0
+    if (date instanceof admin.firestore.Timestamp) return date.toMillis()
+    if (date instanceof Date) return date.getTime()
+    if (typeof date === 'object' && date !== null) {
+      const d = date as Record<string, unknown>
+      if (typeof d.toMillis === 'function') {
+        return (d.toMillis as () => number)()
+      }
+      if (typeof d.seconds === 'number') return d.seconds * 1000
+    }
+    if (typeof date === 'string' || typeof date === 'number') {
+      const val = new Date(date).getTime()
+      return isNaN(val) ? 0 : val
+    }
+    return 0
+  }
+
   async createTicket(
     uid: string,
     email: string,
     dto: CreateTicketDto,
     file?: Express.Multer.File,
-  ): Promise<TicketRecord> {
-    // Verificar cuota
+  ): Promise<TicketResponseDto> {
     const quota = await this.getTicketQuota(dto.projectId)
     if (quota.remaining <= 0) {
       throw new BadRequestException(
@@ -102,6 +146,7 @@ export class SupportService {
       )
     }
 
+    const docRef = this.db.collection('support_tickets').doc()
     let attachmentPath = ''
 
     if (file) {
@@ -111,56 +156,19 @@ export class SupportService {
           'Solo se permiten imágenes (PNG, JPEG, WEBP)',
         )
       }
-
-      const maxSize = 5 * 1024 * 1024 // 5 MB
-      if (file.size > maxSize) {
+      if (file.size > 5 * 1024 * 1024) {
         throw new BadRequestException('La imagen no debe superar los 5 MB')
       }
 
-      const docRef = this.db.collection('support_tickets').doc()
       attachmentPath = `support_attachments/${uid}/${docRef.id}_${file.originalname}`
-      const bucket = admin.storage().bucket()
-      const fileRef = bucket.file(attachmentPath)
+      const fileRef = admin.storage().bucket().file(attachmentPath)
       await fileRef.save(file.buffer, {
         metadata: { contentType: file.mimetype },
       })
-
-      const now = new Date()
-      const ticket: TicketRecord & { attachmentPath?: string } = {
-        id: docRef.id,
-        clientId: uid,
-        clientEmail: email,
-        subject: dto.subject,
-        message: dto.message,
-        priority: dto.priority || 'medium',
-        status: 'open',
-        adminResponse: '',
-        projectId: dto.projectId,
-        projectName: dto.projectName,
-        attachmentPath,
-        createdAt: now,
-        updatedAt: now,
-      }
-
-      await docRef.set(ticket)
-
-      // Notificar a todos los administradores (sin await para no bloquear la iteración principal)
-      this.notifyAdmins(
-        'Nuevo Ticket Creado',
-        `El cliente ${email} ha abierto el ticket: ${dto.subject}`,
-        `/admin/tickets/${ticket.id}`,
-      ).catch((e) =>
-        console.error('Error notificando admins sobre nuevo ticket', e),
-      )
-
-      return ticket
     }
 
-    const docRef = this.db.collection('support_tickets').doc()
-    const now = new Date()
-
-    const ticket: TicketRecord = {
-      id: docRef.id,
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    const ticketData = {
       clientId: uid,
       clientEmail: email,
       subject: dto.subject,
@@ -170,212 +178,213 @@ export class SupportService {
       adminResponse: '',
       projectId: dto.projectId,
       projectName: dto.projectName,
+      attachmentPath,
       createdAt: now,
       updatedAt: now,
     }
 
-    await docRef.set(ticket)
-    return ticket
+    await docRef.set(ticketData)
+
+    this.notifyAdmins(
+      'Nuevo Ticket Creado',
+      `El cliente ${email} ha abierto el ticket: ${dto.subject}`,
+      `/admin/tickets/${docRef.id}`,
+    ).catch((e) =>
+      console.error('Error notificando admins sobre nuevo ticket', e),
+    )
+
+    // Notificación por EMAIL al administrador
+    this.mailService
+      .sendMail({
+        to: 'soporte@gabrielzavando.cl',
+        account: 'SUPPORT',
+        subject: `[SOPORTE] Nuevo Ticket: ${dto.subject}`,
+        templateName: 'ticket-created',
+        templateVariables: {
+          clientEmail: email,
+          subject: dto.subject,
+          message: dto.message,
+          priority: dto.priority || 'medium',
+          projectName: dto.projectName || 'General',
+          date: new Date().toLocaleString('es-ES'),
+          ticketId: docRef.id,
+        },
+      })
+      .catch((e) =>
+        console.error('Error enviando email de nuevo ticket al admin', e),
+      )
+
+    const savedDoc = await docRef.get()
+    return this.mapTicketToDto(savedDoc)
   }
 
-  async findByClient(uid: string): Promise<TicketRecord[]> {
+  async findByClient(uid: string): Promise<TicketResponseDto[]> {
     const snapshot = await this.db
       .collection('support_tickets')
       .where('clientId', '==', uid)
-      .orderBy('createdAt', 'desc')
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as TicketRecord)
+    const tickets = snapshot.docs.map((doc) => this.mapTicketToDto(doc))
+    return tickets.sort(
+      (a, b) => this.getMillis(b.createdAt) - this.getMillis(a.createdAt),
+    )
   }
 
-  async findAll(): Promise<TicketRecord[]> {
-    const snapshot = await this.db
-      .collection('support_tickets')
-      .orderBy('createdAt', 'desc')
-      .get()
+  async findAll(): Promise<TicketResponseDto[]> {
+    const snapshot = await this.db.collection('support_tickets').get()
 
-    return snapshot.docs.map((doc) => doc.data() as TicketRecord)
+    const tickets = snapshot.docs.map((doc) => this.mapTicketToDto(doc))
+    return tickets.sort(
+      (a, b) => this.getMillis(b.createdAt) - this.getMillis(a.createdAt),
+    )
   }
 
   async findById(
     ticketId: string,
     uid: string,
     role: string,
-  ): Promise<
-    TicketRecord & { attachmentUrl?: string; clientPhotoUrl?: string }
-  > {
+  ): Promise<TicketResponseDto> {
     const doc = await this.db.collection('support_tickets').doc(ticketId).get()
-
     if (!doc.exists) {
       throw new NotFoundException('Ticket no encontrado')
     }
 
-    const data = doc.data() as TicketRecord & { attachmentPath?: string }
-
-    if (role === 'client' && data.clientId !== uid) {
+    const dto = this.mapTicketToDto(doc)
+    if (role === 'client' && dto.clientId !== uid) {
       throw new NotFoundException('Ticket no encontrado')
     }
 
-    let attachmentUrl: string | undefined = undefined
-
-    if (data.attachmentPath) {
+    if (dto.attachmentPath) {
       try {
-        const bucket = admin.storage().bucket()
-        const fileRef = bucket.file(data.attachmentPath)
+        const fileRef = admin.storage().bucket().file(dto.attachmentPath)
         const [url] = await fileRef.getSignedUrl({
           action: 'read',
-          expires: Date.now() + 60 * 60 * 1000, // 1 hour
+          expires: Date.now() + 60 * 60 * 1000,
         })
-        attachmentUrl = url
-      } catch {
-        console.error('Error generating signed URL for ticket attachment:')
+        dto.attachmentUrl = url
+      } catch (e) {
+        console.error('Error generando signed URL:', e)
       }
     }
 
-    let clientPhotoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.clientEmail || 'User')}&background=random&rounded=false`
+    dto.clientPhotoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(dto.clientEmail || 'User')}&background=random&rounded=false`
     try {
-      const userDoc = await this.db.collection('users').doc(data.clientId).get()
+      const userDoc = await this.db.collection('users').doc(dto.clientId).get()
       if (userDoc.exists) {
-        const userData = userDoc.data() as { photoURL?: string } | undefined
-        if (userData && userData.photoURL) {
-          const photoUrlUnrounded = userData.photoURL
+        const userData = userDoc.data()
+        if (userData?.photoURL) {
+          dto.clientPhotoUrl = (userData.photoURL as string)
             .replace('&rounded=true', '&rounded=false')
             .replace('rounded=true&', '')
-          clientPhotoUrl = photoUrlUnrounded
         }
       }
     } catch (err) {
-      console.error('Error fetching user photo for ticket:', err)
+      console.error('Error fetching user photo:', err)
     }
 
-    return {
-      ...data,
-      attachmentUrl,
-      clientPhotoUrl,
-    }
+    return dto
   }
 
   async updateTicket(
     ticketId: string,
     dto: UpdateTicketDto,
-  ): Promise<TicketRecord> {
+  ): Promise<TicketResponseDto> {
     const docRef = this.db.collection('support_tickets').doc(ticketId)
     const doc = await docRef.get()
-
     if (!doc.exists) {
       throw new NotFoundException('Ticket no encontrado')
     }
 
-    const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
+    const updateData: Record<string, string | admin.firestore.FieldValue> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }
-
-    if (dto.status) {
-      updateData.status = dto.status
-    }
+    if (dto.status) updateData.status = dto.status
     if (dto.adminResponse !== undefined) {
       updateData.adminResponse = dto.adminResponse
     }
 
     await docRef.update(updateData)
-
     const updated = await docRef.get()
-    const ticketRecord = updated.data() as TicketRecord
+    const ticketDto = this.mapTicketToDto(updated)
 
-    // Al responder, notificar al cliente vía MailService
-    if (
-      dto.adminResponse &&
-      dto.adminResponse.trim().length > 0 &&
-      ticketRecord.clientEmail
-    ) {
-      let clientName = 'Cliente'
-      try {
-        const userDoc = await this.db
-          .collection('users')
-          .doc(ticketRecord.clientId)
-          .get()
-        if (userDoc.exists) {
-          const userData = userDoc.data() as {
-            displayName?: string
-            name?: string
-          }
-          clientName = userData.displayName || userData.name || 'Cliente'
-        }
-      } catch (err) {
-        console.error('Error fetching client name for email:', err)
-      }
-
-      this.mailService
-        .sendMail({
-          to: ticketRecord.clientEmail,
-          account: 'SUPPORT',
-          subject: `Actualización de tu ticket: ${ticketRecord.subject}`,
-          templateName: 'ticket-response',
-          templateVariables: {
-            clientName: clientName,
-            subject: ticketRecord.subject,
-            status: ticketRecord.status,
-            message: ticketRecord.message,
-            adminResponse: ticketRecord.adminResponse,
-          },
-        })
-        .catch((err) => console.error('Error enviando email soporte', err))
-
-      this.notificationsService
-        .createNotification({
-          title: 'Respuesta en Ticket',
-          message: `El equipo de soporte ha respondido a tu ticket: ${ticketRecord.subject}`,
-          userId: ticketRecord.clientId,
-          link: `/dashboard/soporte/${ticketRecord.id}`,
-        })
-        .catch((err) => console.error('Error creando notificación', err))
+    if (dto.adminResponse && dto.adminResponse.trim().length > 0) {
+      this.sendResponseNotifications(ticketDto).catch((e) =>
+        console.error('Error in sendResponseNotifications:', e),
+      )
     }
 
-    return ticketRecord
+    return ticketDto
   }
 
-  // ── Helpers ──
+  private async sendResponseNotifications(ticketDto: TicketResponseDto) {
+    let clientName = 'Cliente'
+    try {
+      const userDoc = await this.db
+        .collection('users')
+        .doc(ticketDto.clientId)
+        .get()
+      if (userDoc.exists) {
+        const data = userDoc.data() as Record<string, string> | undefined
+        clientName = data?.displayName || data?.name || 'Cliente'
+      }
+    } catch (err) {
+      console.error('Error fetching client name:', err)
+    }
+
+    this.mailService
+      .sendMail({
+        to: ticketDto.clientEmail,
+        account: 'SUPPORT',
+        subject: `Actualización de tu ticket: ${ticketDto.subject}`,
+        templateName: 'ticket-response',
+        templateVariables: {
+          clientName,
+          subject: ticketDto.subject,
+          status: ticketDto.status,
+          message: ticketDto.message,
+          adminResponse: ticketDto.adminResponse,
+        },
+      })
+      .catch((e) => console.error('Error sending mail:', e))
+
+    this.notificationsService
+      .create(
+        ticketDto.clientId,
+        'Respuesta en Ticket',
+        `El equipo de soporte ha respondido a tu ticket: ${ticketDto.subject}`,
+        'info',
+        `/dashboard/soporte/${ticketDto.id}`,
+      )
+      .catch((e) => console.error('Error creating notification:', e))
+  }
+
   private async notifyAdmins(title: string, message: string, link: string) {
     try {
-      const adminsSnapshot = await this.db
+      const admins = await this.db
         .collection('users')
         .where('role', '==', 'admin')
         .get()
 
-      if (adminsSnapshot.empty) return
-
-      const promises = adminsSnapshot.docs.map((doc) =>
-        this.notificationsService.createNotification({
-          title,
-          message,
-          userId: doc.id,
-          link,
-        }),
+      const promises = admins.docs.map((doc) =>
+        this.notificationsService.create(doc.id, title, message, 'info', link),
       )
-
       await Promise.all(promises)
     } catch (e) {
-      console.error('Error en notifyAdmins:', e)
+      console.error('Error in notifyAdmins:', e)
     }
   }
-
-  // ────────────── Conversation Messages ──────────────
 
   async addMessage(
     ticketId: string,
     dto: AddMessageDto,
     senderEmail: string,
     file?: Express.Multer.File,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<MessageResponseDto> {
     const docRef = this.db.collection('support_tickets').doc(ticketId)
     const doc = await docRef.get()
+    if (!doc.exists) throw new NotFoundException('Ticket no encontrado')
 
-    if (!doc.exists) {
-      throw new NotFoundException('Ticket no encontrado')
-    }
-
-    const ticket = doc.data() as TicketRecord
-
+    const ticket = this.mapTicketToDto(doc)
     if (ticket.status === 'resolved') {
       throw new BadRequestException(
         'No se pueden enviar mensajes a un ticket resuelto',
@@ -383,55 +392,72 @@ export class SupportService {
     }
 
     const msgRef = docRef.collection('messages').doc()
-    const now = new Date()
-    const message: Record<string, any> = {
-      id: msgRef.id,
+    let attachmentPath = ''
+    if (file) {
+      const ext = file.originalname.split('.').pop() || 'jpg'
+      attachmentPath = `support_attachments/msg_${msgRef.id}_${Date.now()}.${ext}`
+      await admin
+        .storage()
+        .bucket()
+        .file(attachmentPath)
+        .save(file.buffer, {
+          metadata: { contentType: file.mimetype },
+        })
+    }
+
+    const messageData = {
       body: dto.body,
       senderRole: dto.senderRole,
       senderEmail,
-      createdAt: now,
       senderPhotoUrl: dto.senderPhotoUrl || null,
+      attachmentPath,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }
 
-    if (file) {
-      const bucket = admin.storage().bucket()
-      const ext = file.originalname.split('.').pop() || 'jpg'
-      const path = `support_attachments/msg_${msgRef.id}_${Date.now()}.${ext}`
-      const fileInBucket = bucket.file(path)
+    await msgRef.set(messageData)
 
-      await fileInBucket.save(file.buffer, {
-        metadata: { contentType: file.mimetype },
-      })
-      message.attachmentPath = path
-    }
-
-    await msgRef.set(message)
-
-    // Si el admin envía un mensaje, notificar al cliente
     if (dto.senderRole === 'admin') {
       this.notificationsService
-        .createNotification({
-          title: 'Nuevo mensaje en tu ticket',
-          message: `El equipo de soporte te ha respondido en el ticket: ${ticket.subject}`,
-          userId: ticket.clientId,
-          link: `/dashboard/soporte/${ticketId}`,
-        })
+        .create(
+          ticket.clientId,
+          'Nuevo mensaje en tu ticket',
+          `El equipo de soporte te ha respondido en el ticket: ${ticket.subject}`,
+          'info',
+          `/dashboard/soporte/${ticketId}`,
+        )
         .catch((e) => console.error('Error notifying client:', e))
     } else {
-      // Si el cliente responde, notificar a los administradores
       this.notifyAdmins(
         'Nuevo mensaje de cliente',
         `El cliente ha respondido en el ticket: ${ticket.subject}`,
         `/admin/tickets/${ticketId}`,
-      ).catch((e) =>
-        console.error('Error notificando admins sobre nuevo mensaje', e),
-      )
+      ).catch((e) => console.error('Error notifying admins:', e))
+
+      // Notificación por EMAIL al administrador (Réplica de Cliente)
+      this.mailService
+        .sendMail({
+          to: 'soporte@gabrielzavando.cl',
+          account: 'SUPPORT',
+          subject: `[SOPORTE] Nueva Réplica: ${ticket.subject}`,
+          templateName: 'ticket-reply',
+          templateVariables: {
+            clientEmail: senderEmail,
+            subject: ticket.subject,
+            message: dto.body,
+            ticketId: ticketId,
+            date: new Date().toLocaleString('es-ES'),
+          },
+        })
+        .catch((e) =>
+          console.error('Error enviando email de réplica al admin', e),
+        )
     }
 
-    return message
+    const savedMsg = await msgRef.get()
+    return this.mapMessageToDto(savedMsg)
   }
 
-  async getMessages(ticketId: string): Promise<Record<string, unknown>[]> {
+  async getMessages(ticketId: string): Promise<MessageResponseDto[]> {
     const snapshot = await this.db
       .collection('support_tickets')
       .doc(ticketId)
@@ -439,71 +465,59 @@ export class SupportService {
       .orderBy('createdAt', 'asc')
       .get()
 
-    const messages = snapshot.docs.map((d) => d.data())
-
-    // Generar URLs firmadas para los adjuntos
+    const messages = snapshot.docs.map((doc) => this.mapMessageToDto(doc))
     const bucket = admin.storage().bucket()
-    const processedMessages = await Promise.all(
+
+    const processed = await Promise.all(
       messages.map(async (m) => {
         if (m.attachmentPath) {
           try {
-            const fileRef = bucket.file(m.attachmentPath as string)
-            const [url] = await fileRef.getSignedUrl({
+            const [url] = await bucket.file(m.attachmentPath).getSignedUrl({
               action: 'read',
               expires: Date.now() + 60 * 60 * 1000,
             })
-            return { ...m, attachmentUrl: url }
+            m.attachmentUrl = url
           } catch (e) {
-            console.error(
-              'Error generating signed URL for message attachment:',
-              e,
-            )
+            console.error('Error generating signed URL for message:', e)
           }
         }
         return m
       }),
     )
 
-    return processedMessages
+    return processed
   }
 
   async deleteTicket(id: string): Promise<void> {
     const docRef = this.db.collection('support_tickets').doc(id)
     const doc = await docRef.get()
+    if (!doc.exists) throw new NotFoundException('Ticket no encontrado')
 
-    if (!doc.exists) {
-      throw new NotFoundException('Ticket no encontrado')
-    }
-
-    const data = doc.data() as TicketRecord & { attachmentPath?: string }
+    const ticket = this.mapTicketToDto(doc)
     const bucket = admin.storage().bucket()
 
-    // 1. Eliminar adjunto del ticket si existe
-    if (data.attachmentPath) {
+    if (ticket.attachmentPath) {
       try {
-        await bucket.file(data.attachmentPath).delete()
+        await bucket.file(ticket.attachmentPath).delete()
       } catch (e) {
-        console.error('Error deleting ticket attachment:', e)
+        console.error(e)
       }
     }
 
-    // 2. Eliminar mensajes y sus adjuntos
-    const messagesSnapshot = await docRef.collection('messages').get()
-    const deletePromises = messagesSnapshot.docs.map(async (msgDoc) => {
-      const msgData = msgDoc.data()
-      if (msgData.attachmentPath) {
+    const messages = await docRef.collection('messages').get()
+    const deletePromises = messages.docs.map(async (msgDoc) => {
+      const msg = this.mapMessageToDto(msgDoc)
+      if (msg.attachmentPath) {
         try {
-          await bucket.file(msgData.attachmentPath as string).delete()
+          await bucket.file(msg.attachmentPath).delete()
         } catch (e) {
-          console.error('Error deleting message attachment:', e)
+          console.error(e)
         }
       }
       return msgDoc.ref.delete()
     })
 
     await Promise.all(deletePromises)
-
-    // 3. Eliminar el ticket
     await docRef.delete()
   }
 }

@@ -3,63 +3,86 @@ import * as admin from 'firebase-admin'
 import { FirebaseService } from '../firebase/firebase.service'
 import { CreateCategoryDto } from './dto/create-category.dto'
 import { UpdateCategoryDto } from './dto/update-category.dto'
+import { CategoryResponseDto } from './dto/category-response.dto'
+import { BlogCategoryRecord } from './interfaces/category.interface'
 
 @Injectable()
 export class BlogCategoriesService {
-  private collection: admin.firestore.CollectionReference
+  private db: admin.firestore.Firestore
 
   constructor(private readonly firebaseService: FirebaseService) {
-    this.collection = admin.firestore().collection('categories')
+    this.db = this.firebaseService.getDb()
   }
 
-  async create(createCategoryDto: CreateCategoryDto) {
+  private mapCategoryToDto(
+    doc: admin.firestore.DocumentSnapshot,
+  ): CategoryResponseDto {
+    const data = (doc.data() || {}) as BlogCategoryRecord
+    return {
+      id: doc.id,
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      color: data.color,
+      icon: data.icon,
+    }
+  }
+
+  async create(
+    createCategoryDto: CreateCategoryDto,
+  ): Promise<CategoryResponseDto> {
     const { slug } = createCategoryDto
-    // Verify if slug exists
-    const existing = await this.collection.where('slug', '==', slug).get()
+    const existing = await this.db
+      .collection('categories')
+      .where('slug', '==', slug)
+      .get()
     if (!existing.empty) {
       throw new Error('Category slug already exists')
     }
 
-    const docRef = this.collection.doc()
-    const category = {
+    const docRef = this.db.collection('categories').doc()
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    const categoryData = {
       id: docRef.id,
       ...createCategoryDto,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: now,
+      updatedAt: now,
     }
 
-    await docRef.set(category)
-    return category
+    await docRef.set(categoryData)
+    const saved = await docRef.get()
+    return this.mapCategoryToDto(saved)
   }
 
-  async findAll() {
-    const query = this.collection.orderBy('name', 'asc')
-    const snapshot = await query.get()
-    return snapshot.docs.map((doc) => doc.data())
+  async findAll(): Promise<CategoryResponseDto[]> {
+    const snapshot = await this.db
+      .collection('categories')
+      .orderBy('name', 'asc')
+      .get()
+    return snapshot.docs.map((doc) => this.mapCategoryToDto(doc))
   }
 
-  async findOne(id: string) {
-    const doc = await this.collection.doc(id).get()
+  async findOne(id: string): Promise<CategoryResponseDto> {
+    const doc = await this.db.collection('categories').doc(id).get()
     if (!doc.exists) {
       throw new NotFoundException(`Category with ID ${id} not found`)
     }
-    return doc.data()
+    return this.mapCategoryToDto(doc)
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    const docRef = this.collection.doc(id)
+  async update(
+    id: string,
+    updateCategoryDto: UpdateCategoryDto,
+  ): Promise<CategoryResponseDto> {
+    const docRef = this.db.collection('categories').doc(id)
     const doc = await docRef.get()
     if (!doc.exists) {
       throw new NotFoundException(`Category with ID ${id} not found`)
     }
 
-    const updateData: Record<string, unknown> = {
-      ...(updateCategoryDto as Record<string, unknown>),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }
-
     if (updateCategoryDto.slug) {
-      const existing = await this.collection
+      const existing = await this.db
+        .collection('categories')
         .where('slug', '==', updateCategoryDto.slug)
         .get()
       const otherDocsWithSameSlug = existing.docs.filter((d) => d.id !== id)
@@ -68,12 +91,22 @@ export class BlogCategoriesService {
       }
     }
 
+    const updateData = {
+      ...updateCategoryDto,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+
     await docRef.update(updateData)
-    return { id, ...updateData }
+    const updated = await docRef.get()
+    return this.mapCategoryToDto(updated)
   }
 
-  async remove(id: string) {
-    await this.collection.doc(id).delete()
-    return { id, deleted: true }
+  async remove(id: string): Promise<void> {
+    const docRef = this.db.collection('categories').doc(id)
+    const doc = await docRef.get()
+    if (!doc.exists) {
+      throw new NotFoundException(`Category with ID ${id} not found`)
+    }
+    await docRef.delete()
   }
 }

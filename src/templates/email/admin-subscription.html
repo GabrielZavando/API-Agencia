@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva Suscripción | {{name}}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Open Sans', Arial, sans-serif; line-height: 1.6; color: #1D0033; max-width: 600px; margin: 0 auto; background-color: #F3E8FF; padding: 20px 0; }
+    .container { background-color: #ffffff; border-left: 6px solid #6B21A8; margin: 0 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .header { background: #6B21A8; padding: 30px; text-align: center; color: #FFFFFF; }
+    .content { padding: 40px 30px; }
+    .greeting { font-family: 'Montserrat', sans-serif; font-size: 20px; color: #6B21A8; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-box { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 20px; margin: 20px 0; }
+    .info-item { margin: 8px 0; font-size: 14px; }
+    .footer { background-color: #6B21A8; color: #FFFFFF; text-align: center; padding: 40px 30px; font-size: 12px; }
+    .social-links img { margin: 0 12px; filter: brightness(0) invert(1); }
+    .cta-button { display: inline-block; padding: 14px 28px; background: #FF0080; color: #FFFFFF; text-decoration: none; font-weight: 700; text-transform: uppercase; margin: 15px 0; font-size: 13px; letter-spacing: 1px; border-radius: 0; }
+    .cta-button:hover { background: #A600FF !important; }
+    .system-tag { display: inline-block; padding: 4px 12px; background: #6B21A8; color: #FFFFFF; font-size: 10px; font-weight: 700; border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+        <tr>
+          <td align="center" valign="middle">
+            <img src="{{logoUrl}}" alt="Gabriel Zavando" width="50" style="display:block; border:0;">
+          </td>
+          <td align="center" valign="middle" style="padding-left: 15px;">
+            <div style="font-family:'Montserrat',sans-serif; font-size: 18px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">
+              Gabriel Zavando | Full Stack Developer
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="content">
+      <div class="system-tag">Gestión Interna</div>
+      <h1 class="greeting">¡Tienes un nuevo suscriptor!</h1>
+      
+      <p>Se ha registrado una nueva dirección de correo en la lista de difusión oficial:</p>
+
+      <div class="info-box">
+        <div class="info-item"><strong>📧 Email:</strong> <a href="mailto:{{subscriberEmail}}" style="color: #6B21A8; text-decoration: none;">{{subscriberEmail}}</a></div>
+        <div class="info-item"><strong>📅 Fecha de Registro:</strong> {{date}}</div>
+        <div class="info-item"><strong>📌 Origen:</strong> Formulario de Suscripción Principal</div>
+      </div>
+
+      <p style="font-size: 14px; color: #6B7280; margin-top: 30px;">
+        Este usuario recibirá automáticamente la bienvenida y las actualizaciones futuras que publiques en el blog.
+      </p>
+    </div>
+    <div class="footer">
+      <div class="social-links" style="margin-bottom: 20px;">
+         <a href="{{linkedinUrl}}" style="text-decoration:none;"><img src="{{linkedinIconUrl}}" alt="LinkedIn" width="24" height="24" /></a>
+         <a href="{{youtubeUrl}}" style="text-decoration:none;"><img src="{{youtubeIconUrl}}" alt="YouTube" width="24" height="24" /></a>
+         <a href="{{githubUrl}}" style="text-decoration:none;"><img src="{{githubIconUrl}}" alt="GitHub" width="24" height="24" /></a>
+         <a href="{{instagramUrl}}" style="text-decoration:none;"><img src="{{instagramIconUrl}}" alt="Instagram" width="24" height="24" /></a>
+      </div>
+      Este es un mensaje automático generado por el sistema de gestión de <strong>{{name}}</strong>.<br>
+      © {{currentYear}} | Panel de Administración
+    </div>
+  </div>
+</body>
+</html>

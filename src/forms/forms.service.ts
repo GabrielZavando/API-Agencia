@@ -2,12 +2,20 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
-import { FirebaseService, ProspectRecord } from '../firebase/firebase.service'
+import { FirebaseService } from '../firebase/firebase.service'
+import { ProspectRecord, SubscriberRecord } from './interfaces/forms.interface'
 import { MailService } from '../mail/mail.service'
+import { BlogService } from '../blog/blog.service'
 import { companyConfig } from '../config/company.config'
 // Librerías anti-spam
 import disposableDomains from 'disposable-email-domains'
 import { validate } from 'deep-email-validator'
+
+import { SystemConfigService } from '../system-config/system-config.service'
+import {
+  ProspectResponseDto,
+  SubscriberResponseDto,
+} from './dto/form-response.dto'
 
 @Injectable()
 export class FormsService {
@@ -15,7 +23,34 @@ export class FormsService {
     private readonly firebaseService: FirebaseService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    private readonly blogService: BlogService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
+
+  private mapProspectToDto(data: ProspectRecord): ProspectResponseDto {
+    return {
+      id: data.prospectId,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      message: '', // Mensaje no se guarda directamente en prospect sino en conversaciones
+      status: data.status,
+      conversations: data.conversations as any[],
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    }
+  }
+
+  private mapSubscriberToDto(data: SubscriberRecord): SubscriberResponseDto {
+    return {
+      id: data.subscriberId,
+      email: data.email,
+      status: data.status as 'pending' | 'confirmed' | 'unsubscribed',
+      subscribedAt: data.createdAt,
+      confirmedAt: data.confirmedAt,
+      meta: data.meta,
+    }
+  }
 
   // ================================================
   // Métodos de Validación Anti-Spam
@@ -276,57 +311,24 @@ export class FormsService {
     isNewProspect: boolean,
   ): Promise<boolean> {
     try {
-      const adminEmail = companyConfig.email
+      const config = await this.systemConfigService.getConfig()
+      const adminEmail = config?.email || companyConfig.email
 
       return await this.mailService.sendMail({
         to: adminEmail,
         subject: `Nuevo mensaje de contacto ${isNewProspect ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333; border-bottom: 2px solid #FF0080; padding-bottom: 10px;">
-              📧 Nuevo mensaje de contacto ${isNewProspect ? '<span style="color: #FF0080;">(PRIMER CONTACTO)</span>' : '<span style="color: #A600FF;">(CONTACTO RECURRENTE)</span>'}
-            </h2>
-
-            <div style="background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <h3 style="margin-top: 0; color: #333;">📋 Información del contacto:</h3>
-              <p><strong>Nombre:</strong> ${contactDto.name}</p>
-              <p><strong>Email:</strong> ${contactDto.email}</p>
-              <p><strong>Teléfono:</strong> ${contactDto.phone || 'No proporcionado'}</p>
-              <p><strong>Tipo:</strong> ${isNewProspect ? 'Nuevo prospecto' : 'Prospecto recurrente'}</p>
-              <p><strong>Fecha:</strong> ${new Date().toLocaleString('es-ES')}</p>
-            </div>
-
-            <div style="background: #fff; border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <h3 style="margin-top: 0; color: #333;">💬 Mensaje del usuario:</h3>
-              <div style="background: #f8f8f8; padding: 15px; border-left: 4px solid #FF0080; margin: 10px 0;">
-                ${contactDto.message.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-
-            <div style="background: #e8f5e8; border: 1px solid #4CAF50; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <h3 style="margin-top: 0; color: #2E7D32;">🤖 Respuesta automática enviada:</h3>
-              <div style="background: #fff; padding: 15px; border-left: 4px solid #4CAF50; margin: 10px 0;">
-                ${responseContent.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
-              <h4 style="margin-top: 0; color: #856404;">⚡ Acciones recomendadas:</h4>
-              <ul style="margin: 10px 0;">
-                <li>Revisar el mensaje y responder personalmente si es necesario</li>
-                <li>Actualizar el estado del prospecto en Firebase si corresponde</li>
-                <li>Agregar notas o etiquetas según el tipo de consulta</li>
-              </ul>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-
-            <p style="color: #666; font-size: 12px; text-align: center;">
-              Este es un mensaje automático generado por el sistema de contacto.<br>
-              No responder directamente a este email.
-            </p>
-          </div>
-        `,
+        templateName: 'admin-contact',
+        templateVariables: {
+          typeLabel: isNewProspect
+            ? 'PRIMER CONTACTO (PROSPECTO NUEVO)'
+            : 'CONTACTO RECURRENTE',
+          contactName: contactDto.name,
+          contactEmail: contactDto.email,
+          contactPhone: contactDto.phone || 'No proporcionado',
+          contactMessage: contactDto.message.replace(/\n/g, '<br>'),
+          autoResponse: responseContent.replace(/\n/g, '<br>'),
+          date: new Date().toLocaleString('es-ES'),
+        },
       })
     } catch (error) {
       console.error('Error enviando notificación administrativa:', error)
@@ -339,50 +341,20 @@ export class FormsService {
     subscribeDto: SubscribeDto,
   ): Promise<boolean> {
     try {
-      const adminEmail = companyConfig.email
+      const config = await this.systemConfigService.getConfig()
+      const adminEmail = config?.email || companyConfig.email
 
       return await this.mailService.sendMail({
         to: adminEmail,
         subject: `🔔 Nueva suscripción al newsletter`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333; border-bottom: 2px solid #A600FF; padding-bottom: 10px;">
-              🔔 Nueva suscripción al newsletter
-            </h2>
-
-            <div style="background: #f0e6ff; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #A600FF;">
-              <h3 style="margin-top: 0; color: #333;">📧 Información del nuevo suscriptor:</h3>
-              <p><strong>Email:</strong> ${subscribeDto.email}</p>
-              <p><strong>Fecha de suscripción:</strong> ${new Date().toLocaleString('es-ES')}</p>
-              <p><strong>User Agent:</strong> ${subscribeDto.meta.userAgent}</p>
-              <p><strong>Página de origen:</strong> ${subscribeDto.meta.page}</p>
-              ${subscribeDto.meta.referrer ? `<p><strong>Referrer:</strong> ${subscribeDto.meta.referrer}</p>` : ''}
-            </div>
-
-            <div style="background: #e8f5e8; border: 1px solid #4CAF50; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <h3 style="margin-top: 0; color: #2E7D32;">✅ Acciones realizadas automáticamente:</h3>
-              <ul style="margin: 10px 0;">
-                <li>✅ Suscriptor guardado en base de datos</li>
-                <li>✅ Email de bienvenida enviado al suscriptor</li>
-                <li>✅ Notificación enviada al administrador</li>
-              </ul>
-            </div>
-
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
-              <h4 style="margin-top: 0; color: #856404;">📈 Estadísticas y seguimiento:</h4>
-              <p style="margin: 10px 0;">
-                Este suscriptor se agregó a tu lista de newsletter. Puedes gestionar todas las suscripciones desde Firebase.
-              </p>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-
-            <p style="color: #666; font-size: 12px; text-align: center;">
-              Este es un mensaje automático generado por el sistema de suscripciones.<br>
-              No responder directamente a este email.
-            </p>
-          </div>
-        `,
+        templateName: 'admin-subscription',
+        templateVariables: {
+          subscriberEmail: subscribeDto.email,
+          date: new Date().toLocaleString('es-ES'),
+          pageOrigin: subscribeDto.meta.page,
+          referrer: subscribeDto.meta.referrer || 'Directo',
+          userAgent: subscribeDto.meta.userAgent,
+        },
       })
     } catch (error) {
       console.error('Error enviando notificación de suscripción:', error)
@@ -444,10 +416,12 @@ export class FormsService {
     email: string,
   ): Promise<boolean> {
     try {
+      const baseVariables = await this.mailService.getBaseVariables(email)
       return await this.mailService.sendMail({
         to: email,
         subject: 'Confirmación de desuscripción - Newsletter',
         templateName: 'unsubscribe-confirmation',
+        templateVariables: baseVariables,
       })
     } catch (error) {
       console.error(
@@ -552,18 +526,23 @@ export class FormsService {
   }
 
   // Obtener todos los prospectos
-  async getAllProspects(): Promise<ProspectRecord[]> {
-    return await this.firebaseService.getAllProspects()
+  async getAllProspects(): Promise<ProspectResponseDto[]> {
+    const prospects = await this.firebaseService.getAllProspects()
+    return prospects.map((p) => this.mapProspectToDto(p))
   }
 
   // Obtener un prospecto por ID
-  async getProspectById(prospectId: string): Promise<ProspectRecord | null> {
-    return await this.firebaseService.getProspectById(prospectId)
+  async getProspectById(
+    prospectId: string,
+  ): Promise<ProspectResponseDto | null> {
+    const prospect = await this.firebaseService.getProspectById(prospectId)
+    return prospect ? this.mapProspectToDto(prospect) : null
   }
 
   // Obtener todos los suscriptores
-  async getAllSubscribers(): Promise<any[]> {
-    return await this.firebaseService.getAllSubscribers()
+  async getAllSubscribers(): Promise<SubscriberResponseDto[]> {
+    const subscribers = await this.firebaseService.getAllSubscribers()
+    return subscribers.map((s) => this.mapSubscriberToDto(s))
   }
 
   // Responder administrativamente a un prospecto
@@ -581,7 +560,9 @@ export class FormsService {
       if (!prospectDoc.exists) {
         throw new Error('Prospecto no encontrado al intentar enviar el correo')
       }
-      const prospectData = prospectDoc.data() as ProspectRecord
+      const prospectData = (await this.firebaseService.getProspectById(
+        prospectId,
+      )) as ProspectRecord
 
       // 3. Reconstruir un ContactDto simplificado para la plantilla de correo
       const contactDto: ContactDto = {
@@ -635,73 +616,54 @@ export class FormsService {
   private async sendDoubleOptInEmail(
     email: string,
     token: string,
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const websiteUrl = companyConfig.websiteUrl
-      // La URL puede ser absoluta (prod) o relativa si usas NestJS como proxy
+      const config = await this.systemConfigService.getConfig()
+      const websiteUrl = config?.websiteUrl || companyConfig.websiteUrl
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
-      const fromEmail =
-        this.configService.get<string>('SMTP_FROM_EMAIL') ||
-        'contacto@gabrielzavando.cl'
-      const fromName = companyConfig.name
-
-      return await this.mailService.sendMail({
+      return await this.mailService.sendMailDetailed({
         to: email,
-        from: `"${fromName}" <${fromEmail}>`,
         subject: 'Confirma tu suscripción al Newsletter',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #FF0080; border-bottom: 2px solid #FF0080; padding-bottom: 10px;">
-              \uD83D\uDD14 Confirma tu suscripción
-            </h2>
-
-            <p style="font-size: 1.1rem; color: #333;">\u00a1Hola!</p>
-            <p style="color: #555; line-height: 1.6;">
-              Recibimos una solicitud para suscribirte a nuestro newsletter.
-              Haz clic en el botón de abajo para confirmar tu suscripción y empezar a recibir
-              tips de transformación digital.
-            </p>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${confirmUrl}"
-                style="background-color: #FF0080; color: #fff; padding: 14px 32px;
-                       text-decoration: none; font-weight: bold; font-size: 1rem;
-                       display: inline-block;">
-                Confirmar suscripción
-              </a>
-            </div>
-
-            <p style="color: #999; font-size: 0.85rem;">
-              Si no solicitaste esta suscripción, ignora este mensaje.
-              El enlace expira en 48 horas.<br>
-              O copia este enlace en tu navegador:<br>
-              <a href="${confirmUrl}" style="color: #FF0080;">${confirmUrl}</a>
-            </p>
-          </div>
-        `,
+        templateName: 'subscriber-double-opt-in',
+        templateVariables: {
+          confirmUrl,
+        },
       })
     } catch (error) {
       console.error('Error enviando email de confirmación:', error)
-      return false
+      return { success: false, error: (error as Error).message }
     }
   }
 
   // ================================================
-  // Campaña de Re-confirmación de Suscriptores
+  // Acciones en Lote (Bulk) para Suscriptores
   // ================================================
 
-  async runReconfirmationCampaign(): Promise<{
-    sent: number
-    skipped: number
-    errors: number
-    details: string[]
-  }> {
-    const rawSubs = await this.firebaseService.getAllSubscribers()
-    const subscribers = rawSubs as Record<string, unknown>[]
+  async bulkDeleteSubscribers(subscriberIds: string[]) {
+    if (!subscriberIds || subscriberIds.length === 0) {
+      return { success: false, message: 'No se enviaron IDs para eliminar' }
+    }
 
-    // Enviar a todos excepto a los ya confirmados
-    const targets = subscribers.filter((s) => s['status'] !== 'confirmed')
+    const count =
+      await this.firebaseService.bulkDeleteSubscribers(subscriberIds)
+    return {
+      success: true,
+      message: `Se han eliminado físicamente ${count} suscriptores correctamente.`,
+      count,
+    }
+  }
+
+  async bulkConfirmSubscribers(subscriberIds: string[]) {
+    if (!subscriberIds || subscriberIds.length === 0) {
+      return { success: false, message: 'No se enviaron IDs para confirmar' }
+    }
+
+    const allSubscribers = await this.firebaseService.getAllSubscribers()
+
+    const targets = allSubscribers.filter((s) =>
+      subscriberIds.includes(s.subscriberId),
+    )
 
     let sent = 0
     let skipped = 0
@@ -709,10 +671,9 @@ export class FormsService {
     const details: string[] = []
 
     for (const sub of targets) {
-      const email = sub['email'] as string
+      const email = sub.email
       try {
-        // Generar nuevo token de re-confirmación
-        const subId = sub['subscriberId'] as string
+        const subId = sub.subscriberId
         const newToken =
           await this.firebaseService.refreshReconfirmationToken(subId)
 
@@ -722,13 +683,16 @@ export class FormsService {
           continue
         }
 
-        const ok = await this.sendReconfirmationEmail(email, newToken)
-        if (ok) {
+        // Delay para evitar bloqueos por envíos simultáneos
+        await new Promise((resolve) => setTimeout(resolve, 800))
+
+        const result = await this.sendReconfirmationEmail(email, newToken)
+        if (result.success) {
           sent++
-          details.push(`✅ ${email}: email enviado`)
+          details.push(`✅ ${email}: email de confirmación enviado`)
         } else {
           errors++
-          details.push(`❌ ${email}: fallo al enviar`)
+          details.push(`❌ ${email}: ${result.error || 'fallo al enviar'}`)
         }
       } catch (err) {
         errors++
@@ -736,64 +700,90 @@ export class FormsService {
       }
     }
 
+    return {
+      success: true,
+      message: `Proceso de confirmación en lote completado.`,
+      sent,
+      skipped,
+      errors,
+      details,
+    }
+  }
+
+  // ================================================
+  // Campaña de Re-confirmación de Suscriptores (TODOS)
+  // ================================================
+
+  async runReconfirmationCampaign(): Promise<{
+    sent: number
+    skipped: number
+    errors: number
+    details: string[]
+  }> {
+    const subscribers = await this.firebaseService.getAllSubscribers()
+
+    // Enviar a todos excepto a los ya confirmados
+    const targets = subscribers.filter((s) => s.status !== 'confirmed')
+
+    let sent = 0
+    let skipped = 0
+    let errors = 0
+    const details: string[] = []
+
+    for (const sub of targets) {
+      const email = sub.email
+      try {
+        // Generar nuevo token de re-confirmación
+        const subId = sub.subscriberId
+        const newToken =
+          await this.firebaseService.refreshReconfirmationToken(subId)
+
+        if (!newToken) {
+          skipped++
+          details.push(`⚠️ ${email}: sin ID válido`)
+          continue
+        }
+
+        // Delay preventivo
+        await new Promise((resolve) => setTimeout(resolve, 800))
+
+        const result = await this.sendReconfirmationEmail(email, newToken)
+        if (result.success) {
+          sent++
+          details.push(`✅ ${email}: email enviado`)
+        } else {
+          errors++
+          details.push(`❌ ${email}: ${result.error || 'fallo al enviar'}`)
+        }
+      } catch (err) {
+        errors++
+        details.push(`❌ ${email}: ${(err as Error).message}`)
+      }
+    }
     return { sent, skipped, errors, details }
   }
 
-  // Email de re-confirmación (campaña de limpieza)
+  // Email de re-confirmación para campañas o procesos manuales
   private async sendReconfirmationEmail(
     email: string,
     token: string,
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const websiteUrl = companyConfig.websiteUrl
+      const config = await this.systemConfigService.getConfig()
+      const websiteUrl = config?.websiteUrl || companyConfig.websiteUrl
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
-      const fromEmail =
-        this.configService.get<string>('SMTP_FROM_EMAIL') ||
-        'contacto@gabrielzavando.cl'
-      const fromName = companyConfig.name
-
-      return await this.mailService.sendMail({
+      return await this.mailService.sendMailDetailed({
         to: email,
-        from: `"${fromName}" <${fromEmail}>`,
         subject: '¿Sigues interesado? Confirma tu suscripción',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px;
-                      margin: 0 auto; padding: 20px;">
-            <h2 style="color: #FF0080; border-bottom: 2px solid #FF0080;
-                       padding-bottom: 10px;">
-              ¿Sigues interesado en recibir contenido de valor?
-            </h2>
-
-            <p style="font-size: 1.1rem; color: #333;">¡Hola!</p>
-            <p style="color: #555; line-height: 1.6;">
-              Estamos limpiando nuestra lista para enviarte solo contenido
-              que realmente te interese. Haz clic en el botón de abajo para
-              confirmar que sigues queriendo recibir tips de transformación
-              digital en tu bandeja.
-            </p>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${confirmUrl}"
-                style="background-color: #FF0080; color: #fff;
-                       padding: 14px 32px; text-decoration: none;
-                       font-weight: bold; font-size: 1rem;
-                       display: inline-block;">
-                Sí, quiero seguir suscrito
-              </a>
-            </div>
-
-            <p style="color: #999; font-size: 0.85rem;">
-              Si no deseas seguir recibiendo emails, simplemente ignora
-              este mensaje. Serás eliminado de la lista en 7 días.<br>
-              O copia este enlace:<br>
-              <a href="${confirmUrl}" style="color: #FF0080;">${confirmUrl}</a>
-            </p>
-          </div>
-        `,
+        templateName: 'subscriber-reconfirmation',
+        templateVariables: {
+          confirmUrl,
+        },
       })
-    } catch {
-      return false
+    } catch (error) {
+      console.error('Error enviando email de re-confirmación:', error)
+      return { success: false, error: (error as Error).message }
     }
   }
 
@@ -806,55 +796,83 @@ export class FormsService {
     total: number
     details: string[]
   }> {
-    const rawCandidates = await this.firebaseService.getAllSubscribers()
-    const subscribers = rawCandidates as Record<string, unknown>[]
+    const subscribers = await this.firebaseService.getAllSubscribers()
     const cutoff = Date.now() - daysThreshold * 24 * 60 * 60 * 1000
 
     // Candidatos: pending/active con reconfirmación enviada antes del umbral
-    const candidates = subscribers.filter((s) => {
-      if (s['status'] === 'confirmed') return false
-      const reconfAt = s['reconfirmationSentAt']
+    const targets = subscribers.filter((s) => {
+      if (s.status === 'confirmed') return false
+      const reconfAt = s.reconfirmationSentAt
       if (!reconfAt) return false
-      const ts =
-        typeof reconfAt === 'object' && '_seconds' in reconfAt
-          ? (reconfAt as { _seconds: number })._seconds * 1000
-          : new Date(reconfAt as string).getTime()
-      return ts < cutoff
+
+      const reconfTs =
+        reconfAt instanceof Date ? reconfAt.getTime() : reconfAt.toMillis()
+      return reconfTs < cutoff
     })
 
-    const details: string[] = []
     let marked = 0
+    const details: string[] = []
 
-    for (const sub of candidates) {
-      const id = sub['subscriberId'] as string
-      const email = sub['email'] as string
+    for (const sub of targets) {
       try {
-        await this.firebaseService.markSubscriberInactive(id)
+        await this.firebaseService.markSubscriberInactive(sub.subscriberId)
         marked++
-        details.push(`🗑️ ${email}: marcado como inactivo`)
-      } catch {
-        details.push(`⚠️ ${email}: error al marcar`)
+        details.push(`✅ ${sub.email}: marcado como inactivo`)
+      } catch (err) {
+        details.push(`❌ ${sub.email}: ${(err as Error).message}`)
       }
     }
 
-    return { marked, total: subscribers.length, details }
+    return { marked, total: targets.length, details }
   }
 
-  // ================================================
-  // Exportar lista de suscriptores
-  // ================================================
+  // Enviar boletín a una lista de suscriptores
+  async sendNewsletterToSubscribers(subscriberIds: string[], postId: string) {
+    const post = await this.blogService.findOne(postId)
+    if (!post) {
+      return { success: false, message: 'Artículo no encontrado' }
+    }
 
-  async exportSubscribers(): Promise<{
-    count: number
-    subscribers: Record<string, unknown>[]
-  }> {
-    const all = await this.firebaseService.getAllSubscribers()
-    const clean = (all as Record<string, unknown>[]).map((s) => ({
-      email: s['email'],
-      status: s['status'] ?? 'active',
-      createdAt: s['createdAt'],
-      confirmedAt: s['confirmedAt'] ?? null,
-    }))
-    return { count: clean.length, subscribers: clean }
+    const allSubscribers = await this.firebaseService.getAllSubscribers()
+    const targets = allSubscribers.filter(
+      (s) => subscriberIds.includes(s.subscriberId) && s.status === 'confirmed',
+    )
+
+    let sent = 0
+    let errors = 0
+
+    for (const sub of targets) {
+      try {
+        await this.mailService.sendMailDetailed({
+          to: sub.email,
+          subject: post.title,
+          templateName: 'newsletter',
+          templateVariables: {
+            postTitle: post.title,
+            postExcerpt: post.excerpt,
+            postUrl: `${companyConfig.websiteUrl}/blog/${post.slug}`,
+            postImage: post.coverImage,
+          },
+        })
+        sent++
+        // Delay preventivo
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (error) {
+        errors++
+        console.error(`Error enviando newsletter a ${sub.email}:`, error)
+      }
+    }
+
+    return {
+      success: true,
+      message: `Envío completado: ${sent} exitosos, ${errors} errores.`,
+      sent,
+      errors,
+    }
+  }
+
+  // Exportar suscriptores
+  async exportSubscribers() {
+    return this.getAllSubscribers()
   }
 }

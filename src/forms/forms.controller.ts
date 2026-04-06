@@ -11,6 +11,10 @@ import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
 import { FormsService } from './forms.service'
 import { Throttle, SkipThrottle } from '@nestjs/throttler'
+import {
+  ProspectResponseDto,
+  SubscriberResponseDto,
+} from './dto/form-response.dto'
 
 @Controller('forms')
 export class FormsController {
@@ -18,18 +22,18 @@ export class FormsController {
 
   @Throttle({ short: { ttl: 900_000, limit: 5 } }) // 5 req / 15 min por IP
   @Post('contact')
-  handleContact(@Body() contactDto: ContactDto) {
+  async handleContact(@Body() contactDto: ContactDto): Promise<any> {
     return this.formsService.handleContact(contactDto)
   }
 
   @Throttle({ short: { ttl: 600_000, limit: 3 } }) // 3 req / 10 min por IP
   @Post('subscribe')
-  handleSubscribe(@Body() subscribeDto: SubscribeDto) {
+  async handleSubscribe(@Body() subscribeDto: SubscribeDto): Promise<any> {
     return this.formsService.handleSubscribe(subscribeDto)
   }
 
   @Post('unsubscribe')
-  handleUnsubscribe(@Query('email') email: string) {
+  async handleUnsubscribe(@Query('email') email: string): Promise<any> {
     return this.formsService.handleUnsubscribe(email)
   }
 
@@ -37,19 +41,21 @@ export class FormsController {
 
   @SkipThrottle()
   @Get('admin/subscribers')
-  getSubscribers() {
+  async getSubscribers(): Promise<SubscriberResponseDto[]> {
     return this.formsService.getAllSubscribers()
   }
 
   @SkipThrottle()
   @Get('admin/prospects')
-  getProspects() {
+  async getProspects(): Promise<ProspectResponseDto[]> {
     return this.formsService.getAllProspects()
   }
 
   @SkipThrottle()
   @Get('admin/prospects/:id')
-  getProspectById(@Param('id') id: string) {
+  async getProspectById(
+    @Param('id') id: string,
+  ): Promise<ProspectResponseDto | null> {
     return this.formsService.getProspectById(id)
   }
 
@@ -57,7 +63,9 @@ export class FormsController {
   @SkipThrottle()
   @Get('verify-subscription/:token')
   @Redirect()
-  async verifySubscription(@Param('token') token: string) {
+  async verifySubscription(
+    @Param('token') token: string,
+  ): Promise<{ url: string }> {
     const result = await this.formsService.verifySubscription(token)
     if (result.success) {
       return { url: '/suscripcion-confirmada?status=ok' }
@@ -65,38 +73,63 @@ export class FormsController {
     return { url: '/suscripcion-confirmada?status=error' }
   }
 
+  @SkipThrottle()
+  @Post('admin/subscribers/send-newsletter')
+  async sendNewsletter(
+    @Body() body: { ids: string[]; postId: string },
+  ): Promise<any> {
+    return await this.formsService.sendNewsletterToSubscribers(
+      body.ids,
+      body.postId,
+    )
+  }
+
   @Post('admin/prospects/:id/reply')
-  adminReplyToProspect(
+  async adminReplyToProspect(
     @Param('id') id: string,
     @Body('replyContent') replyContent: string,
-  ) {
+  ): Promise<any> {
     return this.formsService.adminReplyToProspect(id, replyContent)
   }
 
   // --- Campaña de Re-confirmación y Limpieza ---
 
   @SkipThrottle()
+  @Post('admin/subscribers/bulk-delete')
+  async bulkDeleteSubscribers(@Body('ids') ids: string[]): Promise<any> {
+    return this.formsService.bulkDeleteSubscribers(ids)
+  }
+
+  @SkipThrottle()
+  @Post('admin/subscribers/bulk-confirm')
+  async bulkConfirmSubscribers(@Body('ids') ids: string[]): Promise<any> {
+    return this.formsService.bulkConfirmSubscribers(ids)
+  }
+
+  @SkipThrottle()
   @Post('admin/subscribers/reconfirmation-campaign')
-  runReconfirmationCampaign() {
+  async runReconfirmationCampaign(): Promise<any> {
     return this.formsService.runReconfirmationCampaign()
   }
 
   @SkipThrottle()
   @Post('admin/subscribers/cleanup-inactive')
-  cleanupInactiveSubscribers(@Body('daysThreshold') daysThreshold: number) {
+  async cleanupInactiveSubscribers(
+    @Body('daysThreshold') daysThreshold: number,
+  ): Promise<any> {
     return this.formsService.cleanupInactiveSubscribers(daysThreshold ?? 7)
   }
 
   @SkipThrottle()
   @Get('admin/subscribers/export')
-  exportSubscribers() {
-    return this.formsService.exportSubscribers()
+  async exportSubscribers(): Promise<any> {
+    return await this.formsService.exportSubscribers()
   }
 
   // --- Endpoints de Diagnóstico ---
 
   @Get('test-firebase')
-  async testFirebase() {
+  async testFirebase(): Promise<any> {
     try {
       const testResult = await this.formsService.testFirebaseConnection()
       return {
@@ -114,14 +147,13 @@ export class FormsController {
   }
 
   @Get('test-smtp')
-  async testSMTP() {
-    const testResult = await this.formsService.testSMTPConnection()
-    return testResult
+  async testSMTP(): Promise<any> {
+    return this.formsService.testSMTPConnection()
   }
 
   @Get('status')
-  getStatus() {
-    return {
+  async getStatus(): Promise<any> {
+    return Promise.resolve({
       success: true,
       message: 'API funcionando correctamente',
       features: {
@@ -136,8 +168,7 @@ export class FormsController {
         unsubscribe: 'POST /forms/unsubscribe?email=example@email.com',
         testFirebase: 'GET /forms/test-firebase',
         testSMTP: 'GET /forms/test-smtp',
-        status: 'GET /forms/status',
       },
-    }
+    })
   }
 }

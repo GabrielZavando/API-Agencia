@@ -9,24 +9,30 @@ import { CreateUserDto } from './dto/create-user.dto'
 import { ConfigService } from '@nestjs/config'
 import { MailService } from '../mail/mail.service'
 import { companyConfig } from '../config/company.config'
+import { UserResponseDto } from './dto/user-response.dto'
+import { UserRecord, UserUpdates } from './interfaces/user.interface'
+
+interface MulterFile {
+  fieldname: string
+  originalname: string
+  encoding: string
+  mimetype: string
+  size: number
+  buffer: Buffer
+}
 
 @Injectable()
 export class UsersService {
-  private collection: admin.firestore.CollectionReference
+  private collection: admin.firestore.CollectionReference<UserRecord>
 
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
   ) {
-    this.collection = admin.firestore().collection('users')
-  }
-
-  private clean(v?: string): string {
-    return (v ?? '')
-      .toString()
-      .trim()
-      .replace(/^['"]|['"]$/g, '')
+    this.collection = this.firebaseService
+      .getDb()
+      .collection('users') as admin.firestore.CollectionReference<UserRecord>
   }
 
   private validatePassword(password: string) {
@@ -57,65 +63,16 @@ export class UsersService {
     }
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const data = createUserDto as unknown as Record<string, unknown>
-    const email = data.email as string
-    const password = data.password as string | undefined
-    const displayName = data.displayName as string
-    const role = data.role as string | undefined
-
-    const assignedRole = role || 'client'
-
-    // Si el usuario proporciona una contraseña, validarla
-    if (password) {
-      this.validatePassword(password)
-    }
-
-    const generatedPassword =
-      password || Math.random().toString(36).slice(-8) + 'A1!'
-    const photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`
-
-    try {
-      // 1. Crear usuario en Firebase Auth
-      const userRecord = await admin.auth().createUser({
-        email,
-        password: generatedPassword,
-        displayName,
-        photoURL,
-      })
-
-      const uid = userRecord.uid
-
-      // 2. Setear Custom Claims
-      await admin.auth().setCustomUserClaims(uid, { role: assignedRole })
-
-      // 3. Guardar en Firestore
-      await this.collection.doc(uid).set({
-        uid,
-        email,
-        displayName,
-        photoURL,
-        role: assignedRole,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-
-      // 4. Enviar email de bienvenida
-      await this.sendWelcomeEmail(
-        email,
-        displayName,
-        generatedPassword,
-        assignedRole,
-      )
-
-      return { uid, email, displayName, photoURL, role: assignedRole }
-    } catch (error: unknown) {
-      const err = error as Error & { code?: string }
-      if (err.code === 'auth/email-already-exists') {
-        throw new BadRequestException(
-          'El correo electrónico ya está registrado.',
-        )
-      }
-      throw new BadRequestException(`Error creando usuario: ${err.message}`)
+  private mapUserToDto(docData: UserRecord): UserResponseDto {
+    return {
+      id: docData.id || docData.uid,
+      email: docData.email,
+      displayName: docData.displayName,
+      photoURL: docData.photoURL || '',
+      role: docData.role,
+      storageLimitBytes: docData.storageLimitBytes || 0,
+      createdAt: docData.createdAt,
+      updatedAt: docData.updatedAt,
     }
   }
 
@@ -126,138 +83,175 @@ export class UsersService {
     role: string,
   ) {
     try {
-      // Usaremos un HTML directo en caso de no haber un template específico aún
-      const websiteUrl = companyConfig.websiteUrl
       const companyName = companyConfig.name
-
-      const htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333; border-bottom: 2px solid #FF0080; padding-bottom: 10px;">
-            ¡Bienvenido a ${companyName}!
-          </h2>
-          <p>Hola ${name},</p>
-          <p>Se ha creado una cuenta para ti en nuestro sistema con el rol de <strong>${role}</strong>.</p>
-          <div style="background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #FF0080;">
-            <p style="margin-top: 0;"><strong>Tus credenciales de acceso:</strong></p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Contraseña:</strong> ${pass}</p>
-          </div>
-          <p>Puedes iniciar sesión en nuestro portal privado aquí:</p>
-          <a href="${websiteUrl}/login" style="display: inline-block; background: #FF0080; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-            Acceder al Panel
-          </a>
-          <p style="margin-top: 30px; color: #666; font-size: 14px;">Te recomendamos cambiar esta contraseña la primera vez que inicies sesión por mayor seguridad.</p>
-        </div>
-      `
-
       await this.mailService.sendMail({
         to: email,
         subject: `Tus credenciales de acceso - ${companyName}`,
-        html: htmlContent,
+        templateName: 'user-welcome',
+        templateVariables: {
+          name,
+          userEmail: email,
+          password: pass,
+          role,
+        },
       })
-      console.log(`✅ Correo de bienvenida enviado a: ${email}`)
     } catch (error) {
       console.error('Error enviando email de bienvenida:', error)
     }
   }
 
-  async findAll() {
+  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    const { email, password, displayName, role } = createUserDto
+    const assignedRole = role || 'client'
+
+    if (password) this.validatePassword(password)
+
+    const generatedPassword =
+      password || Math.random().toString(36).slice(-8) + 'A1!'
+    const photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      displayName,
+    )}&background=random&color=fff`
+
+    try {
+      const userRecord = await admin.auth().createUser({
+        email,
+        password: generatedPassword,
+        displayName,
+        photoURL,
+      })
+
+      const uid = userRecord.uid
+      await admin.auth().setCustomUserClaims(uid, { role: assignedRole })
+
+      const DEFAULT_STORAGE_BYTES = 5 * 1024 * 1024 * 1024
+      const ADMIN_STORAGE_BYTES = 30 * 1024 * 1024 * 1024
+      const storageLimitBytes =
+        assignedRole === 'admin' ? ADMIN_STORAGE_BYTES : DEFAULT_STORAGE_BYTES
+
+      const userData: UserRecord = {
+        uid,
+        id: uid,
+        email,
+        displayName,
+        photoURL,
+        role: assignedRole,
+        storageLimitBytes,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }
+
+      await this.collection.doc(uid).set(userData)
+      await this.sendWelcomeEmail(
+        email,
+        displayName,
+        generatedPassword,
+        assignedRole,
+      )
+
+      return this.mapUserToDto(userData)
+    } catch (error: any) {
+      const firebaseError = error as { code?: string; message?: string }
+      if (firebaseError.code === 'auth/email-already-exists') {
+        throw new BadRequestException(
+          'El correo electrónico ya está registrado.',
+        )
+      }
+      throw new BadRequestException(
+        `Error creando usuario: ${firebaseError.message || 'Error desconocido'}`,
+      )
+    }
+  }
+
+  async findAll(): Promise<UserResponseDto[]> {
     const snapshot = await this.collection.orderBy('createdAt', 'desc').get()
-    return snapshot.docs.map((doc) => doc.data())
+    return snapshot.docs.map((doc) => this.mapUserToDto(doc.data()))
   }
 
-  async findAdmins() {
+  async findAdmins(): Promise<UserResponseDto[]> {
     const snapshot = await this.collection.where('role', '==', 'admin').get()
-    return snapshot.docs.map((doc) => doc.data())
+    return snapshot.docs.map((doc) => this.mapUserToDto(doc.data()))
   }
 
-  async findOne(uid: string) {
+  async findOne(uid: string): Promise<UserResponseDto> {
     const doc = await this.collection.doc(uid).get()
     if (!doc.exists) {
-      // Fallback: Intentar obtener datos básicos de Firebase Auth
       try {
         const userRecord = await admin.auth().getUser(uid)
-        return {
+        const userData: UserRecord = {
           uid: userRecord.uid,
-          email: userRecord.email,
-          displayName: userRecord.displayName,
+          id: userRecord.uid,
+          email: userRecord.email || '',
+          displayName: userRecord.displayName || '',
           photoURL: userRecord.photoURL,
           role: (userRecord.customClaims?.role as string) || 'client',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         }
+        return this.mapUserToDto(userData)
       } catch {
         throw new NotFoundException(`Usuario no encontrado.`)
       }
     }
-    return doc.data()
+    const data = doc.data()
+    if (!data) throw new NotFoundException('Datos de usuario no encontrados')
+    return this.mapUserToDto(data)
   }
 
   async updateProfile(
     uid: string,
     updateData: { displayName?: string; phone?: string; description?: string },
-    avatar?: Express.Multer.File,
-  ) {
+    avatar?: MulterFile,
+  ): Promise<UserResponseDto> {
     const docRef = this.collection.doc(uid)
     const doc = await docRef.get()
     let existingData = doc.exists ? doc.data() : null
 
     if (!existingData) {
-      // Si no existe el documento, intentamos obtener info de Auth para crearlo
       try {
-        const userRecord = await admin.auth().getUser(uid)
+        const user = await admin.auth().getUser(uid)
         existingData = {
-          uid: userRecord.uid,
-          email: userRecord.email,
-          displayName: userRecord.displayName,
-          photoURL: userRecord.photoURL,
-          role: (userRecord.customClaims?.role as string) || 'client',
+          uid: user.uid,
+          id: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          photoURL: user.photoURL,
+          role: (user.customClaims?.role as string) || 'client',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         }
       } catch {
         throw new NotFoundException(`Usuario no encontrado.`)
       }
     }
 
-    let photoURL: string | undefined = undefined
+    if (!existingData) {
+      throw new NotFoundException('No se pudo recuperar la información base')
+    }
 
-    // Procesar Avatar si existe
+    let photoURL: string | undefined
     if (avatar) {
-      const MAX_SIZE = 2 * 1024 * 1024 // 2MB
-      const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp']
-
-      if (avatar.size > MAX_SIZE) {
-        throw new BadRequestException(
-          'La imagen de perfil no debe superar los 2MB.',
-        )
+      if (avatar.size > 2 * 1024 * 1024) {
+        throw new BadRequestException('La imagen no debe superar los 2MB.')
       }
-      if (!ALLOWED_MIME.includes(avatar.mimetype)) {
-        throw new BadRequestException(
-          'Formato de imagen no válido. Usa JPG, PNG o WEBP.',
-        )
+      const allowed = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowed.includes(avatar.mimetype)) {
+        throw new BadRequestException('Formato de imagen no válido.')
       }
 
       const bucket = admin.storage().bucket()
       const ext = avatar.originalname.split('.').pop() || 'jpg'
-      const storagePath = `users_avatars/${uid}_${Date.now()}.${ext}`
-      const fileRef = bucket.file(storagePath)
-
-      await fileRef.save(avatar.buffer, {
+      const path = `users_avatars/${uid}_${Date.now()}.${ext}`
+      const file = bucket.file(path)
+      await file.save(avatar.buffer, {
         metadata: { contentType: avatar.mimetype },
       })
-
-      // Hacer que la URL sea pública nativamente (Firebase Cloud Storage URL public)
-      await fileRef.makePublic()
-      photoURL = `https://storage.googleapis.com/${bucket.name}/${storagePath}`
+      await file.makePublic()
+      photoURL = `https://storage.googleapis.com/${bucket.name}/${path}`
     }
 
-    const updates: Record<string, unknown> = {
+    const updates: UserUpdates = {
       ...updateData,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }
+    if (photoURL) updates.photoURL = photoURL
 
-    if (photoURL) {
-      updates.photoURL = photoURL
-    }
-
-    // Actualizar también en Auth si cambia el nombre o la foto
     const authUpdates: admin.auth.UpdateRequest = {}
     if (updateData.displayName) authUpdates.displayName = updateData.displayName
     if (photoURL) authUpdates.photoURL = photoURL
@@ -266,51 +260,43 @@ export class UsersService {
       await admin.auth().updateUser(uid, authUpdates)
     }
 
-    // Actualizar o crear en Firestore
-    await docRef.set(
-      {
-        ...existingData,
-        ...updates,
-      },
-      { merge: true },
-    )
-
-    return { ...existingData, ...updates }
+    await docRef.set({ ...existingData, ...updates }, { merge: true })
+    return this.mapUserToDto({ ...existingData, ...updates })
   }
 
-  async updateUser(uid: string, updateData: Record<string, unknown>) {
+  async updateUser(
+    uid: string,
+    updateData: Record<string, unknown>,
+  ): Promise<UserResponseDto> {
     const docRef = this.collection.doc(uid)
     const doc = await docRef.get()
-    if (!doc.exists) {
-      throw new NotFoundException(`Usuario no encontrado.`)
-    }
+    if (!doc.exists) throw new NotFoundException(`Usuario no encontrado.`)
 
-    const updates: Record<string, unknown> = {
+    const updates: Record<string, any> = {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }
-    const authUpdates: Record<string, unknown> = {}
+    const authUpdates: admin.auth.UpdateRequest = {}
 
     if (updateData.displayName !== undefined) {
-      authUpdates.displayName = updateData.displayName
+      authUpdates.displayName = updateData.displayName as string
       updates.displayName = updateData.displayName
     }
     if (updateData.email !== undefined) {
-      authUpdates.email = updateData.email
+      authUpdates.email = updateData.email as string
       updates.email = updateData.email
     }
     if (updateData.password) {
       this.validatePassword(updateData.password as string)
-      authUpdates.password = updateData.password
+      authUpdates.password = updateData.password as string
     }
 
     if (Object.keys(authUpdates).length > 0) {
-      try {
-        await admin.auth().updateUser(uid, authUpdates)
-      } catch (error: unknown) {
-        throw new BadRequestException(
-          `Error al actualizar usuario en Auth: ${(error as Error).message}`,
-        )
-      }
+      await admin
+        .auth()
+        .updateUser(uid, authUpdates)
+        .catch((e: Error) => {
+          throw new BadRequestException(`Error Auth: ${e.message}`)
+        })
     }
 
     if (updateData.role !== undefined) {
@@ -318,43 +304,34 @@ export class UsersService {
       updates.role = updateData.role
     }
 
-    // Parse and save new limits
-    if (updateData.storageLimitGb !== undefined) {
-      const storageLimit = Number(updateData.storageLimitGb)
-      if (!isNaN(storageLimit)) {
-        updates.storageLimitGb = storageLimit
-      }
-    }
-    if (updateData.monthlyTicketLimit !== undefined) {
-      const ticketLimit = Number(updateData.monthlyTicketLimit)
-      if (!isNaN(ticketLimit)) {
-        updates.monthlyTicketLimit = ticketLimit
+    if (updateData.storageLimitBytes !== undefined) {
+      const storageLimit = Number(updateData.storageLimitBytes)
+      if (!isNaN(storageLimit) && storageLimit > 0) {
+        updates.storageLimitBytes = storageLimit
       }
     }
 
     await docRef.update(updates)
-    const updatedDoc = await docRef.get()
-    return updatedDoc.data()
+    const updated = await docRef.get()
+    const finalData = updated.data()
+    if (!finalData) {
+      throw new NotFoundException('Datos no encontrados tras update')
+    }
+    return this.mapUserToDto(finalData)
   }
 
-  async setAdminRole(uid: string) {
+  async setAdminRole(uid: string): Promise<{ message: string }> {
     await admin.auth().setCustomUserClaims(uid, { role: 'admin' })
     await this.collection.doc(uid).update({ role: 'admin' })
     return { message: `User ${uid} is now admin` }
   }
 
-  async remove(uid: string) {
-    // Eliminar de Firebase Auth
-    try {
-      await admin.auth().deleteUser(uid)
-    } catch (error) {
-      console.error(`Error deleting user from Auth: ${uid}`, error)
-      // No lanzamos error si no existe en Auth pero sí en Firestore
-    }
-
-    // Eliminar de Firestore
+  async remove(uid: string): Promise<{ message: string }> {
+    await admin
+      .auth()
+      .deleteUser(uid)
+      .catch((e) => console.error(e))
     await this.collection.doc(uid).delete()
-
     return { message: `Usuario ${uid} eliminado correctamente` }
   }
 }

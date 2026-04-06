@@ -9,22 +9,19 @@ import { Reflector } from '@nestjs/core'
 import * as admin from 'firebase-admin'
 import { ROLES_KEY } from './roles.decorator'
 import { Request } from 'express'
-
-export interface AuthenticatedRequest extends Request {
-  user?: admin.auth.DecodedIdToken & { role?: string }
-}
+import { AuthRequest } from '../common/interfaces/auth.interface'
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>()
-    const token = this.extractTokenFromHeader(request)
+    const request = context.switchToHttp().getRequest<AuthRequest>()
+    const token =
+      this.extractTokenFromCookie(request) ||
+      this.extractTokenFromHeader(request)
 
     if (!token) {
-      console.log('Headers recibidos:', request.headers)
-      console.log('Token extraído:', token)
       throw new UnauthorizedException(
         'No se ha proporcionado un token de autenticación',
       )
@@ -98,5 +95,21 @@ export class FirebaseAuthGuard implements CanActivate {
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? []
     return type === 'Bearer' ? token : undefined
+  }
+
+  private extractTokenFromCookie(request: Request): string | undefined {
+    const cookieHeader = request.headers.cookie
+    if (!cookieHeader) return undefined
+
+    const cookies = cookieHeader.split(';').reduce(
+      (acc, cookie) => {
+        const [name, value] = cookie.trim().split('=')
+        acc[name] = value
+        return acc
+      },
+      {} as Record<string, string>,
+    )
+
+    return cookies['session']
   }
 }
