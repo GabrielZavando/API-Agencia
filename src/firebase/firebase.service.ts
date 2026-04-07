@@ -7,44 +7,12 @@ import * as crypto from 'crypto'
 import { ContactDto } from '../forms/dto/contact.dto'
 import { SubscribeDto } from '../forms/dto/subscribe.dto'
 
-export interface ProspectRecord {
-  prospectId: string // ID interno del prospecto (Firestore)
-  name: string
-  email: string
-  phone: string // Siempre será un string (vacío o con teléfono)
-  createdAt: Date
-  updatedAt: Date
-  conversations: ConversationRecord[]
-  // Campo para cuando se convierta en usuario autenticado
-  authUserId?: string // Firebase Auth UID (cuando se registre)
-  status: 'prospect' | 'converted' | 'inactive'
-}
-
-export interface ConversationRecord {
-  conversationId: string
-  incomingMessage: IncomingMessageRecord
-  outgoingResponse: OutgoingResponseRecord
-  timestamp: Date
-}
-
-export interface IncomingMessageRecord {
-  messageId: string
-  content: string
-  meta: {
-    userAgent: string
-    referrer?: string | null
-    page: string
-    ts: string
-  }
-  receivedAt: Date
-}
-
-export interface OutgoingResponseRecord {
-  responseId: string
-  content: string
-  sentAt: Date
-  emailSent: boolean
-}
+import {
+  ProspectRecord,
+  SubscriberRecord,
+} from '../forms/interfaces/forms.interface'
+import { SystemConfig } from '../system-config/interfaces/system-config.interface'
+import { ConversationRecord } from '../forms/interfaces/forms.interface'
 
 @Injectable()
 export class FirebaseService {
@@ -148,7 +116,8 @@ export class FirebaseService {
       }
 
       const doc = snapshot.docs[0]
-      return { prospectId: doc.id, ...doc.data() } as ProspectRecord
+      const data = doc.data() as Omit<ProspectRecord, 'prospectId'>
+      return { prospectId: doc.id, ...data } as ProspectRecord
     } catch (error) {
       console.error('Error buscando prospecto:', error)
       return null
@@ -162,10 +131,13 @@ export class FirebaseService {
         .orderBy('updatedAt', 'desc')
         .get()
 
-      return snapshot.docs.map((doc) => ({
-        prospectId: doc.id,
-        ...doc.data(),
-      })) as ProspectRecord[]
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<ProspectRecord, 'prospectId'>
+        return {
+          prospectId: doc.id,
+          ...data,
+        } as ProspectRecord
+      })
     } catch (error) {
       console.error('Error obteniendo todos los prospectos:', error)
       throw new Error('Error al obtener los prospectos de Firebase')
@@ -476,24 +448,27 @@ export class FirebaseService {
     }
   }
 
-  async getAllSubscribers(): Promise<any[]> {
+  async getAllSubscribers(): Promise<SubscriberRecord[]> {
     try {
       const snapshot = await this.db
         .collection('subscribers')
         .orderBy('createdAt', 'desc')
         .get()
 
-      return snapshot.docs.map((doc) => ({
-        subscriberId: doc.id,
-        ...doc.data(),
-      }))
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<SubscriberRecord, 'subscriberId'>
+        return {
+          subscriberId: doc.id,
+          ...data,
+        }
+      })
     } catch (error) {
       console.error('Error obteniendo todos los suscriptores:', error)
       throw new Error('Error al obtener los suscriptores de Firebase')
     }
   }
 
-  // Eliminar suscriptor de la colección 'subscribers'
+  // Eliminar suscriptor de la colección 'subscribers' por EMAIL
   async removeSubscriber(email: string): Promise<boolean> {
     try {
       const subscriber = await this.findSubscriberByEmail(email)
@@ -510,6 +485,33 @@ export class FirebaseService {
     } catch (error) {
       console.error('Error eliminando suscriptor:', error)
       throw new Error('Error eliminando suscriptor de Firebase')
+    }
+  }
+
+  // Eliminar suscriptor por ID (Físico)
+  async deleteSubscriberById(subscriberId: string): Promise<boolean> {
+    try {
+      await this.db.collection('subscribers').doc(subscriberId).delete()
+      return true
+    } catch (error) {
+      console.error('Error eliminando suscriptor por ID:', error)
+      return false
+    }
+  }
+
+  // Eliminar múltiples suscriptores por ID (Físico, usando Batch)
+  async bulkDeleteSubscribers(subscriberIds: string[]): Promise<number> {
+    try {
+      const batch = this.db.batch()
+      subscriberIds.forEach((id) => {
+        const docRef = this.db.collection('subscribers').doc(id)
+        batch.delete(docRef)
+      })
+      await batch.commit()
+      return subscriberIds.length
+    } catch (error) {
+      console.error('Error en eliminación masiva:', error)
+      throw new Error('Fallo al realizar la eliminación masiva')
     }
   }
 
@@ -596,5 +598,36 @@ export class FirebaseService {
       inactivatedAt: new Date(),
       updatedAt: new Date(),
     })
+  }
+
+  // --- CONFIGURACIÓN DEL SISTEMA ---
+
+  async getSystemConfig(): Promise<SystemConfig | null> {
+    try {
+      const doc = await this.db.collection('system_config').doc('global').get()
+      if (!doc.exists) return null
+      return doc.data() as SystemConfig
+    } catch (error) {
+      console.error('Error obteniendo system_config:', error)
+      return null
+    }
+  }
+
+  async updateSystemConfig(data: Partial<SystemConfig>): Promise<void> {
+    try {
+      await this.db
+        .collection('system_config')
+        .doc('global')
+        .set(
+          {
+            ...data,
+            updatedAt: new Date(),
+          },
+          { merge: true },
+        )
+    } catch (error) {
+      console.error('Error actualizando system_config:', error)
+      throw new Error('Error al actualizar la configuración de Firebase')
+    }
   }
 }

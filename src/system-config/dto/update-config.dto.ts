@@ -1,30 +1,52 @@
-import { IsOptional, IsString, IsBoolean, IsObject } from 'class-validator'
+import { IsOptional, IsString, IsObject } from 'class-validator'
 
 export class UpdateSystemConfigDto {
   @IsOptional()
   @IsString()
-  siteName?: string
+  name?: string
 
   @IsOptional()
   @IsString()
-  contactEmail?: string
+  description?: string
 
   @IsOptional()
-  @IsBoolean()
-  maintenanceMode?: boolean
+  @IsString()
+  websiteUrl?: string
 
   @IsOptional()
-  @IsBoolean()
-  enableRegistrations?: boolean
+  @IsString()
+  address?: string
+
+  @IsOptional()
+  @IsString()
+  phone?: string
+
+  @IsOptional()
+  @IsString()
+  servicesUrl?: string
+
+  @IsOptional()
+  @IsString()
+  email?: string
+
+  @IsOptional()
+  @IsString()
+  logoUrl?: string
+
+  @IsOptional()
+  @IsString()
+  faviconUrl?: string
 
   @IsOptional()
   @IsObject()
-  features?: Record<string, boolean>
-
-  @IsOptional()
-  @IsObject()
-  branding?: {
-    primaryColor?: string
-    logoUrl?: string
+  social?: {
+    linkedinUrl?: string
+    instagramUrl?: string
+    githubUrl?: string
+    youtubeUrl?: string
+    linkedinIconUrl?: string
+    instagramIconUrl?: string
+    githubIconUrl?: string
+    youtubeIconUrl?: string
   }
 }

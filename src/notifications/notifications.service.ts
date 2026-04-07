@@ -1,76 +1,82 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import * as admin from 'firebase-admin'
 import { FirebaseService } from '../firebase/firebase.service'
-import { CreateNotificationDto } from './dto/create-notification.dto'
-
-export interface NotificationRecord {
-  id: string
-  title: string
-  message: string
-  userId: string
-  link?: string
-  read: boolean
-  createdAt: Date
-}
+import { NotificationRecord } from './interfaces/notification.interface'
 
 @Injectable()
 export class NotificationsService {
-  private db: admin.firestore.Firestore
+  private collection: admin.firestore.CollectionReference<NotificationRecord>
 
-  constructor(private readonly _firebase: FirebaseService) {
-    this.db = admin.firestore()
+  constructor(private readonly firebaseService: FirebaseService) {
+    this.collection = this.firebaseService
+      .getDb()
+      .collection(
+        'notifications',
+      ) as admin.firestore.CollectionReference<NotificationRecord>
   }
 
-  async createNotification(
-    dto: CreateNotificationDto,
+  async create(
+    userId: string,
+    title: string,
+    message: string,
+    type: NotificationRecord['type'] = 'info',
+    link?: string,
   ): Promise<NotificationRecord> {
-    const docRef = this.db.collection('notifications').doc()
-    const now = new Date()
-
     const notification: NotificationRecord = {
-      id: docRef.id,
-      title: dto.title,
-      message: dto.message,
-      userId: dto.userId,
-      link: dto.link,
-      read: dto.read || false,
-      createdAt: now,
+      userId,
+      title,
+      message,
+      type,
+      read: false,
+      link,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }
 
-    await docRef.set(notification)
-    return notification
+    const docRef = await this.collection.add(notification)
+    return { ...notification, id: docRef.id }
   }
 
-  async getUserNotifications(userId: string): Promise<NotificationRecord[]> {
-    const snapshot = await this.db
-      .collection('notifications')
+  async findAllByUser(userId: string): Promise<NotificationRecord[]> {
+    const snapshot = await this.collection
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
-      .limit(50)
       .get()
 
-    return snapshot.docs.map((doc) => doc.data() as NotificationRecord)
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
   }
 
-  async markAsRead(
-    notificationId: string,
-    userId: string,
-  ): Promise<NotificationRecord> {
-    const docRef = this.db.collection('notifications').doc(notificationId)
+  async markAsRead(id: string): Promise<{ success: boolean }> {
+    const docRef = this.collection.doc(id)
     const doc = await docRef.get()
 
     if (!doc.exists) {
       throw new NotFoundException('Notificación no encontrada')
     }
 
-    const data = doc.data() as NotificationRecord
+    await docRef.update({ read: true } as Partial<NotificationRecord>)
+    return { success: true }
+  }
 
-    if (data.userId !== userId) {
-      throw new NotFoundException('Notificación no encontrada')
-    }
+  async markAllAsRead(userId: string): Promise<{ count: number }> {
+    const snapshot = await this.collection
+      .where('userId', '==', userId)
+      .where('read', '==', false)
+      .get()
 
-    await docRef.update({ read: true })
+    const batch = this.firebaseService.getDb().batch()
+    snapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, { read: true } as Partial<NotificationRecord>)
+    })
 
-    return { ...data, read: true }
+    await batch.commit()
+    return { count: snapshot.size }
+  }
+
+  async remove(id: string): Promise<{ success: boolean }> {
+    await this.collection.doc(id).delete()
+    return { success: true }
   }
 }

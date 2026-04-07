@@ -3,18 +3,19 @@ import {
   Post,
   Body,
   UnauthorizedException,
-  Res,
   Logger,
 } from '@nestjs/common'
 import * as admin from 'firebase-admin'
-import { Response } from 'express'
+import { SessionResponseDto } from './dto/session-response.dto'
 
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name)
 
   @Post('session')
-  async createSession(@Body('idToken') idToken: string, @Res() res: Response) {
+  async createSession(
+    @Body('idToken') idToken: string,
+  ): Promise<SessionResponseDto> {
     if (!idToken) {
       throw new UnauthorizedException('ID Token is required')
     }
@@ -37,7 +38,7 @@ export class AuthController {
 
       this.logger.log(`Session cookie created for user: ${decodedIdToken.uid}`)
 
-      return res.status(200).json({ sessionCookie })
+      return { sessionCookie }
     } catch (error) {
       this.logger.error('Failed to create session cookie', error)
       throw new UnauthorizedException('Invalid ID token')

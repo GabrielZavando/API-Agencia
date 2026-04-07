@@ -6,17 +6,9 @@ import {
 import * as admin from 'firebase-admin'
 import { CreateProjectDto } from './dto/create-project.dto'
 import { UpdateProjectDto } from './dto/update-project.dto'
+import { ProjectResponseDto } from './dto/project-response.dto'
 import { FirebaseService } from '../firebase/firebase.service'
-
-export interface ProjectRecord {
-  id: string
-  clientId: string
-  name: string
-  description: string
-  monthlyTicketLimit: number
-  createdAt: Date
-  updatedAt: Date
-}
+import { ProjectRecord } from './interfaces/project.interface'
 
 @Injectable()
 export class ProjectsService {
@@ -26,7 +18,28 @@ export class ProjectsService {
     this.db = this._firebase.getDb()
   }
 
-  async create(createProjectDto: CreateProjectDto): Promise<ProjectRecord> {
+  private mapDocumentToDto(
+    doc: admin.firestore.DocumentSnapshot<ProjectRecord>,
+  ): ProjectResponseDto {
+    const data = doc.data()
+    if (!data) throw new NotFoundException('Datos del proyecto no encontrados')
+
+    return {
+      id: doc.id,
+      clientId: data.clientId,
+      name: data.name,
+      description: data.description || '',
+      monthlyTicketLimit: data.monthlyTicketLimit || 3,
+      status: data.status,
+      percentage: data.percentage,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    }
+  }
+
+  async create(
+    createProjectDto: CreateProjectDto,
+  ): Promise<ProjectResponseDto> {
     if (!createProjectDto.clientId) {
       throw new BadRequestException('El ID del cliente es requerido')
     }
@@ -35,74 +48,84 @@ export class ProjectsService {
     }
 
     const docRef = this.db.collection('projects').doc()
-    const now = new Date()
+    const now = admin.firestore.FieldValue.serverTimestamp()
 
-    const project: ProjectRecord = {
-      id: docRef.id,
+    const projectData: ProjectRecord = {
       clientId: createProjectDto.clientId,
       name: createProjectDto.name,
       description: createProjectDto.description || '',
       monthlyTicketLimit: createProjectDto.monthlyTicketLimit || 3,
+      status: createProjectDto.status || 'active',
+      percentage: createProjectDto.percentage || 0,
       createdAt: now,
       updatedAt: now,
     }
 
-    await docRef.set(project)
-    return project
+    await docRef.set(projectData)
+    const savedDoc =
+      (await docRef.get()) as admin.firestore.DocumentSnapshot<ProjectRecord>
+    return this.mapDocumentToDto(savedDoc)
   }
 
-  async findAll(): Promise<ProjectRecord[]> {
-    const snapshot = await this.db.collection('projects').get()
-    const projects = snapshot.docs.map((doc) => doc.data() as ProjectRecord)
+  private getMillis(date: unknown): number {
+    if (!date) return 0
+    if (date instanceof Date) return date.getTime()
+
+    const d = date as Record<string, unknown>
+    if (typeof d.toMillis === 'function') {
+      return (d.toMillis as () => number)()
+    }
+    if (typeof d.seconds === 'number') {
+      return d.seconds * 1000
+    }
+    if (typeof date === 'string' || typeof date === 'number') {
+      const val = new Date(date).getTime()
+      return isNaN(val) ? 0 : val
+    }
+    return 0
+  }
+
+  async findAll(): Promise<ProjectResponseDto[]> {
+    const snapshot = (await this.db
+      .collection('projects')
+      .get()) as admin.firestore.QuerySnapshot<ProjectRecord>
+    const projects = snapshot.docs.map((doc) => this.mapDocumentToDto(doc))
     return projects.sort((a, b) => {
-      const timeA = (a.createdAt as unknown as admin.firestore.Timestamp)
-        .toMillis
-        ? (a.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(a.createdAt).getTime()
-
-      const timeB = (b.createdAt as unknown as admin.firestore.Timestamp)
-        .toMillis
-        ? (b.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(b.createdAt).getTime()
-
+      const timeA = this.getMillis(a.createdAt)
+      const timeB = this.getMillis(b.createdAt)
       return timeB - timeA
     })
   }
 
-  async findAllByClient(clientId: string): Promise<ProjectRecord[]> {
-    const snapshot = await this.db
+  async findAllByClient(clientId: string): Promise<ProjectResponseDto[]> {
+    const snapshot = (await this.db
       .collection('projects')
       .where('clientId', '==', clientId)
-      .get()
+      .get()) as admin.firestore.QuerySnapshot<ProjectRecord>
 
-    const projects = snapshot.docs.map((doc) => doc.data() as ProjectRecord)
+    const projects = snapshot.docs.map((doc) => this.mapDocumentToDto(doc))
     return projects.sort((a, b) => {
-      const timeA = (a.createdAt as unknown as admin.firestore.Timestamp)
-        .toMillis
-        ? (a.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(a.createdAt).getTime()
-
-      const timeB = (b.createdAt as unknown as admin.firestore.Timestamp)
-        .toMillis
-        ? (b.createdAt as unknown as admin.firestore.Timestamp).toMillis()
-        : new Date(b.createdAt).getTime()
-
+      const timeA = this.getMillis(a.createdAt)
+      const timeB = this.getMillis(b.createdAt)
       return timeB - timeA
     })
   }
 
-  async findOne(id: string): Promise<ProjectRecord> {
-    const doc = await this.db.collection('projects').doc(id).get()
+  async findOne(id: string): Promise<ProjectResponseDto> {
+    const doc = (await this.db
+      .collection('projects')
+      .doc(id)
+      .get()) as admin.firestore.DocumentSnapshot<ProjectRecord>
     if (!doc.exists) {
       throw new NotFoundException('Proyecto no encontrado')
     }
-    return doc.data() as ProjectRecord
+    return this.mapDocumentToDto(doc)
   }
 
   async update(
     id: string,
     updateProjectDto: UpdateProjectDto,
-  ): Promise<ProjectRecord> {
+  ): Promise<ProjectResponseDto> {
     const docRef = this.db.collection('projects').doc(id)
     const doc = await docRef.get()
 
@@ -110,9 +133,9 @@ export class ProjectsService {
       throw new NotFoundException('Proyecto no encontrado')
     }
 
-    const updateData = {
+    const updateData: Record<string, any> = {
       ...updateProjectDto,
-      updatedAt: new Date(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }
 
     // Remove undefined values
@@ -123,18 +146,17 @@ export class ProjectsService {
     })
 
     await docRef.update(updateData)
-    const updatedDoc = await docRef.get()
-    return updatedDoc.data() as ProjectRecord
+    const updatedDoc =
+      (await docRef.get()) as admin.firestore.DocumentSnapshot<ProjectRecord>
+    return this.mapDocumentToDto(updatedDoc)
   }
 
   async remove(id: string): Promise<{ success: boolean }> {
     const docRef = this.db.collection('projects').doc(id)
     const doc = await docRef.get()
-
     if (!doc.exists) {
       throw new NotFoundException('Proyecto no encontrado')
     }
-
     await docRef.delete()
     return { success: true }
   }

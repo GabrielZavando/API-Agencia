@@ -21,6 +21,7 @@ import { BlogCategoriesModule } from './blog-categories/blog-categories.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { IdeasModule } from './ideas/ideas.module'
 import { SystemConfigModule } from './system-config/system-config.module'
+import { AssessmentModule } from './assessment/assessment.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SystemConfigModule } from './system-config/system-config.module'
     NotificationsModule,
     IdeasModule,
     SystemConfigModule,
+    AssessmentModule,
   ],
   controllers: [AppController],
   providers: [

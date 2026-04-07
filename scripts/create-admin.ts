@@ -1,111 +1,172 @@
-import * as admin from 'firebase-admin';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as dotenv from 'dotenv';
+import * as admin from 'firebase-admin'
+import * as path from 'path'
+import * as fs from 'fs'
+import * as dotenv from 'dotenv'
 
 // Cargar variables de entorno
-dotenv.config();
+dotenv.config()
 
-const createAdminUser = async () => {
-  try {
-    // 1. Inicializar Firebase Admin
-    const serviceAccountPath = path.join(
-      __dirname,
-      '..',
-      'config',
-      'firebase-service-account.json',
-    );
+// ============================================================
+// USO:
+//   pnpm ts-node scripts/create-admin.ts <email> <password> [displayName]
+//
+// EJEMPLOS:
+//   pnpm ts-node scripts/create-admin.ts admin@gabrielzavando.cl MiClave123! "Gabriel Zavando"
+//   pnpm ts-node scripts/create-admin.ts otra@cuenta.com OtraClave456#
+// ============================================================
 
-    if (fs.existsSync(serviceAccountPath)) {
-      const fileContent = fs.readFileSync(serviceAccountPath, 'utf8');
-      const parsedContent = JSON.parse(fileContent) as Record<string, string>;
-      const serviceAccount = {
-        projectId: parsedContent.project_id || parsedContent.projectId,
-        clientEmail: parsedContent.client_email || parsedContent.clientEmail,
-        privateKey: parsedContent.private_key || parsedContent.privateKey,
-      };
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.projectId,
-      });
-      console.log(
-        'Firebase inicializado usando archivo config/firebase-service-account.json',
-      );
-    } else {
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(
-        /\\n/g,
-        '\n',
-      );
-      if (!privateKey) throw new Error('No FIREBASE_PRIVATE_KEY found in .env');
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey,
-        }),
-        projectId: process.env.FIREBASE_PROJECT_ID,
-      });
-      console.log('Firebase inicializado usando variables de .env');
+const validatePassword = (password: string): void => {
+  const errors: string[] = []
+  if (password.length < 8) errors.push('mínimo 8 caracteres')
+  if (!/[A-Z]/.test(password)) errors.push('al menos una mayúscula')
+  if (!/[a-z]/.test(password)) errors.push('al menos una minúscula')
+  if (!/[0-9]/.test(password)) errors.push('al menos un número')
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    errors.push('al menos un carácter especial (!@#$...)')
+
+  if (errors.length > 0) {
+    console.error('❌ La contraseña no cumple los requisitos:')
+    errors.forEach((e) => console.error(`   • ${e}`))
+    process.exit(1)
+  }
+}
+
+const initializeFirebase = (): void => {
+  const serviceAccountPath = path.join(
+    process.cwd(),
+    'config',
+    'firebase-service-account.json',
+  )
+
+  if (fs.existsSync(serviceAccountPath)) {
+    const fileContent = fs.readFileSync(serviceAccountPath, 'utf8')
+    const parsed = JSON.parse(fileContent) as Record<string, string>
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: parsed.project_id || parsed.projectId,
+        clientEmail: parsed.client_email || parsed.clientEmail,
+        privateKey: parsed.private_key || parsed.privateKey,
+      }),
+    })
+    console.log(
+      '🔑 Firebase inicializado con config/firebase-service-account.json',
+    )
+  } else {
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    if (!privateKey) {
+      console.error('❌ No se encontró FIREBASE_PRIVATE_KEY en el archivo .env')
+      process.exit(1)
     }
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey,
+      }),
+    })
+    console.log('🔑 Firebase inicializado con variables de entorno (.env)')
+  }
+}
 
-    // 2. Datos del Admin
-    const email = process.argv[2] || 'admin@gabrielzavando.cl';
-    // Puedes cambiar esta contraseña luego si el usuario se crea desde aquí
-    const password = 'AdminPassword123!';
-    const displayName = 'Super Admin';
+const createAdminUser = async (): Promise<void> => {
+  // ── Validar argumentos ───────────────────────────────────
+  const [, , email, password, displayName] = process.argv
 
-    console.log(`Buscando/Creando usuario: ${email}...`);
+  if (!email || !password) {
+    console.error('\n❌ Uso incorrecto.')
+    console.error(
+      '   pnpm ts-node scripts/create-admin.ts <email> <password> [displayName]\n',
+    )
+    console.error('   Ejemplo:')
+    console.error(
+      '   pnpm ts-node scripts/create-admin.ts admin@gabrielzavando.cl MiClave123! "Gabriel Zavando"\n',
+    )
+    process.exit(1)
+  }
 
-    let userRecord: admin.auth.UserRecord;
+  validatePassword(password)
+
+  const name = displayName || 'Super Admin'
+
+  // ── Inicializar Firebase ─────────────────────────────────
+  initializeFirebase()
+
+  try {
+    console.log(`\n👤 Procesando usuario: ${email}`)
+
+    // 1. Crear o actualizar en Firebase Auth
+    let userRecord: admin.auth.UserRecord
     try {
-      userRecord = await admin.auth().getUserByEmail(email);
+      userRecord = await admin.auth().getUserByEmail(email)
       console.log(
-        'El usuario ya existe en Firebase Auth, actualizando contraseña...',
-      );
-      userRecord = await admin.auth().updateUser(userRecord.uid, { password });
+        '   ⚠️  El usuario ya existe en Auth. Actualizando contraseña y nombre...',
+      )
+      userRecord = await admin.auth().updateUser(userRecord.uid, {
+        password,
+        displayName: name,
+      })
     } catch (err) {
-      const authError = err as { code?: string };
+      const authError = err as { code?: string }
       if (authError.code === 'auth/user-not-found') {
         userRecord = await admin.auth().createUser({
           email,
           password,
-          displayName,
-        });
+          displayName: name,
+        })
+        console.log('   ✅ Usuario creado en Firebase Auth')
       } else {
-        throw err;
+        throw err
       }
     }
 
-    const uid = userRecord.uid;
-    console.log(`UID del usuario: ${uid}`);
+    const uid = userRecord.uid
 
-    // 3. Setear Custom Claims (Role Admin)
-    await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
-    console.log('✅ Custom claims asignados: { role: "admin" }');
+    // 2. Asignar Custom Claim { role: 'admin' }
+    await admin.auth().setCustomUserClaims(uid, { role: 'admin' })
+    console.log('   ✅ Custom claim asignado: { role: "admin" }')
 
-    // 4. Guardar en Firestore db
+    // 3. Guardar/actualizar documento en Firestore
+    const photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b0464&color=fff`
+    // Admin: 30 GB de almacenamiento
+    const ADMIN_STORAGE_LIMIT_BYTES = 30 * 1024 * 1024 * 1024
+
     await admin.firestore().collection('users').doc(uid).set(
       {
         uid,
         email,
-        displayName,
+        displayName: name,
+        photoURL,
         role: 'admin',
+        storageLimitBytes: ADMIN_STORAGE_LIMIT_BYTES,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
-    );
+    )
+    console.log('   ✅ Documento guardado en Firestore')
+    console.log(`   📋 Datos guardados:`)
+    console.log(`      uid:               ${uid}`)
+    console.log(`      email:             ${email}`)
+    console.log(`      displayName:       ${name}`)
+    console.log(`      role:              admin`)
+    console.log(`      storageLimitBytes: ${ADMIN_STORAGE_LIMIT_BYTES} (30 GB)`)
+    console.log(`      photoURL:          ${photoURL}`)
 
-    console.log('✅ Documento guardado en Firestore');
-    console.log('\n=======================================');
-    console.log('Credenciales de acceso:');
-    console.log(`Email:    ${email}`);
-    console.log(`Password: ${password}`);
-    console.log('=======================================\n');
+    console.log('\n======================================')
+    console.log('✅ Administrador creado exitosamente')
+    console.log('======================================')
+    console.log(`   Email:    ${email}`)
+    console.log(`   Password: ${password}`)
+    console.log('======================================')
+    console.log('⚠️  Cambia esta contraseña al primer inicio de sesión.\n')
   } catch (error) {
-    console.error('❌ Error creando admin:', error);
+    console.error('\n❌ Error durante la creación del admin:', error)
+    process.exit(1)
   } finally {
-    process.exit(0);
+    process.exit(0)
   }
-};
+}
 
-createAdminUser().catch(console.error);
+createAdminUser().catch((err) => {
+  console.error('❌ Error inesperado:', err)
+  process.exit(1)
+})

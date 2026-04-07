@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenido/a a la Plataforma | Gabriel Zavando</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Open Sans', Arial, sans-serif; line-height: 1.6; color: #1D0033; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px 0; }
+    .container { background-color: #ffffff; margin: 0 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { background: #471761; padding: 30px; text-align: center; color: #FFFFFF; }
+    .content { padding: 40px 30px; }
+    .greeting { font-family: 'Montserrat', sans-serif; font-size: 24px; color: #1D0033; margin-bottom: 25px; font-weight: 700; }
+    .auth-card { background: #F8FAFC; border: 1px solid #E2E8F0; padding: 25px; margin: 25px 0; border-left: 4px solid #1D0033; }
+    .cta-button { display: inline-block; font-family: 'Montserrat', sans-serif; font-weight: 700; text-decoration: none; padding: 16px 32px; background: #FF0080; color: #FFFFFF; text-transform: uppercase; margin: 25px 0; font-size: 14px; letter-spacing: 1px; border-radius: 0; }
+    .cta-button:hover { background: #A600FF !important; }
+    .footer { background-color: #471761; color: #FFFFFF; text-align: center; padding: 40px 30px; font-size: 13px; }
+    .social-links img { margin: 0 12px; filter: brightness(0) invert(1); }
+    .info-list { list-style: none; padding: 0; margin: 25px 0; font-size: 14px; color: #475569; }
+    .info-list li { margin-bottom: 15px; }
+    .info-list li b { color: #1D0033; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+        <tr>
+          <td align="center" valign="middle">
+            <img src="{{logoUrl}}" alt="Gabriel Zavando" width="50" style="display:block; border:0;">
+          </td>
+          <td align="center" valign="middle" style="padding-left: 15px;">
+            <div style="font-family:'Montserrat',sans-serif; font-size: 18px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">
+              Gabriel Zavando | Full Stack Developer
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="content">
+      <h1 class="greeting">¡Hola {{userName}}! 🎉</h1>
+      <p>Es un placer darte la bienvenida a nuestra plataforma de gestión digital. Ya tienes acceso a todas las herramientas necesarias para potenciar tu crecimiento.</p>
+      
+      <div class="auth-card">
+        <p style="margin: 0;"><strong>Tu cuenta ha sido activada correctamente.</strong></p>
+        <p style="margin: 10px 0 0 0; font-size: 14px;">Usa tu dirección de correo: <b>{{userEmail}}</b> para iniciar sesión.</p>
+      </div>
+
+      <p>Desde tu panel personal podrás:</p>
+      <ul class="info-list">
+        <li>📌 <b>Gestión de Informes:</b> Acceso inmediato a todos tus reportes estratégicos.</li>
+        <li>📂 <b>Repositorio de Archivos:</b> Biblioteca compartida de activos y recursos multimedia.</li>
+        <li>💬 <b>Soporte Directo:</b> Canal prioritario para consultas y tickets técnicos.</li>
+      </ul>
+
+      <div style="text-align: center;">
+        <a href="{{websiteUrl}}/login" class="cta-button" style="color: #FFFFFF; text-decoration: none;">Acceder a mi Panel</a>
+      </div>
+
+      <p style="margin-top: 30px; font-size: 14px; color: #64748b; font-style: italic;">
+        ¿Algún problema para ingresar? Responde a este correo y nuestro equipo técnico te ayudará de inmediato.
+      </p>
+    </div>
+    <div class="footer">
+      <div class="social-links" style="margin-bottom: 25px;">
+        <a href="{{linkedinUrl}}" style="text-decoration:none;"><img src="{{linkedinIconUrl}}" alt="LinkedIn" width="24" height="24" /></a>
+        <a href="{{youtubeUrl}}" style="text-decoration:none;"><img src="{{youtubeIconUrl}}" alt="YouTube" width="24" height="24" /></a>
+        <a href="{{githubUrl}}" style="text-decoration:none;"><img src="{{githubIconUrl}}" alt="GitHub" width="24" height="24" /></a>
+        <a href="{{instagramUrl}}" style="text-decoration:none;"><img src="{{instagramIconUrl}}" alt="Instagram" width="24" height="24" /></a>
+      </div>
+
+      <p style="margin-bottom: 5px; font-weight: 600; font-size: 15px;">Gabriel Zavando | Full Stack Developer</p>
+      <p style="margin: 0; opacity: 0.8;">{{address}}</p>
+      <p style="margin: 5px 0 25px 0; opacity: 0.8;">📞 {{phone}} | ✉️ {{email}}</p>
+      
+      <div style="font-size: 11px; opacity: 0.5; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+        © {{currentYear}} | Todos los derechos reservados.<br>
+        Este es un mensaje institucional enviado por el sistema de Gabriel Zavando.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

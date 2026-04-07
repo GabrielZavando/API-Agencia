@@ -17,4 +17,13 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!')
     })
   })
+
+  describe('health', () => {
+    it('debe retornar status ok con timestamp', () => {
+      const result = appController.healthCheck()
+      expect(result.status).toBe('ok')
+      expect(result.timestamp).toBeDefined()
+      expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp)
+    })
+  })
 })

@@ -14,11 +14,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ReportsService } from './reports.service'
 import { CreateReportDto } from './dto/create-report.dto'
-import {
-  FirebaseAuthGuard,
-  AuthenticatedRequest,
-} from '../auth/firebase-auth.guard'
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
+import { AuthRequest } from '../common/interfaces/auth.interface'
 import { Roles } from '../auth/roles.decorator'
+import { ReportResponseDto } from './dto/report-response.dto'
 
 @Controller('reports')
 @UseGuards(FirebaseAuthGuard)
@@ -29,21 +28,21 @@ export class ReportsController {
   @Post()
   @Roles('admin')
   @UseInterceptors(FileInterceptor('file'))
-  uploadReport(
+  async uploadReport(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateReportDto,
-  ) {
+  ): Promise<ReportResponseDto> {
     return this.reportsService.uploadReport(file, dto)
   }
 
   /** Admin: listar todos / Cliente: listar los suyos */
   @Get()
   @Roles('admin', 'client')
-  findAll(
-    @Req() req: AuthenticatedRequest,
+  async findAll(
+    @Req() req: AuthRequest,
     @Query('clientId') clientId?: string,
-  ) {
-    if (req.user?.role === 'client') {
+  ): Promise<ReportResponseDto[]> {
+    if (req.user.role === 'client') {
       return this.reportsService.findByClient(req.user.uid)
     }
     if (clientId) {
@@ -57,17 +56,17 @@ export class ReportsController {
   @Roles('admin', 'client')
   async getDownloadUrl(
     @Param('id') id: string,
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Query('download') download?: string,
-  ) {
+  ): Promise<{ url: string; fileName: string }> {
     const isDownload = download === 'true'
-    return this.reportsService.getDownloadUrl(id, req.user!, isDownload)
+    return this.reportsService.getDownloadUrl(id, req.user, isDownload)
   }
 
   /** Solo Admin: eliminar informe */
   @Delete(':id')
   @Roles('admin')
-  deleteReport(@Param('id') id: string) {
+  async deleteReport(@Param('id') id: string): Promise<void> {
     return this.reportsService.deleteReport(id)
   }
 }

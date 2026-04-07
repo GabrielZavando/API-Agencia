@@ -2,7 +2,7 @@ import { ProjectsController } from './projects.controller'
 import { ProjectsService } from './projects.service'
 import { CreateProjectDto } from './dto/create-project.dto'
 import { UpdateProjectDto } from './dto/update-project.dto'
-import { AuthenticatedRequest } from '../auth/firebase-auth.guard'
+import { AuthRequest } from '../common/interfaces/auth.interface'
 
 describe('ProjectsController', () => {
   let controller: ProjectsController
@@ -43,7 +43,7 @@ describe('ProjectsController', () => {
     it('should find projects for the current authenticated user', async () => {
       const req = {
         user: { uid: 'client1' },
-      } as unknown as AuthenticatedRequest
+      } as unknown as AuthRequest
       const expectedResult = [{ id: '1', name: 'Test', clientId: 'client1' }]
       mockProjectsService.findAllByClient.mockResolvedValue(expectedResult)
       const result = await controller.findMyProjects(req)

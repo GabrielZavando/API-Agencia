@@ -14,6 +14,7 @@ import { BlogCategoriesService } from './blog-categories.service'
 import { CreateCategoryDto } from './dto/create-category.dto'
 import { UpdateCategoryDto } from './dto/update-category.dto'
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
+import { CategoryResponseDto } from './dto/category-response.dto'
 
 @Controller('blog-categories')
 export class BlogCategoriesController {
@@ -21,20 +22,22 @@ export class BlogCategoriesController {
 
   @Post()
   @UseGuards(FirebaseAuthGuard)
-  async create(@Body() createCategoryDto: CreateCategoryDto) {
+  async create(
+    @Body() createCategoryDto: CreateCategoryDto,
+  ): Promise<CategoryResponseDto> {
     try {
       return await this.blogCategoriesService.create(createCategoryDto)
     } catch (err) {
       const error = err as Error
       throw new HttpException(
-        error.message || 'Error creatomg category',
+        error.message || 'Error creating category',
         HttpStatus.BAD_REQUEST,
       )
     }
   }
 
   @Get()
-  async findAll() {
+  async findAll(): Promise<CategoryResponseDto[]> {
     try {
       return await this.blogCategoriesService.findAll()
     } catch (err) {
@@ -47,7 +50,7 @@ export class BlogCategoriesController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<CategoryResponseDto> {
     try {
       return await this.blogCategoriesService.findOne(id)
     } catch (err) {
@@ -64,7 +67,7 @@ export class BlogCategoriesController {
   async update(
     @Param('id') id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
-  ) {
+  ): Promise<CategoryResponseDto> {
     try {
       return await this.blogCategoriesService.update(id, updateCategoryDto)
     } catch (err) {
@@ -78,7 +81,7 @@ export class BlogCategoriesController {
 
   @Delete(':id')
   @UseGuards(FirebaseAuthGuard)
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<void> {
     try {
       return await this.blogCategoriesService.remove(id)
     } catch (err) {
