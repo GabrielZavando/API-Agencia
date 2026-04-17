@@ -816,10 +816,10 @@ export class FormsService {
 
   // ================================================
   // CRON: Suscriptores no confirmados en 72h → 'unconfirmed'
-  // Se ejecuta cada hora
+  // Se ejecuta cada 3 días (72 horas) a la medianoche
   // ================================================
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron('0 0 */3 * *')
   async cronMarkUnconfirmed() {
     this.logger.log('Cron: verificando suscriptores sin confirmar en 72h...')
     try {
