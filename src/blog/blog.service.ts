@@ -57,6 +57,7 @@ export class BlogService {
       id: data.id,
       title: data.title,
       slug: data.slug,
+      content: data.content,
       excerpt: data.excerpt,
       coverImage: data.coverImage,
       author: data.author,
@@ -125,11 +126,12 @@ export class BlogService {
       // Aplicar ordenamiento
       query = query.orderBy('createdAt', 'desc')
 
-      // Proyección: excluye `content` del payload para optimizar ancho de banda
+      // Proyección: ahora incluimos `content` para que el frontend pueda extraer el excerpt
       const projection = query.select(
         'id',
         'title',
         'slug',
+        'content',
         'excerpt',
         'coverImage',
         'author',
