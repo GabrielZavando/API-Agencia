@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { Cron, CronExpression } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
@@ -811,5 +812,23 @@ export class FormsService {
   // Exportar suscriptores
   async exportSubscribers() {
     return this.getAllSubscribers()
+  }
+
+  // ================================================
+  // CRON: Suscriptores no confirmados en 72h → 'unconfirmed'
+  // Se ejecuta cada hora
+  // ================================================
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async cronMarkUnconfirmed() {
+    this.logger.log('Cron: verificando suscriptores sin confirmar en 72h...')
+    try {
+      const count = await this.firebaseService.markSubscribersUnconfirmed(72)
+      if (count > 0) {
+        this.logger.log(`Cron: ${count} suscriptores marcados como 'unconfirmed'`)
+      }
+    } catch (err) {
+      this.logger.error('Cron markUnconfirmed error:', (err as Error).message)
+    }
   }
 }

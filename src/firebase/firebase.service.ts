@@ -538,12 +538,20 @@ export class FirebaseService {
     token: string,
   ): Promise<{ success: boolean; email?: string }> {
     try {
+      // Acepta tokens tanto en estado 'pending' (nueva suscripción) como 'sent' (campaña enviada)
       const snapshot = await this.db
         .collection('subscribers')
         .where('confirmationToken', '==', token)
-        .where('status', '==', 'pending')
         .limit(1)
         .get()
+
+      if (!snapshot.empty) {
+        const s = snapshot.docs[0].data() as Record<string, unknown>
+        const allowedStatuses = ['pending', 'sent']
+        if (!allowedStatuses.includes(s['status'] as string)) {
+          return { success: false }
+        }
+      }
 
       if (snapshot.empty) {
         return { success: false }
@@ -579,7 +587,7 @@ export class FirebaseService {
 
       await this.db.collection('subscribers').doc(subscriberId).update({
         confirmationToken: newToken,
-        status: 'pending',
+        status: 'sent', // Indica que el correo de confirmación fue enviado
         reconfirmationSentAt: now,
         updatedAt: now,
       })
@@ -598,6 +606,38 @@ export class FirebaseService {
       inactivatedAt: new Date(),
       updatedAt: new Date(),
     })
+  }
+
+  // Campaña: marcar como 'unconfirmed' a los que no confirmaron en el plazo (72h)
+  async markSubscribersUnconfirmed(hoursThreshold = 72): Promise<number> {
+    const cutoff = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000)
+    const snapshot = await this.db
+      .collection('subscribers')
+      .where('status', '==', 'sent')
+      .get()
+
+    const batch = this.db.batch()
+    let count = 0
+    const now = new Date()
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as Record<string, unknown>
+      const sentAt = data['reconfirmationSentAt'] as admin.firestore.Timestamp | Date | undefined
+      if (!sentAt) continue
+
+      const sentDate = sentAt instanceof Date ? sentAt : sentAt.toDate()
+      if (sentDate < cutoff) {
+        batch.update(doc.ref, {
+          status: 'unconfirmed',
+          unconfirmedAt: now,
+          updatedAt: now,
+        })
+        count++
+      }
+    }
+
+    if (count > 0) await batch.commit()
+    return count
   }
 
   // --- CONFIGURACIÓN DEL SISTEMA ---
