@@ -56,7 +56,13 @@ export interface SubscriberRecord {
   }
   createdAt: Date | admin.firestore.Timestamp
   updatedAt: Date | admin.firestore.Timestamp
-  status: 'pending' | 'sent' | 'confirmed' | 'unconfirmed' | 'inactive' | 'unsubscribed'
+  status:
+    | 'pending'
+    | 'sent'
+    | 'confirmed'
+    | 'unconfirmed'
+    | 'inactive'
+    | 'unsubscribed'
   confirmationToken: string | null
   confirmedAt: Date | admin.firestore.Timestamp | null
   reconfirmationSentAt?: Date | admin.firestore.Timestamp

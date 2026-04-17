@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule'
+import { Cron, SchedulerRegistry } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
@@ -582,7 +582,7 @@ export class FormsService {
           continue
         }
 
-        // Delay preventivo para evitar ser baneados por SPAM en el SMTP 
+        // Delay preventivo para evitar ser baneados por SPAM en el SMTP
         await new Promise((resolve) => setTimeout(resolve, 2000))
 
         const result = await this.sendReconfirmationEmail(email, newToken)
@@ -600,7 +600,7 @@ export class FormsService {
     }
 
     if (sent > 0) {
-      this.ensureCronIsRunning()
+      await this.ensureCronIsRunning()
     }
 
     return {
@@ -704,7 +704,7 @@ export class FormsService {
       }
     }
     if (sent > 0) {
-      this.ensureCronIsRunning()
+      await this.ensureCronIsRunning()
     }
 
     return { sent, skipped, errors, details }
@@ -834,19 +834,20 @@ export class FormsService {
     try {
       // 1. Verificar si existen suscriptores en estado 'sent' antes de procesar
       const allSubscribers = await this.firebaseService.getAllSubscribers()
-      const hasWork = allSubscribers.some(s => s.status === 'sent')
+      const hasWork = allSubscribers.some((s) => s.status === 'sent')
 
       if (!hasWork) {
-        this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
+        await this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
         return
       }
 
       const count = await this.firebaseService.markSubscribersUnconfirmed(72)
-      
+
       // 2. Si después de procesar ya no quedan suscriptores en 'sent', detener el cron
-      const remaining = allSubscribers.filter(s => s.status === 'sent').length - count
+      const remaining =
+        allSubscribers.filter((s) => s.status === 'sent').length - count
       if (remaining <= 0) {
-        this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
+        await this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
       }
     } catch (err) {
       this.logger.error('Cron markUnconfirmed error:', (err as Error).message)
@@ -854,14 +855,22 @@ export class FormsService {
   }
 
   // Activa el cron si está detenido
-  private ensureCronIsRunning() {
+  private async ensureCronIsRunning() {
     try {
-      const job = this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP')
+      const job = this.schedulerRegistry.getCronJob(
+        'RECONFIRMATION_CLEANUP',
+      ) as unknown as {
+        running: boolean
+        start: () => Promise<void>
+      }
       if (!job.running) {
-        job.start()
+        await job.start()
       }
     } catch (e) {
-      this.logger.error('Error al intentar reactivar el Cron:', (e as Error).message)
+      this.logger.error(
+        'Error al intentar reactivar el Cron:',
+        (e as Error).message,
+      )
     }
   }
 }
