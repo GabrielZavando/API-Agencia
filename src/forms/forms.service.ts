@@ -187,7 +187,7 @@ export class FormsService {
         consultaId,
         emailSent,
         adminNotified,
-        esContactoNuevo: !existingContacto,
+        isNewProspect: !existingContacto,
       }
     } catch (error) {
       console.error('Error procesando formulario:', error)
