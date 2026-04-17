@@ -2,39 +2,152 @@ import { FormsService } from './forms.service'
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 import { ConfigService } from '@nestjs/config'
+import { BlogService } from '../blog/blog.service'
+import { SystemConfigService } from '../system-config/system-config.service'
 
-describe('FormsService', () => {
+const mockFirebaseService = {
+  findContactoByEmail: vi.fn(),
+  saveContacto: vi.fn().mockResolvedValue('contacto-123'),
+  addConsultaToContacto: vi.fn().mockResolvedValue('consulta-456'),
+  markConsultaEmailAsSent: vi.fn().mockResolvedValue(undefined),
+  findSubscriberByEmail: vi.fn().mockResolvedValue(null),
+  saveSubscriber: vi.fn().mockResolvedValue('sub-id'),
+  getSubscriberConfirmationToken: vi.fn().mockResolvedValue('token-abc'),
+  confirmSubscriber: vi.fn().mockResolvedValue({ success: true }),
+  getAllSubscribers: vi.fn().mockResolvedValue([]),
+  removeSubscriber: vi.fn().mockResolvedValue(true),
+  getDb: vi.fn(),
+  testConnection: vi.fn().mockResolvedValue({ success: true }),
+  bulkDeleteSubscribers: vi.fn().mockResolvedValue(2),
+  refreshReconfirmationToken: vi.fn().mockResolvedValue('new-token'),
+}
+
+const mockMailService = {
+  sendMail: vi.fn().mockResolvedValue(true),
+  sendMailDetailed: vi.fn().mockResolvedValue({ success: true }),
+  getBaseVariables: vi.fn().mockResolvedValue({}),
+  testConnection: vi.fn().mockResolvedValue({ success: true }),
+}
+
+const mockConfigService = {
+  get: vi.fn().mockReturnValue(undefined),
+}
+
+const mockBlogService = {}
+
+const mockSystemConfigService = {
+  getConfig: vi.fn().mockResolvedValue({ email: 'admin@test.com' }),
+}
+
+// Mock de librerías externas
+vi.mock('disposable-email-domains', () => ({
+  default: ['mailinator.com', 'tempmail.com'],
+}))
+vi.mock('deep-email-validator', () => ({
+  validate: vi.fn().mockResolvedValue({ valid: true }),
+}))
+
+describe('FormsService — handleContact', () => {
   let service: FormsService
-  let firebaseService: Partial<FirebaseService>
-  let mailService: Partial<MailService>
-  let configService: Partial<ConfigService>
 
   beforeEach(() => {
-    firebaseService = {
-      getDb: vi.fn().mockReturnValue({
-        collection: vi.fn().mockReturnThis(),
-        doc: vi.fn().mockReturnThis(),
-      }),
-      findProspectByEmail: vi.fn(),
-      createProspectWithConversation: vi.fn(),
-      addConversationToProspect: vi.fn(),
-      markEmailAsSent: vi.fn(),
-    }
-    mailService = {
-      sendMail: vi.fn().mockResolvedValue(true),
-    }
-    configService = {
-      get: vi.fn().mockReturnValue('mock-value'),
-    }
-
+    vi.clearAllMocks()
     service = new FormsService(
-      firebaseService as FirebaseService,
-      mailService as MailService,
-      configService as ConfigService,
+      mockFirebaseService as unknown as FirebaseService,
+      mockMailService as unknown as MailService,
+      mockConfigService as unknown as ConfigService,
+      mockBlogService as unknown as BlogService,
+      mockSystemConfigService as unknown as SystemConfigService,
     )
   })
 
-  it('should be defined', () => {
-    expect(service).toBeDefined()
+  const baseContactDto = {
+    name: 'Pablo Torres',
+    email: 'pablo@empresa.com',
+    phone: '+56911223344',
+    message: 'Necesito información sobre sus servicios',
+    meta: {
+      userAgent: 'Mozilla',
+      page: '/contacto',
+      ts: new Date().toISOString(),
+    },
+  }
+
+  describe('cuando el contacto es nuevo', () => {
+    it('debe guardar el contacto, crear una consulta y enviar emails', async () => {
+      // Arrange
+      mockFirebaseService.findContactoByEmail.mockResolvedValueOnce(null)
+
+      // Act
+      const result = await service.handleContact(baseContactDto)
+
+      // Assert
+      expect(result.success).toBe(true)
+      expect(result.contactoId).toBe('contacto-123')
+      expect(result.consultaId).toBe('consulta-456')
+      expect(result.isNewProspect).toBe(true)
+      expect(mockFirebaseService.saveContacto).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'pablo@empresa.com',
+          origen: 'formulario_contacto',
+        }),
+      )
+      expect(mockFirebaseService.addConsultaToContacto).toHaveBeenCalledWith(
+        'contacto-123',
+        expect.objectContaining({
+          contenido: baseContactDto.message,
+          estado: 'respondida_automaticamente',
+        }),
+      )
+    })
+
+    it('debe marcar el email como enviado en la consulta si el envío tuvo éxito', async () => {
+      // Arrange
+      mockFirebaseService.findContactoByEmail.mockResolvedValueOnce(null)
+      mockMailService.sendMail.mockResolvedValue(true)
+
+      // Act
+      await service.handleContact(baseContactDto)
+
+      // Assert
+      expect(mockFirebaseService.markConsultaEmailAsSent).toHaveBeenCalledWith(
+        'contacto-123',
+        'consulta-456',
+      )
+    })
+  })
+
+  describe('cuando el contacto ya existe', () => {
+    it('debe actualizar el contacto y registrar la nueva consulta', async () => {
+      // Arrange
+      mockFirebaseService.findContactoByEmail.mockResolvedValueOnce({
+        contactoId: 'contacto-123',
+        name: 'Pablo Torres',
+        email: 'pablo@empresa.com',
+      })
+
+      // Act
+      const result = await service.handleContact(baseContactDto)
+
+      // Assert
+      expect(result.success).toBe(true)
+      expect(result.isNewProspect).toBe(false)
+      // Se sigue creando una nueva consulta para el contacto existente
+      expect(mockFirebaseService.addConsultaToContacto).toHaveBeenCalled()
+    })
+  })
+
+  describe('validaciones anti-spam', () => {
+    it('debe rechazar dominios de correo desechables', async () => {
+      // Arrange
+      const dto = { ...baseContactDto, email: 'test@mailinator.com' }
+
+      // Act
+      const result = await service.handleContact(dto)
+
+      // Assert
+      expect(result.success).toBe(false)
+      expect(result.message).toContain('correo electrónico permanente')
+    })
   })
 })

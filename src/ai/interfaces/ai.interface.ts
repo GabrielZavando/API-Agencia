@@ -4,10 +4,10 @@ export interface AIProvider {
 }
 
 export interface AIContext {
-  prospectName: string
-  prospectEmail: string
+  nombreContacto: string
+  emailContacto: string
   message: string
-  isReturningProspect: boolean
+  esContactoRecurrente: boolean
   previousConversations?: ConversationSummary[]
   companyInfo: CompanyInfo
 }

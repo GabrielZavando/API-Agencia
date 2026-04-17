@@ -41,7 +41,7 @@ export class OpenAIProvider implements AIProvider {
       return 'Eres un asistente que ayuda a responder consultas de prospectos de manera profesional y amigable.'
     }
 
-    const { companyInfo, isReturningProspect, prospectName } = context
+    const { companyInfo, esContactoRecurrente, nombreContacto } = context
 
     return `Eres un asistente de atención al cliente para ${companyInfo.name}.
 
@@ -52,21 +52,21 @@ INFORMACIÓN DE LA EMPRESA:
 - Valores: ${companyInfo.values.join(', ')}
 - Tono de comunicación: ${companyInfo.tone}
 
-CONTEXTO DEL PROSPECTO:
-- Nombre: ${prospectName}
-- ${isReturningProspect ? 'Cliente recurrente (dale prioridad y menciona que aprecias su regreso)' : 'Nuevo prospecto (dale una cálida bienvenida)'}
+CONTEXTO DEL CONTACTO:
+- Nombre: ${nombreContacto}
+- ${esContactoRecurrente ? 'Contacto recurrente (dale prioridad y menciona que aprecias su regreso)' : 'Nuevo contacto (dale una cálida bienvenida)'}
 
 INSTRUCCIONES:
 1. Responde de manera ${companyInfo.tone} y profesional
 2. Agradece genuinamente su contacto
 3. Muestra interés real en su consulta
-4. ${isReturningProspect ? 'Reconoce que ya han interactuado antes' : 'Preséntate brevemente'}
+4. ${esContactoRecurrente ? 'Reconoce que ya han interactuado antes' : 'Preséntate brevemente'}
 5. Ofrece ayuda específica relacionada con nuestros servicios
 6. Mantén un tono ${companyInfo.tone} pero siempre profesional
 7. Invita a continuar la conversación
 8. La respuesta debe ser entre 150-300 palabras
 9. No uses saludo, ya que será parte de una plantilla HTML
 
-Genera una respuesta personalizada que conecte emocionalmente con el prospecto.`
+Genera una respuesta personalizada que conecte emocionalmente con el contacto.`
   }
 }

@@ -1,16 +1,26 @@
 import * as admin from 'firebase-admin'
 
-export type AssessmentLevel = 'semilla' | 'brote' | 'arbol'
-export type PillarName = 'personas' | 'procesos' | 'tecnologia' | 'datos'
+export type DiagnosticoLevel = 'semilla' | 'brote' | 'arbol'
+export type NombrePilar =
+  | 'cultura'
+  | 'estrategia'
+  | 'procesos'
+  | 'tecnologia'
+  | 'datos'
 
 export interface PillarScore {
-  personas: number
+  cultura: number
+  estrategia: number
   procesos: number
   tecnologia: number
   datos: number
 }
 
-export interface AssessmentRecord {
+/**
+ * Representa el registro de un diagnóstico procesado.
+ * Nota: La persistencia real ahora ocurre mediante la subcolección en Contactos.
+ */
+export interface DiagnosticoInternalRecord {
   id: string
   name: string
   email: string
@@ -20,6 +30,8 @@ export interface AssessmentRecord {
   level: string
   pillarScores: Record<string, number>
   createdAt: admin.firestore.Timestamp | admin.firestore.FieldValue
+  status?: 'queued' | 'sent'
+  context?: Record<string, any>
 }
 
 export interface PillarFeedback {

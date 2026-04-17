@@ -1,6 +1,6 @@
 import * as admin from 'firebase-admin'
 
-export class AssessmentResponseDto {
+export class DiagnosticoDetalleDto {
   id: string
   name: string
   email: string
@@ -20,7 +20,7 @@ export class AssessmentResponseDto {
 /**
  * Resultado detallado del diagnóstico procesado por ResolverService
  */
-export interface AssessmentDiagnosisResult {
+export interface DiagnosticoRespuestaDto {
   success: boolean
   diagnosis: Record<string, any>
 }

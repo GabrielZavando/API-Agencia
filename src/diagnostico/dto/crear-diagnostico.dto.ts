@@ -9,7 +9,7 @@ import {
   IsOptional,
 } from 'class-validator'
 
-export class CreateAssessmentDto {
+export class CrearDiagnosticoDto {
   @IsNotEmpty()
   @IsString()
   name: string
@@ -23,8 +23,8 @@ export class CreateAssessmentDto {
   industry: string
 
   @IsArray()
-  @ArrayMinSize(12)
-  @ArrayMaxSize(12)
+  @ArrayMinSize(15)
+  @ArrayMaxSize(15)
   @IsBoolean({ each: true })
   answers: boolean[]
 

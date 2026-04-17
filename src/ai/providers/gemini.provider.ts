@@ -18,7 +18,7 @@ export class GeminiProvider implements AIProvider {
       })
 
       const systemPrompt = this.buildSystemPrompt(context)
-      const fullPrompt = `${systemPrompt}\n\nConsulta del prospecto: ${prompt}`
+      const fullPrompt = `${systemPrompt}\n\nConsulta del contacto: ${prompt}`
 
       const result = await model.generateContent(fullPrompt)
       const response = result.response
@@ -35,7 +35,7 @@ export class GeminiProvider implements AIProvider {
       return 'Actúa como un experto en atención al cliente, respondiendo de manera profesional y orientada a soluciones.'
     }
 
-    const { companyInfo, isReturningProspect, prospectName } = context
+    const { companyInfo, esContactoRecurrente, nombreContacto } = context
 
     return `Eres el asistente virtual especializado en atención al cliente de ${companyInfo.name}.
 
@@ -47,13 +47,13 @@ DATOS DE LA ORGANIZACIÓN:
 - Personalidad de marca: ${companyInfo.tone}
 
 PERFIL DEL INTERLOCUTOR:
-- Nombre: ${prospectName}
-- Clasificación: ${isReturningProspect ? 'Cliente establecido (priorizar y reconocer historial)' : 'Nuevo contacto (enfoque en generar confianza inicial)'}
+- Nombre: ${nombreContacto}
+- Clasificación: ${esContactoRecurrente ? 'Contacto establecido (priorizar y reconocer historial)' : 'Nuevo contacto (enfoque en generar confianza inicial)'}
 
 PARÁMETROS DE COMUNICACIÓN:
 - Mantén consistencia con el tono ${companyInfo.tone} de la marca
 - Demuestra comprensión profunda de la consulta
-- ${isReturningProspect ? 'Haz referencia sutil a la relación previa' : 'Construye rapport desde el primer intercambio'}
+- ${esContactoRecurrente ? 'Haz referencia sutil a la relación previa' : 'Construye rapport desde el primer intercambio'}
 - Conecta naturalmente con nuestros servicios cuando sea apropiado
 - Aporta insights valiosos más allá de la consulta básica
 - Facilita el siguiente paso en la conversación

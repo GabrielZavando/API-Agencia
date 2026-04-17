@@ -4,6 +4,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
+import { ScheduleModule } from '@nestjs/schedule'
 import { FirebaseModule } from './firebase/firebase.module'
 import { FormsModule } from './forms/forms.module'
 import { TemplatesModule } from './templates/templates.module'
@@ -21,7 +22,7 @@ import { BlogCategoriesModule } from './blog-categories/blog-categories.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { IdeasModule } from './ideas/ideas.module'
 import { SystemConfigModule } from './system-config/system-config.module'
-import { AssessmentModule } from './assessment/assessment.module'
+import { DiagnosticoModule } from './diagnostico/diagnostico.module'
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AssessmentModule } from './assessment/assessment.module'
     ThrottlerModule.forRoot([
       { name: 'short', ttl: 60_000, limit: 100 }, // 100 req / min (general)
     ]),
+    ScheduleModule.forRoot(),
     FirebaseModule,
     FormsModule,
     TemplatesModule,
@@ -48,7 +50,7 @@ import { AssessmentModule } from './assessment/assessment.module'
     NotificationsModule,
     IdeasModule,
     SystemConfigModule,
-    AssessmentModule,
+    DiagnosticoModule,
   ],
   controllers: [AppController],
   providers: [

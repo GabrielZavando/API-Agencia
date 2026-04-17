@@ -6,7 +6,7 @@ import {
   IsISO8601,
   ValidateNested,
 } from 'class-validator'
-import { Type } from 'class-transformer'
+import { Type, Transform } from 'class-transformer'
 
 class MetaDto {
   @IsString()
@@ -32,8 +32,10 @@ export class ContactDto {
   @IsEmail()
   email: string
 
+  @IsOptional()
   @IsString()
-  phone: string // Obligatorio pero puede ser string vacío
+  @Transform(({ value }) => (value ?? '') as string)
+  phone?: string | null // Opcional: acepta string, null o ausente
 
   @IsNotEmpty()
   @IsString()

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
 import { FirebaseService } from '../firebase/firebase.service'
-import { ProspectRecord, SubscriberRecord } from './interfaces/forms.interface'
+import { SubscriberRecord } from './interfaces/forms.interface'
 import { MailService } from '../mail/mail.service'
 import { BlogService } from '../blog/blog.service'
 import { companyConfig } from '../config/company.config'
@@ -12,13 +12,12 @@ import disposableDomains from 'disposable-email-domains'
 import { validate } from 'deep-email-validator'
 
 import { SystemConfigService } from '../system-config/system-config.service'
-import {
-  ProspectResponseDto,
-  SubscriberResponseDto,
-} from './dto/form-response.dto'
+import { SubscriberResponseDto } from './dto/form-response.dto'
 
 @Injectable()
 export class FormsService {
+  private readonly logger = new Logger(FormsService.name)
+
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly mailService: MailService,
@@ -27,19 +26,7 @@ export class FormsService {
     private readonly systemConfigService: SystemConfigService,
   ) {}
 
-  private mapProspectToDto(data: ProspectRecord): ProspectResponseDto {
-    return {
-      id: data.prospectId,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      message: '', // Mensaje no se guarda directamente en prospect sino en conversaciones
-      status: data.status,
-      conversations: data.conversations as any[],
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    }
-  }
+  // Eliminado mapProspectToDto
 
   private mapSubscriberToDto(data: SubscriberRecord): SubscriberResponseDto {
     return {
@@ -137,59 +124,70 @@ export class FormsService {
 
       // 1. Recibir formulario (ya validado por el DTO)
 
-      // 2. Buscar prospecto
-      const existingProspect = await this.findProspect(contactDto.email)
-
-      // 3. Generar respuesta personalizada con IA
-      const responseContent = await this.generateResponse(
-        contactDto,
-        existingProspect,
+      // 2. Comprobar si existe contacto
+      const existingContacto = await this.firebaseService.findContactoByEmail(
+        contactDto.email,
       )
 
-      let prospectId: string
-      let conversationId: string
+      // 3. Generar respuesta personalizada
+      const responseContent = await this.generateResponse(
+        contactDto,
+        existingContacto,
+      )
 
-      if (!existingProspect) {
-        // 4a. Crear nuevo prospecto con primera conversación
-        prospectId = await this.storeNewProspect(contactDto, responseContent)
-        conversationId = 'first_conversation' // Se genera internamente
-      } else {
-        // 4b. Agregar nueva conversación a prospecto existente
-        prospectId = existingProspect.prospectId
-        conversationId = await this.storeNewConversation(
-          prospectId,
-          contactDto,
-          responseContent,
-        )
-      }
+      // 4. Guardar contacto
+      const contactoId = await this.firebaseService.saveContacto({
+        name: contactDto.name,
+        email: contactDto.email,
+        phone: contactDto.phone || '',
+        origen: 'formulario_contacto',
+      })
 
-      // 5. Enviar respuesta por correo
+      // 5. Crear consulta asociada
+      const consultaId = await this.firebaseService.addConsultaToContacto(
+        contactoId,
+        {
+          contenido: contactDto.message,
+          estado: 'respondida_automaticamente',
+          meta: contactDto.meta,
+          respuesta: {
+            fecha: new Date(),
+            contenido: responseContent,
+            emailSent: false,
+          },
+        },
+      )
+
+      // 6. Enviar repuesta por correo
       const emailSent = await this.sendResponseEmail(
         contactDto,
         responseContent,
-        !existingProspect,
+        !existingContacto,
       )
 
-      // 6. Enviar notificación al administrador
+      // 7. Enviar notificación al administrador
       const adminNotified = await this.sendAdminNotificationEmail(
         contactDto,
         responseContent,
-        !existingProspect,
+        !existingContacto,
       )
 
-      // 7. Marcar email como enviado en Firebase
+      // 8. Marcar email como enviado en la consulta
       if (emailSent) {
-        await this.firebaseService.markEmailAsSent(prospectId, conversationId)
+        await this.firebaseService.markConsultaEmailAsSent(
+          contactoId,
+          consultaId,
+        )
       }
 
       return {
         success: true,
         message: 'Formulario procesado correctamente',
-        prospectId,
-        conversationId,
+        contactoId,
+        consultaId,
         emailSent,
         adminNotified,
-        isNewProspect: !existingProspect,
+        esContactoNuevo: !existingContacto,
       }
     } catch (error) {
       console.error('Error procesando formulario:', error)
@@ -201,54 +199,25 @@ export class FormsService {
     }
   }
 
-  // Método para buscar prospectos
-  private async findProspect(email: string): Promise<ProspectRecord | null> {
-    return await this.firebaseService.findProspectByEmail(email)
-  }
-
-  // Método para almacenar nuevo prospecto
-  private async storeNewProspect(
-    contactDto: ContactDto,
-    responseContent: string,
-  ): Promise<string> {
-    return await this.firebaseService.createProspectWithConversation(
-      contactDto,
-      responseContent,
-    )
-  }
-
-  // Método para guardar nueva conversación
-  private async storeNewConversation(
-    prospectId: string,
-    contactDto: ContactDto,
-    responseContent: string,
-  ): Promise<string> {
-    return await this.firebaseService.addConversationToProspect(
-      prospectId,
-      contactDto,
-      responseContent,
-    )
-  }
-
   // Método para generar respuesta personalizada con IA
   private generateResponse(
     contactDto: ContactDto,
-    existingProspect?: ProspectRecord | null,
+    existingContacto?: any,
   ): Promise<string> {
     try {
       // Temporalmente deshabilitado - falta configurar API keys de IA
       /* 
-      const aiResponse = await this.aiService.generateProspectResponse(
+      const aiResponse = await this.aiService.generateResponse(
         contactDto,
-        existingProspect || undefined,
+        existingContacto || undefined,
       );
       
       console.log(`Respuesta generada por ${aiResponse.provider} en ${aiResponse.processingTime}ms`);
       return aiResponse.content;
       */
 
-      // Fallback a respuesta estática por ahora (alineada con el contenido del email)
-      if (existingProspect) {
+      // Fallback a respuesta estática por ahora
+      if (existingContacto) {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
         )
@@ -261,7 +230,7 @@ export class FormsService {
       console.error('Error generando respuesta:', error)
 
       // Fallback a respuesta estática
-      if (existingProspect) {
+      if (existingContacto) {
         return Promise.resolve(
           `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
         )
@@ -277,14 +246,14 @@ export class FormsService {
   private async sendResponseEmail(
     contactDto: ContactDto,
     responseContent: string,
-    isNewProspect: boolean,
+    esContactoNuevo: boolean,
   ): Promise<boolean> {
     try {
-      const templateName = isNewProspect
-        ? 'welcome-prospect'
-        : 'returning-prospect'
+      const templateName = esContactoNuevo
+        ? 'bienvenida-contacto'
+        : 'regreso-contacto'
 
-      const subject = isNewProspect
+      const subject = esContactoNuevo
         ? `Gracias por contactarnos, ${contactDto.name}`
         : `¡Qué gusto verte de nuevo, ${contactDto.name}!`
 
@@ -308,7 +277,7 @@ export class FormsService {
   private async sendAdminNotificationEmail(
     contactDto: ContactDto,
     responseContent: string,
-    isNewProspect: boolean,
+    esContactoNuevo: boolean,
   ): Promise<boolean> {
     try {
       const config = await this.systemConfigService.getConfig()
@@ -316,11 +285,11 @@ export class FormsService {
 
       return await this.mailService.sendMail({
         to: adminEmail,
-        subject: `Nuevo mensaje de contacto ${isNewProspect ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
+        subject: `Nuevo mensaje de contacto ${esContactoNuevo ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
         templateName: 'admin-contact',
         templateVariables: {
-          typeLabel: isNewProspect
-            ? 'PRIMER CONTACTO (PROSPECTO NUEVO)'
+          typeLabel: esContactoNuevo
+            ? 'PRIMER CONTACTO (CONTACTO NUEVO)'
             : 'CONTACTO RECURRENTE',
           contactName: contactDto.name,
           contactEmail: contactDto.email,
@@ -525,84 +494,12 @@ export class FormsService {
     }
   }
 
-  // Obtener todos los prospectos
-  async getAllProspects(): Promise<ProspectResponseDto[]> {
-    const prospects = await this.firebaseService.getAllProspects()
-    return prospects.map((p) => this.mapProspectToDto(p))
-  }
-
-  // Obtener un prospecto por ID
-  async getProspectById(
-    prospectId: string,
-  ): Promise<ProspectResponseDto | null> {
-    const prospect = await this.firebaseService.getProspectById(prospectId)
-    return prospect ? this.mapProspectToDto(prospect) : null
-  }
+  // getAllProspects, getProspectById y adminReplyToProspect eliminados.
 
   // Obtener todos los suscriptores
   async getAllSubscribers(): Promise<SubscriberResponseDto[]> {
     const subscribers = await this.firebaseService.getAllSubscribers()
     return subscribers.map((s) => this.mapSubscriberToDto(s))
-  }
-
-  // Responder administrativamente a un prospecto
-  async adminReplyToProspect(prospectId: string, replyContent: string) {
-    try {
-      // 1. Guardar la respuesta en Firebase como parte de la conversación
-      const conversationId = await this.firebaseService.addAdminReplyToProspect(
-        prospectId,
-        replyContent,
-      )
-
-      // 2. Obtener los datos del prospecto para enviar el correo
-      const db = this.firebaseService.getDb()
-      const prospectDoc = await db.collection('prospects').doc(prospectId).get()
-      if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado al intentar enviar el correo')
-      }
-      const prospectData = (await this.firebaseService.getProspectById(
-        prospectId,
-      )) as ProspectRecord
-
-      // 3. Reconstruir un ContactDto simplificado para la plantilla de correo
-      const contactDto: ContactDto = {
-        name: prospectData.name,
-        email: prospectData.email,
-        phone: prospectData.phone,
-        message: 'Respuesta sobre su consulta anterior', // Placeholder referencial
-        meta: {
-          userAgent: 'Admin',
-          page: 'AdminPanel',
-          ts: new Date().toISOString(),
-        },
-      }
-
-      // 4. Enviar email al prospecto (simil a sendResponseEmail pero tratándolo como recurrente)
-      const emailSent = await this.sendResponseEmail(
-        contactDto,
-        replyContent,
-        false, // Forzamos false para usar plantilla 'returning-prospect' u otra si se desea
-      )
-
-      // 5. Marcar como enviado si el correo salió exitoso
-      if (emailSent) {
-        await this.firebaseService.markEmailAsSent(prospectId, conversationId)
-      }
-
-      return {
-        success: true,
-        message: 'Respuesta enviada correctamente',
-        conversationId,
-        emailSent,
-      }
-    } catch (error) {
-      console.error('Error enviando respuesta de administrador:', error)
-      return {
-        success: false,
-        message: 'Error enviando respuesta de administrador',
-        error: (error as Error).message,
-      }
-    }
   }
 
   // Double Opt-In: confirmar suscripción por token
@@ -710,6 +607,45 @@ export class FormsService {
     }
   }
 
+  // --- Métodos de Administración de Contactos ---
+
+  async getAllContactos() {
+    return this.firebaseService.getAllContactos()
+  }
+
+  async getContactoFullDetail(contactoId: string) {
+    const contacto = await this.firebaseService.getContactoById(contactoId)
+    if (!contacto) return null
+
+    const consultas =
+      await this.firebaseService.getConsultasForContacto(contactoId)
+    const diagnosticos =
+      await this.firebaseService.getDiagnosticosForContacto(contactoId)
+
+    return {
+      ...contacto,
+      consultas,
+      diagnosticos,
+    }
+  }
+
+  async addAdminReplyToConsulta(
+    contactoId: string,
+    consultaId: string,
+    replyContent: string,
+  ) {
+    const contacto = await this.firebaseService.getContactoById(contactoId)
+    if (!contacto) throw new Error('Contacto no encontrado')
+
+    await this.firebaseService.addAdminReplyToConsulta(
+      contactoId,
+      consultaId,
+      replyContent,
+    )
+
+    return { success: true }
+  }
+
   // ================================================
   // Campaña de Re-confirmación de Suscriptores (TODOS)
   // ================================================
@@ -720,6 +656,7 @@ export class FormsService {
     errors: number
     details: string[]
   }> {
+    this.logger.log('Iniciando campaña de re-confirmación masiva...')
     const subscribers = await this.firebaseService.getAllSubscribers()
 
     // Enviar a todos excepto a los ya confirmados
