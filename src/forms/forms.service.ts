@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { Cron, CronExpression } from '@nestjs/schedule'
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
@@ -25,6 +25,7 @@ export class FormsService {
     private readonly configService: ConfigService,
     private readonly blogService: BlogService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
   // Eliminado mapProspectToDto
@@ -598,6 +599,10 @@ export class FormsService {
       }
     }
 
+    if (sent > 0) {
+      this.ensureCronIsRunning()
+    }
+
     return {
       success: true,
       message: `Proceso de confirmación en lote completado.`,
@@ -698,6 +703,10 @@ export class FormsService {
         details.push(`❌ ${email}: ${(err as Error).message}`)
       }
     }
+    if (sent > 0) {
+      this.ensureCronIsRunning()
+    }
+
     return { sent, skipped, errors, details }
   }
 
@@ -819,16 +828,40 @@ export class FormsService {
   // Se ejecuta cada 3 días (72 horas) a la medianoche
   // ================================================
 
-  @Cron('0 0 */3 * *')
+  @Cron('0 0 */3 * *', { name: 'RECONFIRMATION_CLEANUP' })
   async cronMarkUnconfirmed() {
     this.logger.log('Cron: verificando suscriptores sin confirmar en 72h...')
     try {
+      // 1. Verificar si existen suscriptores en estado 'sent' antes de procesar
+      const allSubscribers = await this.firebaseService.getAllSubscribers()
+      const hasWork = allSubscribers.some(s => s.status === 'sent')
+
+      if (!hasWork) {
+        this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
+        return
+      }
+
       const count = await this.firebaseService.markSubscribersUnconfirmed(72)
-      if (count > 0) {
-        this.logger.log(`Cron: ${count} suscriptores marcados como 'unconfirmed'`)
+      
+      // 2. Si después de procesar ya no quedan suscriptores en 'sent', detener el cron
+      const remaining = allSubscribers.filter(s => s.status === 'sent').length - count
+      if (remaining <= 0) {
+        this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP').stop()
       }
     } catch (err) {
       this.logger.error('Cron markUnconfirmed error:', (err as Error).message)
+    }
+  }
+
+  // Activa el cron si está detenido
+  private ensureCronIsRunning() {
+    try {
+      const job = this.schedulerRegistry.getCronJob('RECONFIRMATION_CLEANUP')
+      if (!job.running) {
+        job.start()
+      }
+    } catch (e) {
+      this.logger.error('Error al intentar reactivar el Cron:', (e as Error).message)
     }
   }
 }
