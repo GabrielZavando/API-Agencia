@@ -580,8 +580,8 @@ export class FormsService {
           continue
         }
 
-        // Delay para evitar bloqueos por envíos simultáneos
-        await new Promise((resolve) => setTimeout(resolve, 800))
+        // Delay preventivo para evitar ser baneados por SPAM en el SMTP 
+        await new Promise((resolve) => setTimeout(resolve, 2000))
 
         const result = await this.sendReconfirmationEmail(email, newToken)
         if (result.success) {
@@ -681,8 +681,8 @@ export class FormsService {
           continue
         }
 
-        // Delay preventivo
-        await new Promise((resolve) => setTimeout(resolve, 800))
+        // Delay preventivo mayor para evitar ban
+        await new Promise((resolve) => setTimeout(resolve, 2000))
 
         const result = await this.sendReconfirmationEmail(email, newToken)
         if (result.success) {
