@@ -32,9 +32,9 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Deploy Firestore Indexes
-        run: |
-          npx firebase-tools deploy --only firestore:indexes --project ${{ env.PROJECT_ID }}
+      # - name: Deploy Firestore Indexes
+      #   run: |
+      #     npx firebase-tools deploy --only firestore:indexes --project ${{ env.PROJECT_ID }}
 
       - name: Build and Push image
         run: |
