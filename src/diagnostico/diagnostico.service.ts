@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { companyConfig } from '../config/company.config'
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 import { PdfService } from './pdf.service'
@@ -120,7 +121,7 @@ export class DiagnosticoService {
     pdfBuffer?: Buffer,
   ): Promise<boolean> {
     const baseVars = await this.mailService.getBaseVariables(email)
-    const scheduleUrl = 'https://calendar.app.google/HbTU9z3qgBWTUzkK7'
+    const scheduleUrl = companyConfig.calendlyUrl
 
     const attachments =
       pdfBuffer && pdfBuffer.length > 0

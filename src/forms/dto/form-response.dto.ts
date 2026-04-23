@@ -25,7 +25,13 @@ export class ProspectResponseDto {
 export class SubscriberResponseDto {
   id: string
   email: string
-  status: 'pending' | 'sent' | 'confirmed' | 'unconfirmed' | 'inactive' | 'unsubscribed'
+  status:
+    | 'pending'
+    | 'sent'
+    | 'confirmed'
+    | 'unconfirmed'
+    | 'inactive'
+    | 'unsubscribed'
   subscribedAt:
     | admin.firestore.Timestamp
     | admin.firestore.FieldValue

@@ -622,7 +622,10 @@ export class FirebaseService {
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as Record<string, unknown>
-      const sentAt = data['reconfirmationSentAt'] as admin.firestore.Timestamp | Date | undefined
+      const sentAt = data['reconfirmationSentAt'] as
+        | admin.firestore.Timestamp
+        | Date
+        | undefined
       if (!sentAt) continue
 
       const sentDate = sentAt instanceof Date ? sentAt : sentAt.toDate()
