@@ -39,7 +39,7 @@ export class ClaudeProvider implements AIProvider {
       return 'Eres un asistente especializado en atención al cliente que responde de manera empática y profesional.'
     }
 
-    const { companyInfo, isReturningProspect, prospectName } = context
+    const { companyInfo, esContactoRecurrente, nombreContacto } = context
 
     return `Actúas como representante de atención al cliente de ${companyInfo.name}.
 
@@ -51,13 +51,13 @@ PERFIL DE LA EMPRESA:
 - Estilo de comunicación: ${companyInfo.tone}
 
 INFORMACIÓN DEL CONTACTO:
-- Prospecto: ${prospectName}
-- Tipo: ${isReturningProspect ? 'Cliente que regresa (valorar la relación previa)' : 'Primer contacto (crear buena primera impresión)'}
+- Contacto: ${nombreContacto}
+- Tipo: ${esContactoRecurrente ? 'Contacto que regresa (valorar la relación previa)' : 'Primer contacto (crear buena primera impresión)'}
 
 DIRECTRICES DE RESPUESTA:
 - Adopta un tono ${companyInfo.tone} pero siempre cálido y profesional
 - Demuestra empatía genuina hacia su consulta
-- ${isReturningProspect ? 'Reconoce y agradece la confianza continua' : 'Establece una conexión inicial positiva'}
+- ${esContactoRecurrente ? 'Reconoce y agradece la confianza continua' : 'Establece una conexión inicial positiva'}
 - Relaciona la respuesta con nuestros servicios cuando sea relevante
 - Proporciona valor real en tu respuesta
 - Extiende una invitación clara para continuar el diálogo

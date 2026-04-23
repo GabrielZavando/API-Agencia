@@ -27,7 +27,11 @@ export class BlogService {
     date: Date | admin.firestore.Timestamp | admin.firestore.FieldValue,
   ): Date {
     if (date instanceof admin.firestore.Timestamp) return date.toDate()
-    return date instanceof Date ? date : new Date()
+    if (date instanceof Date) return date
+    if (date && typeof date === 'object' && '_seconds' in (date as any)) {
+      return new Date((date as unknown as { _seconds: number })._seconds * 1000)
+    }
+    return new Date()
   }
 
   private mapPostToDto(data: BlogPostRecord): PostResponseDto {
@@ -53,6 +57,7 @@ export class BlogService {
       id: data.id,
       title: data.title,
       slug: data.slug,
+      content: data.content,
       excerpt: data.excerpt,
       coverImage: data.coverImage,
       author: data.author,
@@ -104,47 +109,56 @@ export class BlogService {
    * Utiliza caché en memoria con TTL de 60 segundos.
    */
   async findAll(publishedOnly = false): Promise<PostListItemDto[]> {
-    const cached =
-      await this.cacheManager.get<PostListItemDto[]>(CACHE_KEY_ALL_POSTS)
-    if (cached) return cached
+    try {
+      const cached =
+        await this.cacheManager.get<PostListItemDto[]>(CACHE_KEY_ALL_POSTS)
+      if (cached) return cached
 
-    // Índice compuesto requerido: published ASC + createdAt DESC
-    let query: admin.firestore.Query = this.collection.orderBy(
-      'createdAt',
-      'desc',
-    )
+      // Iniciamos la consulta base
+      let query: admin.firestore.Query = this.collection
 
-    if (publishedOnly) {
-      query = query.where('published', '==', true)
+      // IMPORTANTE: Los filtros de igualdad deben ir ANTES que los de ordenamiento
+      // para facilitar la resolución de índices compuestos en algunas versiones del SDK.
+      if (publishedOnly) {
+        query = query.where('published', '==', true)
+      }
+
+      // Aplicar ordenamiento
+      query = query.orderBy('createdAt', 'desc')
+
+      // Proyección: ahora incluimos `content` para que el frontend pueda extraer el excerpt
+      const projection = query.select(
+        'id',
+        'title',
+        'slug',
+        'content',
+        'excerpt',
+        'coverImage',
+        'author',
+        'category',
+        'tags',
+        'published',
+        'publishedAt',
+        'createdAt',
+      )
+
+      const snapshot = await projection.get()
+      const posts = snapshot.docs.map((doc) =>
+        this.mapPostToListItemDto(doc.data() as BlogPostRecord),
+      )
+
+      await this.cacheManager.set(
+        CACHE_KEY_ALL_POSTS,
+        posts,
+        CACHE_TTL_SECONDS * 1000,
+      )
+
+      return posts
+    } catch (error) {
+      console.error('❌ Error en BlogService.findAll:', error)
+      // Re-lanzamos con más contexto si es posible para que NestJS lo capture
+      throw error
     }
-
-    // Proyección: excluye `content` del payload
-    const projection = query.select(
-      'id',
-      'title',
-      'slug',
-      'excerpt',
-      'coverImage',
-      'author',
-      'category',
-      'tags',
-      'published',
-      'publishedAt',
-      'createdAt',
-    )
-
-    const snapshot = await projection.get()
-    const posts = snapshot.docs.map((doc) =>
-      this.mapPostToListItemDto(doc.data() as BlogPostRecord),
-    )
-
-    await this.cacheManager.set(
-      CACHE_KEY_ALL_POSTS,
-      posts,
-      CACHE_TTL_SECONDS * 1000,
-    )
-
-    return posts
   }
 
   async findOne(id: string): Promise<PostResponseDto> {

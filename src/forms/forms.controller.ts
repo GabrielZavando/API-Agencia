@@ -5,16 +5,15 @@ import {
   Get,
   Query,
   Param,
-  Redirect,
+  UseGuards,
 } from '@nestjs/common'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
 import { FormsService } from './forms.service'
 import { Throttle, SkipThrottle } from '@nestjs/throttler'
-import {
-  ProspectResponseDto,
-  SubscriberResponseDto,
-} from './dto/form-response.dto'
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
+import { Roles } from '../auth/roles.decorator'
+import { SubscriberResponseDto } from './dto/form-response.dto'
 
 @Controller('forms')
 export class FormsController {
@@ -37,82 +36,75 @@ export class FormsController {
     return this.formsService.handleUnsubscribe(email)
   }
 
-  // --- Endpoints de Administración ---
+  // --- Endpoints de Administración de Contactos ---
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
+  @Get('admin/contactos')
+  async getAllContactos(): Promise<any[]> {
+    return this.formsService.getAllContactos()
+  }
+
+  @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
+  @Get('admin/contactos/:id')
+  async getContactoDetail(@Param('id') id: string): Promise<any> {
+    return this.formsService.getContactoFullDetail(id)
+  }
+
+  @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
+  @Post('admin/contactos/:id/consultas/:consultaId/reply')
+  async replyToConsulta(
+    @Param('id') id: string,
+    @Param('consultaId') consultaId: string,
+    @Body('message') message: string,
+  ): Promise<any> {
+    return this.formsService.addAdminReplyToConsulta(id, consultaId, message)
+  }
+
+  // --- Endpoints de Administración de Suscriptores ---
+
+  @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Get('admin/subscribers')
-  async getSubscribers(): Promise<SubscriberResponseDto[]> {
+  async getAllSubscribers(): Promise<SubscriberResponseDto[]> {
     return this.formsService.getAllSubscribers()
-  }
-
-  @SkipThrottle()
-  @Get('admin/prospects')
-  async getProspects(): Promise<ProspectResponseDto[]> {
-    return this.formsService.getAllProspects()
-  }
-
-  @SkipThrottle()
-  @Get('admin/prospects/:id')
-  async getProspectById(
-    @Param('id') id: string,
-  ): Promise<ProspectResponseDto | null> {
-    return this.formsService.getProspectById(id)
-  }
-
-  // Double Opt-In: confirmación de suscripción por token
-  @SkipThrottle()
-  @Get('verify-subscription/:token')
-  @Redirect()
-  async verifySubscription(
-    @Param('token') token: string,
-  ): Promise<{ url: string }> {
-    const result = await this.formsService.verifySubscription(token)
-    if (result.success) {
-      return { url: '/suscripcion-confirmada?status=ok' }
-    }
-    return { url: '/suscripcion-confirmada?status=error' }
-  }
-
-  @SkipThrottle()
-  @Post('admin/subscribers/send-newsletter')
-  async sendNewsletter(
-    @Body() body: { ids: string[]; postId: string },
-  ): Promise<any> {
-    return await this.formsService.sendNewsletterToSubscribers(
-      body.ids,
-      body.postId,
-    )
-  }
-
-  @Post('admin/prospects/:id/reply')
-  async adminReplyToProspect(
-    @Param('id') id: string,
-    @Body('replyContent') replyContent: string,
-  ): Promise<any> {
-    return this.formsService.adminReplyToProspect(id, replyContent)
   }
 
   // --- Campaña de Re-confirmación y Limpieza ---
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Post('admin/subscribers/bulk-delete')
   async bulkDeleteSubscribers(@Body('ids') ids: string[]): Promise<any> {
     return this.formsService.bulkDeleteSubscribers(ids)
   }
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Post('admin/subscribers/bulk-confirm')
   async bulkConfirmSubscribers(@Body('ids') ids: string[]): Promise<any> {
     return this.formsService.bulkConfirmSubscribers(ids)
   }
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Post('admin/subscribers/reconfirmation-campaign')
   async runReconfirmationCampaign(): Promise<any> {
     return this.formsService.runReconfirmationCampaign()
   }
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Post('admin/subscribers/cleanup-inactive')
   async cleanupInactiveSubscribers(
     @Body('daysThreshold') daysThreshold: number,
@@ -121,6 +113,8 @@ export class FormsController {
   }
 
   @SkipThrottle()
+  @UseGuards(FirebaseAuthGuard)
+  @Roles('admin')
   @Get('admin/subscribers/export')
   async exportSubscribers(): Promise<any> {
     return await this.formsService.exportSubscribers()

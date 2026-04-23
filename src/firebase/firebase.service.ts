@@ -4,15 +4,14 @@ import * as admin from 'firebase-admin'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as crypto from 'crypto'
-import { ContactDto } from '../forms/dto/contact.dto'
 import { SubscribeDto } from '../forms/dto/subscribe.dto'
-
 import {
-  ProspectRecord,
+  ContactoRecord,
   SubscriberRecord,
+  ConsultaRecord,
+  DiagnosticoRecord,
 } from '../forms/interfaces/forms.interface'
 import { SystemConfig } from '../system-config/interfaces/system-config.interface'
-import { ConversationRecord } from '../forms/interfaces/forms.interface'
 
 @Injectable()
 export class FirebaseService {
@@ -103,251 +102,252 @@ export class FirebaseService {
     return this.db
   }
 
-  async findProspectByEmail(email: string): Promise<ProspectRecord | null> {
+  async findContactoByEmail(email: string): Promise<ContactoRecord | null> {
     try {
       const snapshot = await this.db
-        .collection('prospects')
+        .collection('contactos')
         .where('email', '==', email)
         .limit(1)
         .get()
 
-      if (snapshot.empty) {
-        return null
-      }
+      if (snapshot.empty) return null
 
       const doc = snapshot.docs[0]
-      const data = doc.data() as Omit<ProspectRecord, 'prospectId'>
-      return { prospectId: doc.id, ...data } as ProspectRecord
+      const data = doc.data() as Record<string, unknown>
+      return { ...data, contactoId: doc.id } as unknown as ContactoRecord
     } catch (error) {
-      console.error('Error buscando prospecto:', error)
+      console.error('Error buscando contacto:', error)
       return null
     }
   }
 
-  async getAllProspects(): Promise<ProspectRecord[]> {
+  async getAllContactos(): Promise<ContactoRecord[]> {
     try {
       const snapshot = await this.db
-        .collection('prospects')
+        .collection('contactos')
         .orderBy('updatedAt', 'desc')
         .get()
 
       return snapshot.docs.map((doc) => {
-        const data = doc.data() as Omit<ProspectRecord, 'prospectId'>
-        return {
-          prospectId: doc.id,
-          ...data,
-        } as ProspectRecord
+        const data = doc.data() as Record<string, unknown>
+        return { ...data, contactoId: doc.id } as unknown as ContactoRecord
       })
     } catch (error) {
-      console.error('Error obteniendo todos los prospectos:', error)
-      throw new Error('Error al obtener los prospectos de Firebase')
+      console.error('Error obteniendo todos los contactos:', error)
+      throw new Error('Error al obtener los contactos de Firebase')
     }
   }
 
-  async getProspectById(prospectId: string): Promise<ProspectRecord | null> {
+  async getContactoById(contactoId: string): Promise<ContactoRecord | null> {
     try {
-      const doc = await this.db.collection('prospects').doc(prospectId).get()
-
+      const doc = await this.db.collection('contactos').doc(contactoId).get()
       if (!doc.exists) return null
-      return { prospectId: doc.id, ...doc.data() } as ProspectRecord
+      const data = doc.data() as Record<string, unknown>
+      return { ...data, contactoId: doc.id } as unknown as ContactoRecord
     } catch (error) {
-      console.error('Error obteniendo prospecto por ID:', error)
+      console.error('Error obteniendo contacto por ID:', error)
       return null
     }
   }
 
-  async createProspectWithConversation(
-    contactDto: ContactDto,
-    responseContent: string,
-  ): Promise<string> {
+  async saveContacto(data: Partial<ContactoRecord>): Promise<string> {
     try {
-      // Generar IDs únicos
-      const prospectId = this.db.collection('prospects').doc().id
-      const conversationId = this.db.collection('conversations').doc().id
-      const messageId = this.db.collection('messages').doc().id
-      const responseId = this.db.collection('responses').doc().id
+      let contactoId = data.contactoId
       const now = new Date()
 
-      const conversation: ConversationRecord = {
-        conversationId,
-        incomingMessage: {
-          messageId,
-          content: contactDto.message,
-          meta: contactDto.meta,
-          receivedAt: now,
-        },
-        outgoingResponse: {
-          responseId,
-          content: responseContent,
-          sentAt: now,
-          emailSent: false, // Se actualizará después del envío
-        },
-        timestamp: now,
+      if (!contactoId && data.email) {
+        const existing = await this.findContactoByEmail(data.email)
+        if (existing) {
+          contactoId = existing.contactoId
+        }
       }
 
-      const prospectData: ProspectRecord = {
-        prospectId,
-        name: contactDto.name,
-        email: contactDto.email,
-        phone: contactDto.phone || '', // String vacío si no hay teléfono
-        createdAt: now,
+      if (!contactoId) {
+        contactoId = this.db.collection('contactos').doc().id
+        await this.db
+          .collection('contactos')
+          .doc(contactoId)
+          .set({
+            ...data,
+            createdAt: now,
+            updatedAt: now,
+            status: 'lead',
+          })
+      } else {
+        await this.db
+          .collection('contactos')
+          .doc(contactoId)
+          .update({
+            ...data,
+            updatedAt: now,
+          })
+      }
+
+      return contactoId
+    } catch (error) {
+      console.error('Error guardando contacto:', error)
+      throw new Error('Error guardando contacto en Firebase')
+    }
+  }
+
+  async addConsultaToContacto(
+    contactoId: string,
+    consultaData: Partial<ConsultaRecord>,
+  ): Promise<string> {
+    try {
+      const consultaId = this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('consultas')
+        .doc().id
+      const now = new Date()
+
+      await this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('consultas')
+        .doc(consultaId)
+        .set({
+          consultaId,
+          ...consultaData,
+          fecha: now,
+        })
+
+      await this.db.collection('contactos').doc(contactoId).update({
         updatedAt: now,
-        status: 'prospect',
-        conversations: [conversation],
-      }
+      })
 
-      await this.db.collection('prospects').doc(prospectId).set(prospectData)
-      return prospectId
+      return consultaId
     } catch (error) {
-      console.error('Error creando prospecto:', error)
-      throw new Error('Error creando prospecto en Firebase')
+      console.error('Error añadiendo consulta:', error)
+      throw new Error('Error añadiendo consulta en Firebase')
     }
   }
 
-  async addConversationToProspect(
-    prospectId: string,
-    contactDto: ContactDto,
-    responseContent: string,
+  async addDiagnosticoToContacto(
+    contactoId: string,
+    diagnosticoData: Partial<DiagnosticoRecord>,
   ): Promise<string> {
     try {
-      // Generar IDs únicos
-      const conversationId = this.db.collection('conversations').doc().id
-      const messageId = this.db.collection('messages').doc().id
-      const responseId = this.db.collection('responses').doc().id
+      const diagnosticoId = this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('diagnosticos')
+        .doc().id
       const now = new Date()
 
-      const newConversation: ConversationRecord = {
-        conversationId,
-        incomingMessage: {
-          messageId,
-          content: contactDto.message,
-          meta: contactDto.meta,
-          receivedAt: now,
-        },
-        outgoingResponse: {
-          responseId,
-          content: responseContent,
-          sentAt: now,
-          emailSent: false, // Se actualizará después del envío
-        },
-        timestamp: now,
-      }
-
       await this.db
-        .collection('prospects')
-        .doc(prospectId)
-        .update({
-          updatedAt: now,
-          conversations: admin.firestore.FieldValue.arrayUnion(newConversation),
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('diagnosticos')
+        .doc(diagnosticoId)
+        .set({
+          diagnosticoId,
+          ...diagnosticoData,
+          createdAt: now,
         })
 
-      return conversationId
+      await this.db.collection('contactos').doc(contactoId).update({
+        updatedAt: now,
+      })
+
+      return diagnosticoId
     } catch (error) {
-      console.error('Error añadiendo conversación:', error)
-      throw new Error('Error añadiendo conversación en Firebase')
+      console.error('Error añadiendo diagnostico:', error)
+      throw new Error('Error añadiendo diagnostico en Firebase')
     }
   }
 
-  async addAdminReplyToProspect(
-    prospectId: string,
+  async addAdminReplyToConsulta(
+    contactoId: string,
+    consultaId: string,
     replyContent: string,
-  ): Promise<string> {
+  ): Promise<void> {
     try {
-      const prospectDoc = await this.db
-        .collection('prospects')
-        .doc(prospectId)
-        .get()
-
-      if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado')
-      }
-
-      const prospectData = prospectDoc.data() as ProspectRecord
-
-      // Si el prospecto no tiene conversaciones previas, no podemos responder a nada
-      // Esto no debería ocurrir bajo flujo normal, pero validamos
-      if (
-        !prospectData.conversations ||
-        prospectData.conversations.length === 0
-      ) {
-        throw new Error('El prospecto no tiene conversaciones para responder')
-      }
-
-      const conversationId = this.db.collection('conversations').doc().id
-      const responseId = this.db.collection('responses').doc().id
       const now = new Date()
-
-      // Creamos una nueva 'conversación' simulada que sólo tiene la respuesta saliente
-      // Usaremos el último mensaje entrante como referencia, pero sin crear un mensaje nuevo
-      const lastIncomingMessage =
-        prospectData.conversations[prospectData.conversations.length - 1]
-          .incomingMessage
-
-      const newConversation: ConversationRecord = {
-        conversationId,
-        incomingMessage: lastIncomingMessage, // Referenciamos el mensaje original que estamos respondiendo (para no alterar la firma)
-        outgoingResponse: {
-          responseId,
-          content: replyContent,
-          sentAt: now,
-          emailSent: false, // Se actualizará al enviar
-        },
-        timestamp: now,
-      }
-
       await this.db
-        .collection('prospects')
-        .doc(prospectId)
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('consultas')
+        .doc(consultaId)
         .update({
-          updatedAt: now,
-          conversations: admin.firestore.FieldValue.arrayUnion(newConversation),
+          estado: 'respondida_manualmente',
+          respuesta: {
+            fecha: now,
+            contenido: replyContent,
+            emailSent: false,
+          },
         })
-
-      return conversationId
+      await this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .update({ updatedAt: now })
     } catch (error) {
       console.error('Error añadiendo respuesta administrativa:', error)
       throw new Error('Error añadiendo respuesta en Firebase')
     }
   }
 
-  async markEmailAsSent(
-    prospectId: string,
-    conversationId: string,
+  async markConsultaEmailAsSent(
+    contactoId: string,
+    consultaId: string,
   ): Promise<void> {
     try {
-      // Obtener el prospecto
-      const prospectDoc = await this.db
-        .collection('prospects')
-        .doc(prospectId)
-        .get()
-
-      if (!prospectDoc.exists) {
-        throw new Error('Prospecto no encontrado')
-      }
-
-      const prospectData = prospectDoc.data() as ProspectRecord
-
-      // Actualizar el estado del email en la conversación específica
-      const updatedConversations = prospectData.conversations.map((conv) => {
-        if (conv.conversationId === conversationId) {
-          return {
-            ...conv,
-            outgoingResponse: {
-              ...conv.outgoingResponse,
-              emailSent: true,
-            },
-          }
-        }
-        return conv
-      })
-
-      await this.db.collection('prospects').doc(prospectId).update({
-        conversations: updatedConversations,
-        updatedAt: new Date(),
-      })
+      // Necesitamos asegurar que no sobresscribimos todo el objeto respuesta
+      await this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('consultas')
+        .doc(consultaId)
+        .update({
+          'respuesta.emailSent': true,
+        })
     } catch (error) {
       console.error('Error marcando email como enviado:', error)
       throw new Error('Error actualizando estado del email')
+    }
+  }
+
+  async getConsultasForContacto(contactoId: string): Promise<ConsultaRecord[]> {
+    try {
+      const snapshot = await this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('consultas')
+        .orderBy('fecha', 'desc')
+        .get()
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Record<string, unknown>
+        return { ...data, consultaId: doc.id } as unknown as ConsultaRecord
+      })
+    } catch (error) {
+      console.error('Error obteniendo consultas del contacto:', error)
+      return []
+    }
+  }
+
+  async getDiagnosticosForContacto(
+    contactoId: string,
+  ): Promise<DiagnosticoRecord[]> {
+    try {
+      const snapshot = await this.db
+        .collection('contactos')
+        .doc(contactoId)
+        .collection('diagnosticos')
+        .orderBy('createdAt', 'desc')
+        .get()
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Record<string, unknown>
+        return {
+          ...data,
+          diagnosticoId: doc.id,
+        } as unknown as DiagnosticoRecord
+      })
+    } catch (error) {
+      console.error('Error obteniendo diagnósticos del contacto:', error)
+      return []
     }
   }
 
@@ -538,12 +538,20 @@ export class FirebaseService {
     token: string,
   ): Promise<{ success: boolean; email?: string }> {
     try {
+      // Acepta tokens tanto en estado 'pending' (nueva suscripción) como 'sent' (campaña enviada)
       const snapshot = await this.db
         .collection('subscribers')
         .where('confirmationToken', '==', token)
-        .where('status', '==', 'pending')
         .limit(1)
         .get()
+
+      if (!snapshot.empty) {
+        const s = snapshot.docs[0].data() as Record<string, unknown>
+        const allowedStatuses = ['pending', 'sent']
+        if (!allowedStatuses.includes(s['status'] as string)) {
+          return { success: false }
+        }
+      }
 
       if (snapshot.empty) {
         return { success: false }
@@ -579,7 +587,7 @@ export class FirebaseService {
 
       await this.db.collection('subscribers').doc(subscriberId).update({
         confirmationToken: newToken,
-        status: 'pending',
+        status: 'sent', // Indica que el correo de confirmación fue enviado
         reconfirmationSentAt: now,
         updatedAt: now,
       })
@@ -598,6 +606,41 @@ export class FirebaseService {
       inactivatedAt: new Date(),
       updatedAt: new Date(),
     })
+  }
+
+  // Campaña: marcar como 'unconfirmed' a los que no confirmaron en el plazo (72h)
+  async markSubscribersUnconfirmed(hoursThreshold = 72): Promise<number> {
+    const cutoff = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000)
+    const snapshot = await this.db
+      .collection('subscribers')
+      .where('status', '==', 'sent')
+      .get()
+
+    const batch = this.db.batch()
+    let count = 0
+    const now = new Date()
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as Record<string, unknown>
+      const sentAt = data['reconfirmationSentAt'] as
+        | admin.firestore.Timestamp
+        | Date
+        | undefined
+      if (!sentAt) continue
+
+      const sentDate = sentAt instanceof Date ? sentAt : sentAt.toDate()
+      if (sentDate < cutoff) {
+        batch.update(doc.ref, {
+          status: 'unconfirmed',
+          unconfirmedAt: now,
+          updatedAt: now,
+        })
+        count++
+      }
+    }
+
+    if (count > 0) await batch.commit()
+    return count
   }
 
   // --- CONFIGURACIÓN DEL SISTEMA ---

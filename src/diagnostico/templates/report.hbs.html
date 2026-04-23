@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+  rel="stylesheet"
+/>
+<title>Diagnóstico de Digitalización</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #ffffff;
+    color: #1a1a2e;
+    font-size: 12px;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    width: 794px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: stretch;
+    padding: 32px 40px 24px;
+    gap: 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .header-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+  }
+
+  .executive-tag {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .header-title {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 0.95;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    letter-spacing: -1.5px;
+    flex: 1;
+    padding: 8px 0;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 14px;
+  }
+
+  .meta-item:first-child { padding-left: 0; }
+
+  .meta-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #9ca3af;
+    text-transform: uppercase;
+  }
+
+  .meta-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .meta-sep {
+    width: 1px;
+    height: 32px;
+    background: #e5e7eb;
+    flex-shrink: 0;
+  }
+
+  .header-right {
+    width: 224px;
+    flex-shrink: 0;
+  }
+
+  .summary-card {
+    background: #1a0a2e;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .summary-tag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #a78bfa;
+    text-transform: uppercase;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .score-big {
+    font-size: 38px;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+  }
+
+  .score-denom {
+    font-size: 20px;
+    font-weight: 700;
+    color: #c4b5fd;
+    line-height: 1;
+  }
+
+  .score-unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    letter-spacing: 0.5px;
+  }
+
+  .nivel-badge {
+    display: inline-block;
+    background: #7C3AED;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+
+  .nivel-badge.semilla { background-color: #ef4444; }
+  .nivel-badge.brote { background-color: #7C3AED; }
+  .nivel-badge.arbol { background-color: #22c55e; }
+
+  .summary-text {
+    font-size: 9.5px;
+    color: #c4b5fd;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  /* ─── QUOTE ──────────────────────────────────────────────── */
+  .quote-section {
+    position: relative;
+    background: #faf5ff;
+    border-left: 4px solid #7C3AED;
+    margin: 24px 40px;
+    padding: 24px 56px 24px 28px;
+    border-radius: 4px;
+  }
+
+  .quote-deco {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    background: #e9d5ff;
+    border-radius: 4px;
+  }
+
+  .quote-icon {
+    font-size: 20px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .quote-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.55;
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+
+  .quote-attr {
+    font-size: 9px;
+    font-weight: 700;
+    color: #7C3AED;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ─── DOS COLUMNAS: PILARES + RIESGOS ───────────────────── */
+  .two-col {
+    display: flex;
+    gap: 24px;
+    padding: 20px 40px;
+  }
+
+  .col-pillar { flex: 1; }
+
+  .col-risks {
+    width: 252px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Tabla de pilares */
+  .pillar-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .pillar-table thead tr {
+    background: #1a1a2e;
+    color: #ffffff;
+  }
+
+  .pillar-table th {
+    padding: 9px 10px;
+    text-align: left;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .pillar-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+  }
+
+  .pillar-table tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  .pillar-name {
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .pillar-score {
+    font-weight: 800;
+    color: #374151;
+    font-size: 11px;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+
+  .status-badge.critico { background-color: #ef4444; }
+  .status-badge.inicio { background-color: #3b82f6; }
+  .status-badge.regular { background-color: #f59e0b; }
+  .status-badge.alta { background-color: #22c55e; }
+
+  /* Riesgos */
+  .risk-card {
+    border: 1px solid #fecaca;
+    border-left: 3px solid #ef4444;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+
+  .risk-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+
+  .risk-title {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #1a1a2e;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .risk-icon {
+    font-size: 14px;
+    margin-left: 8px;
+    flex-shrink: 0;
+    color: #ef4444;
+  }
+
+  .risk-text {
+    font-size: 9.5px;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  /* ─── SECCIÓN INFERIOR: FOCO + PLAN ─────────────────────── */
+  .bottom-section {
+    display: flex;
+    gap: 24px;
+    padding: 4px 40px 36px;
+    align-items: flex-start;
+  }
+
+  .foco-card {
+    width: 190px;
+    flex-shrink: 0;
+    background: #7C3AED;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 22px;
+    min-height: 190px;
+  }
+
+  .foco-title {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    color: #f5f3ff;
+  }
+
+  .foco-text {
+    font-size: 10px;
+    line-height: 1.65;
+    color: #ddd6fe;
+  }
+
+  .action-plan { flex: 1; }
+
+  .action-subtitle {
+    font-size: 8.5px;
+    letter-spacing: 1.5px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    margin-top: 2px;
+  }
+
+  .action-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .action-step:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: #1a1a2e;
+    color: #ffffff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .action-content { flex: 1; }
+
+  .action-title {
+    font-size: 10px;
+    font-weight: 800;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .action-desc {
+    font-size: 10px;
+    color: #6b7280;
+    line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════ -->
+  <div class="header">
+    <div class="header-left">
+      <div>
+        <div class="executive-tag">Executive Dossier {{year}}</div>
+        <div class="header-title">
+          Diagnóstico<br>de<br>Digitalización
+        </div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-item">
+          <span class="meta-label">Consultor Líder</span>
+          <span class="meta-value">{{consultor_nombre}}</span>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">
+          <span class="meta-label">Sector Enfoque</span>
+          <span class="meta-value">{{sector_label}}</span>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">
+          <span class="meta-label">Fecha de Emisión</span>
+          <span class="meta-value">{{fecha}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="summary-card">
+        <div class="summary-tag">Resumen del Diagnóstico</div>
+        <div class="score-row">
+          <span class="score-big">{{score}}</span>
+          <span class="score-denom">/15</span>
+          <span class="score-unit">PUNTOS</span>
+        </div>
+        <span class="nivel-badge {{nivel_class}}">Nivel: {{nivel_label}}</span>
+        <p class="summary-text">{{situacion_actual_text}}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ QUOTE ════════════════════════════════════════════════ -->
+  <div class="quote-section">
+    <div class="quote-deco"></div>
+    <span class="quote-icon">💡</span>
+    <p class="quote-text">"{{mensaje_clave_text}}"</p>
+    <span class="quote-attr">— Perspectiva Estratégica</span>
+  </div>
+
+  <!-- ══ DOS COLUMNAS: PILARES + RIESGOS ══════════════════════ -->
+  <div class="two-col">
+
+    <!-- Tabla de puntaje por pilar -->
+    <div class="col-pillar">
+      <div class="section-title">Puntaje por Pilar</div>
+      <table class="pillar-table">
+        <thead>
+          <tr>
+            <th>Pilar Estratégico</th>
+            <th>Puntaje</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="pillar-name">Cultura</td>
+            <td class="pillar-score">{{puntaje_cultura}}/3</td>
+            <td>
+              <span class="status-badge {{badge_cultura.class}}">
+                {{badge_cultura.label}}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="pillar-name">Estrategia</td>
+            <td class="pillar-score">{{puntaje_estrategia}}/3</td>
+            <td>
+              <span class="status-badge {{badge_estrategia.class}}">
+                {{badge_estrategia.label}}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="pillar-name">Procesos</td>
+            <td class="pillar-score">{{puntaje_procesos}}/3</td>
+            <td>
+              <span class="status-badge {{badge_procesos.class}}">
+                {{badge_procesos.label}}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="pillar-name">Datos</td>
+            <td class="pillar-score">{{puntaje_datos}}/3</td>
+            <td>
+              <span class="status-badge {{badge_datos.class}}">
+                {{badge_datos.label}}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="pillar-name">Tecnología</td>
+            <td class="pillar-score">{{puntaje_tecnologia}}/3</td>
+            <td>
+              <span class="status-badge {{badge_tecnologia.class}}">
+                {{badge_tecnologia.label}}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Riesgos identificados -->
+    <div class="col-risks">
+      <div class="section-title">Riesgos Identificados</div>
+      {{#each riesgos}}
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">{{titulo}}</span>
+          <span class="risk-icon">⚠</span>
+        </div>
+        <p class="risk-text">{{consecuencia}}</p>
+      </div>
+      {{/each}}
+    </div>
+
+  </div>
+
+  <!-- ══ SECCIÓN INFERIOR: FOCO + PLAN DE ACCIÓN ══════════════ -->
+  <div class="bottom-section">
+
+    <!-- Foco crítico -->
+    <div class="foco-card">
+      <div class="foco-title">Foco Crítico</div>
+      <p class="foco-text">{{foco_critico_text}}</p>
+    </div>
+
+    <!-- Plan de acción -->
+    <div class="action-plan">
+      <div class="section-title">Plan de Acción — Próximos 3 Pasos</div>
+      <p class="action-subtitle">Hoja de Ruta Táctica Inmediata</p>
+
+      {{#if plan_de_accion_top3.[0]}}
+      <div class="action-step">
+        <div class="step-num">01</div>
+        <div class="action-content">
+          <div class="action-title">{{plan_de_accion_top3.[0].titulo}}</div>
+          <p class="action-desc">{{plan_de_accion_top3.[0].descripcion_breve}}</p>
+        </div>
+      </div>
+      {{/if}}
+
+      {{#if plan_de_accion_top3.[1]}}
+      <div class="action-step">
+        <div class="step-num">02</div>
+        <div class="action-content">
+          <div class="action-title">{{plan_de_accion_top3.[1].titulo}}</div>
+          <p class="action-desc">{{plan_de_accion_top3.[1].descripcion_breve}}</p>
+        </div>
+      </div>
+      {{/if}}
+
+      {{#if plan_de_accion_top3.[2]}}
+      <div class="action-step">
+        <div class="step-num">03</div>
+        <div class="action-content">
+          <div class="action-title">{{plan_de_accion_top3.[2].titulo}}</div>
+          <p class="action-desc">{{plan_de_accion_top3.[2].descripcion_breve}}</p>
+        </div>
+      </div>
+      {{/if}}
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

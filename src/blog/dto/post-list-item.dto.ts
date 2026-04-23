@@ -2,6 +2,7 @@ export class PostListItemDto {
   id: string
   title: string
   slug: string
+  content?: string
   excerpt?: string
   coverImage?: string | null
   author?: string | null

@@ -1,0 +1,399 @@
+{
+  "capa_nivel": {
+    "semilla": {
+      "titulo": "Semilla: Fundamentos Analógicos",
+      "situacion_actual_text": "El negocio depende fuertemente de tu memoria o tu presencia física. La información está dispersa en agendas impresas, correos sueltos y WhatsApps personales, lo que hace vulnerable la operación a errores manuales.",
+      "mensaje_clave_text": "No busques implementar herramientas avanzadas o Inteligencia Artificial. Ordena la casa primero documentando lo básico."
+    },
+    "brote": {
+      "titulo": "Brote: Adopción Digital Fragmentada",
+      "situacion_actual_text": "El negocio ya usa herramientas, pero actúan como 'islas de información'. La falta de integración genera procesos manuales lentos para sincronizar distintas áreas y duplicidad de esfuerzo en el equipo.",
+      "mensaje_clave_text": "Tu siguiente paso no es contratar más software, sino integrar las plataformas que ya tienes y capacitar al equipo."
+    },
+    "arbol": {
+      "titulo": "Árbol: Raíces Digitales Sólidas",
+      "situacion_actual_text": "Tu negocio es altamente escalable. El sistema trabaja para ti, los procesos fluyen de forma conectada y las decisiones estratégicas comienzan a basarse cien por ciento en datos duros.",
+      "mensaje_clave_text": "Es el momento exacto para delegar con confianza apoyado en Inteligencia Artificial y buscar la automatización extrema."
+    }
+  },
+  "capa_sector": {
+    "comercio_retail": {
+      "impacto_industria_text": "En la venta de productos, el verdadero salto digital exige inventarios sincronizados y una comunicación omnicanal sin fisuras. Fallar en esto significa perder la venta frente a un competidor más rápido.",
+      "riesgos": [
+        { "titulo": "Quiebre de Stock Subrepticio", "consecuencia": "Vender por plataforma digital un producto agotado físicamente." },
+        { "titulo": "Atención Pasiva", "consecuencia": "Clientes abandonando consultas porque WhatsApp no despliega catálogos automatizados." }
+      ]
+    },
+    "hospitalidad_gastronomia": {
+      "impacto_industria_text": "En el mundo de la alimentación y la hospitalidad, los márgenes son ajustados y la agilidad para atender o tomar reservas es vital. La dependencia excesiva de plataformas a domicilio erosiona la utilidad neta.",
+      "riesgos": [
+        { "titulo": "Ceguera de Rentabilidad", "consecuencia": "Ausencia de control digital de mermas e ingredientes." },
+        { "titulo": "Dependencia Externa", "consecuencia": "Altas comisiones por no tener canal de venta o reserva propio digital." }
+      ]
+    },
+    "servicios_b2b": {
+      "impacto_industria_text": "Tu negocio vende intangibles (tiempo y conocimiento). La clave del éxito aquí radica en la sistematización del seguimiento y la transparencia de cara al cliente.",
+      "riesgos": [
+        { "titulo": "Fuga de Prospectos", "consecuencia": "Pérdida de clientes potenciales por retrasos en el seguimiento manual." },
+        { "titulo": "Invisibilidad de Valor", "consecuencia": "Entregables difíciles de auditar que terminan reduciendo la percepción de calidad." }
+      ]
+    },
+    "salud_bienestar": {
+      "impacto_industria_text": "En el rubro de la salud y el bienestar, la confianza y la privacidad de los datos son críticos. La optimización digital de agendas evita tiempos muertos valiosos.",
+      "riesgos": [
+        { "titulo": "Agendas Fantasmas", "consecuencia": "Pacientes que no asisten por falta de confirmación digital automatizada." },
+        { "titulo": "Ficha Desintegrada", "consecuencia": "Historiales clínicos fragmentados que dilatan la atención." }
+      ]
+    },
+    "industrial_produccion": {
+      "impacto_industria_text": "Tu modelo asume alta complejidad logística y operativa. Digitalizar significa conectar en tiempo real el terreno de la operación con las decisiones gerenciales en la oficina.",
+      "riesgos": [
+        { "titulo": "Brecha Informativa", "consecuencia": "Desconexión entre lo que se produce o construye y lo presupuestado, ocultando sobrecostos." },
+        { "titulo": "Procesos Análogos Cuellos de Botella", "consecuencia": "Autorizaciones estancadas en papel." }
+      ]
+    },
+    "agencias_tecnologia": {
+      "impacto_industria_text": "Dada tu naturaleza, el nivel de exigencia digital por parte de tus clientes es máximo. Estandarizar metodologías ágiles es vital para sobrevivir a la rotación de talento.",
+      "riesgos": [
+        { "titulo": "Deuda Técnica Acumulada", "consecuencia": "Sistemas o procesos imposibles de heredar a nuevos integrantes del equipo." },
+        { "titulo": "Síndrome del Héroe", "consecuencia": "Dependencia extrema de un talento individual para que las cosas pasen." }
+      ]
+    },
+    "educacion": {
+      "impacto_industria_text": "La formación de hoy es omnipresente. El verdadero reto es la retención del estudiante garantizando plataformas intuitivas y seguimiento académico escalable.",
+      "riesgos": [
+        { "titulo": "Deserción Temprana", "consecuencia": "El proceso de onboarding o uso de plataforma es muy hostil." },
+        { "titulo": "Falta de Automatización", "consecuencia": "Evaluaciones o emisión de certificados que consumen horas humanas vitales." }
+      ]
+    },
+    "otros": {
+      "impacto_industria_text": "Sin importar tus operaciones exactas, la forma en que estandarizas tus procesos fundamentales y blindas la información de tus clientes dictará la escalabilidad real de la empresa.",
+      "riesgos": [
+        { "titulo": "Procesos Basados en Personas", "consecuencia": "Si alguien clave falta, ocurre un caos operativo inminente." },
+        { "titulo": "Opacidad Financiera", "consecuencia": "Decisiones basadas en el saldo de la cuenta bancaria en lugar de métricas de margen." }
+      ]
+    }
+  },
+  "capa_dimension_critica": {
+    "cultura": {
+      "nombre": "Cultura y Organización",
+      "descripcion": "El factor clave siempre son las personas trabajando bajo una mentalidad digital compartida.",
+      "semilla": [
+        {
+          "titulo": "Asignar Tiempo Digital",
+          "pilar": "Cultura",
+          "tiempo": "1 hora/semana",
+          "descripcion": "**Qué hacer:**\nBloquea 1 hora fija en la agenda para explorar una herramienta digital nueva.\n\n**Cómo hacerlo:**\nUsa un calendario compartido y rota la responsabilidad de investigar cada semana.\n\n**Evidencia:**\nCaptura del evento en el calendario + nota con 3 hallazgos de la sesión.\n\n> **Ejemplo:** \"Los lunes de 10:00 a 11:00, el equipo prueba una herramienta nueva y comparte lo aprendido.\""
+        },
+        {
+          "titulo": "Formalizar Canales de Comunicación",
+          "pilar": "Cultura",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nDefine un canal único para decisiones laborales (email, Slack o WhatsApp Business).\n\n**Cómo hacerlo:**\nComunica la regla por escrito y recuérdala en la próxima reunión.\n\n**Evidencia:**\nDocumento con la política de canales compartido con el equipo.\n\n> **Ejemplo:** \"Las solicitudes operativas van por email. Las urgencias por WhatsApp. Nada se pierde en el limbo.\""
+        },
+        {
+          "titulo": "Evangelizar Documentación",
+          "pilar": "Cultura",
+          "tiempo": "1 hora",
+          "descripcion": "**Qué hacer:**\nInstaura el hábito: si no está escrito en la nube, no existe.\n\n**Cómo hacerlo:**\nCrea una carpeta compartida llamada 'Documentación Oficial' y migra ahí lo crítico.\n\n**Evidencia:**\nCaptura de la carpeta con al menos 5 documentos migrados.\n\n> **Ejemplo:** \"¿Dónde está el procedimiento? Si no está en la carpeta compartida, no es oficial.\""
+        }
+      ],
+      "brote": [
+        {
+          "titulo": "Líder de Transformación",
+          "pilar": "Cultura",
+          "tiempo": "1 hora",
+          "descripcion": "**Qué hacer:**\nDesigna internamente a un campeón digital que se encargue de proponer mejoras de software.\n\n**Cómo hacerlo:**\nElige a alguien con curiosidad tecnológica, sin importar su jerarquía.\n\n**Evidencia:**\nCorreo o documento formalizando el rol y las responsabilidades.\n\n> **Ejemplo:** \"María será nuestra Líder Digital. Ella investiga, propone y capacita al equipo.\""
+        },
+        {
+          "titulo": "Auditoría de Herramientas Reales",
+          "pilar": "Cultura",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nRevisa cuántas herramientas no autorizadas se están usando 'por debajo' para solucionar problemas.\n\n**Cómo hacerlo:**\nHaz una encuesta anónima o pregunta en la próxima reunión de equipo.\n\n**Evidencia:**\nLista de herramientas detectadas + plan de acción (adoptar, migrar o eliminar).\n\n> **Ejemplo:** \"Descubrimos que usan 3 planillas distintas para lo mismo. Unificamos en una.\""
+        },
+        {
+          "titulo": "Eliminar Tareas de Excel",
+          "pilar": "Cultura",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nDesafía al equipo a encontrar al menos un proceso doloroso en Excel que pueda ser absorbido por sistemas de gestión.\n\n**Cómo hacerlo:**\nIdentifica la planilla más usada y busca una alternativa SaaS o base de datos.\n\n**Evidencia:**\nCaptura del antes (Excel) y después (sistema nuevo).\n\n> **Ejemplo:** \"La planilla de inventario se migró a un sistema con alertas automáticas de stock mínimo.\""
+        }
+      ],
+      "arbol": [
+        {
+          "titulo": "Programa de Intraemprendimiento",
+          "pilar": "Cultura",
+          "tiempo": "1 hora/semana",
+          "descripcion": "**Qué hacer:**\nComienza a recompensar las eficiencias generadas. Si un empleado automatiza su horario, apóyalo.\n\n**Cómo hacerlo:**\nEstablece un reconocimiento mensual para quien proponga la mejor mejora de proceso.\n\n**Evidencia:**\nRegistro de mejoras implementadas + reconocimiento público al equipo.\n\n> **Ejemplo:** \"Juan automatizó los reportes semanales. Ganó 5 horas y un bono por innovación.\""
+        },
+        {
+          "titulo": "Laboratorio IA",
+          "pilar": "Cultura",
+          "tiempo": "2 horas/semana",
+          "descripcion": "**Qué hacer:**\nForma grupos experimentales de estudio de Inteligencia Artificial Generativa aplicada al flujo de tu industria.\n\n**Cómo hacerlo:**\nReserva tiempo quincenal para probar casos de uso de IA en tu operación real.\n\n**Evidencia:**\nDocumentación de experimentos + resultados medibles (tiempo ahorrado, calidad mejorada).\n\n> **Ejemplo:** \"El equipo de marketing usa IA para generar variaciones de contenido. 10x más rápido.\""
+        },
+        {
+          "titulo": "Onboarding Escalable",
+          "pilar": "Cultura",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nSistematiza cien por ciento el ingreso de nuevos talentos de manera que el sistema y videos enseñen, no tus horas operativas.\n\n**Cómo hacerlo:**\nGraba videos cortos de cada proceso clave y crea un checklist de primera semana.\n\n**Evidencia:**\nPlaylist de videos de onboarding + checklist completado por el nuevo integrante.\n\n> **Ejemplo:** \"El nuevo vendedor ve 5 videos y completa 10 tareas en su primera semana. Sin depender de ti.\""
+        }
+      ]
+    },
+    "estrategia": {
+      "nombre": "Estrategia",
+      "descripcion": "Digitalizar el caos solo acelerará el caos. Se requiere norte y presupuesto.",
+      "semilla": [
+        {
+          "titulo": "Mapeo de Flujo Vital",
+          "pilar": "Estrategia",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nDibuja en papel el proceso de cómo ingresa un cliente, cómo paga y cómo se atiende. Ubica la etapa que quita más horas.\n\n**Cómo hacerlo:**\nUsa post-its o una pizarra. Identifica los 5 pasos principales.\n\n**Evidencia:**\nFoto del mapa de proceso + círculo en el cuello de botella identificado.\n\n> **Ejemplo:** \"Descubrimos que el 40% del tiempo se va en responder las mismas 5 preguntas por WhatsApp.\""
+        },
+        {
+          "titulo": "Asignar Presupuesto OIT",
+          "pilar": "Estrategia",
+          "tiempo": "1 hora",
+          "descripcion": "**Qué hacer:**\nAsigna un pequeño monto fijo mensual exclusivamente para pago de suscripciones clave (SaaS) que reemplacen mano de obra.\n\n**Cómo hacerlo:**\nDefine un monto (ej: $50.000 CLP/mes) y úsalo solo para herramientas que ahorren tiempo.\n\n**Evidencia:**\nRegistro presupuestario + lista de suscripciones activas.\n\n> **Ejemplo:** \"Destinamos $50.000/mes para software. Priorizamos lo que elimina tareas repetitivas.\""
+        },
+        {
+          "titulo": "Fijar Objetivo de Despapelización",
+          "pilar": "Estrategia",
+          "tiempo": "1 hora",
+          "descripcion": "**Qué hacer:**\nPonte como reto reducir a cero el papel crítico en el trabajo diario a un plazo de 60 días.\n\n**Cómo hacerlo:**\nIdentifica los 3 documentos en papel más usados y migra cada uno a digital.\n\n**Evidencia:**\nLista de documentos migrados + fecha objetivo cumplida.\n\n> **Ejemplo:** \"En 60 días, cero contratos en papel. Todo firmado digitalmente y guardado en la nube.\""
+        }
+      ],
+      "brote": [
+        {
+          "titulo": "Análisis de Dualidad de Stack",
+          "pilar": "Estrategia",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nEnlista las soluciones tecnológicas que estás pagando y fíjate qué herramientas están duplicando características.\n\n**Cómo hacerlo:**\nRevisa los estados de cuenta y identifica suscripciones redundantes.\n\n**Evidencia:**\nLista de herramientas activas + decisiones de consolidar o eliminar.\n\n> **Ejemplo:** \"Pagábamos Zoom y Teams. Eliminar uno nos ahorró $15.000/mes.\""
+        },
+        {
+          "titulo": "Visión a 12 Meses",
+          "pilar": "Estrategia",
+          "tiempo": "3 horas",
+          "descripcion": "**Qué hacer:**\nRedacta el norte oficial: ¿Qué experiencia digital queremos para nuestros clientes en 1 año exacto?\n\n**Cómo hacerlo:**\nEscribe 1 página con 3 objetivos digitales medibles a 12 meses.\n\n**Evidencia:**\nDocumento de visión compartido con el equipo + revisión trimestral agendada.\n\n> **Ejemplo:** \"En 12 meses: 80% de reservas online, 100% de fichas digitales, 0 papel en facturación.\""
+        },
+        {
+          "titulo": "Plan de Integración Ágil",
+          "pilar": "Estrategia",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nPrioriza proyectos de tecnología basada en ROI. Desestima desarrollos 'cool' sin rentabilidad subyacente demostrable.\n\n**Cómo hacerlo:**\nPara cada proyecto, calcula: horas ahorradas × valor hora = ROI mensual.\n\n**Evidencia:**\nMatriz de proyectos priorizados + ROI estimado de cada uno.\n\n> **Ejemplo:** \"El chatbot tiene ROI de 20 horas/mes. El rediseño web puede esperar.\""
+        }
+      ],
+      "arbol": [
+        {
+          "titulo": "Nuevos Modelos de Negocio",
+          "pilar": "Estrategia",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nExplora si tus datos ya capturados te permiten vender 'As A Service' o predecir patrones de compra.\n\n**Cómo hacerlo:**\nAnaliza tu base de clientes y identifica patrones repetitivos que puedan productizarse.\n\n**Evidencia:**\nDocumento de nuevo modelo de negocio + proyección de ingresos.\n\n> **Ejemplo:** \"De vender horas a vender suscripciones mensuales con IA incluida. Ingreso recurrente.\""
+        },
+        {
+          "titulo": "Partnerships Tecnológicas",
+          "pilar": "Estrategia",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nAborda integraciones vía API con tus proveedores logísticos o estratégicos clave.\n\n**Cómo hacerlo:**\nIdentifica 2 partners clave y propone intercambio de datos automatizado.\n\n**Evidencia:**\nAcuerdo de integración + documentación técnica de la conexión.\n\n> **Ejemplo:** \"Nuestro sistema se conecta con el del courier. Las etiquetas se generan solas.\""
+        },
+        {
+          "titulo": "Gobernanza Total",
+          "pilar": "Estrategia",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nEstablece políticas férreas de ciberseguridad, dueños de herramientas y compliance normativo a nivel corporativo.\n\n**Cómo hacerlo:**\nDocumenta quién es responsable de cada sistema y qué políticas de seguridad aplican.\n\n**Evidencia:**\nPolítica de gobernanza escrita + responsables asignados por sistema.\n\n> **Ejemplo:** \"Cada herramienta tiene un dueño. Cada dato sensible tiene un protocolo de protección.\""
+        }
+      ]
+    },
+    "procesos": {
+      "nombre": "Operaciones y Procesos",
+      "descripcion": "La estandarización dicta el ritmo de escalabilidad operativa.",
+      "semilla": [
+        {
+          "titulo": "Establecer la Matriz de Errores",
+          "pilar": "Procesos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nAnota cuáles son los reclamos o errores más comunes mes a mes. Enfócate ciegamente en estandarizar de manera digital esa área.\n\n**Cómo hacerlo:**\nCrea una planilla con: fecha, error, causa, solución aplicada.\n\n**Evidencia:**\nPlanilla con al menos 10 errores registrados + 3 soluciones implementadas.\n\n> **Ejemplo:** \"El 60% de los reclamos son por retrasos en entrega. Creamos un SOP de confirmación 24h antes.\""
+        },
+        {
+          "titulo": "Listado de Tareas Clave (Checklists)",
+          "pilar": "Procesos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nCrea checklists de apertura, cierre de operaciones o ventas. Nadie inventa nada.\n\n**Cómo hacerlo:**\nUsa Google Keep, Notion o una planilla simple. Máximo 10 ítems por checklist.\n\n**Evidencia:**\nCaptura de los checklists + foto del equipo usándolos.\n\n> **Ejemplo:** \"Apertura: 1) Encender sistemas, 2) Revisar reservas, 3) Verificar stock. Todos siguen la misma lista.\""
+        },
+        {
+          "titulo": "Desaparecer el Borrador Físico",
+          "pilar": "Procesos",
+          "tiempo": "3 horas",
+          "descripcion": "**Qué hacer:**\nSi un paso requiere apuntes a mano, muévelo de inmediato a una plantilla de Drive o formulario web.\n\n**Cómo hacerlo:**\nIdentifica los 3 formularios en papel más usados y crea versiones digitales.\n\n**Evidencia:**\nCaptura de los formularios digitales + fecha de eliminación del papel.\n\n> **Ejemplo:** \"Las órdenes de servicio ahora se llenan en el celular. Cero papel, cero pérdida.\""
+        }
+      ],
+      "brote": [
+        {
+          "titulo": "Apalancar Workflows Centralizados",
+          "pilar": "Procesos",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nNo más de 2 sistemas de origen. Usa Trello, Asana o Jira para trazar todo cambio de estado operativo.\n\n**Cómo hacerlo:**\nDefine 3 estados (Pendiente, En Proceso, Completado) y migra todo ahí.\n\n**Evidencia:**\nCaptura del tablero + todos los proyectos activos visibles.\n\n> **Ejemplo:** \"Todo el equipo ve el mismo tablero. Nada se pierde en chats privados.\""
+        },
+        {
+          "titulo": "Automatizar la Confirmación",
+          "pilar": "Procesos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nIntegra Zapier o conectores nativos para avisar al cliente cuando su proceso ha iniciado sin tocar teclas.\n\n**Cómo hacerlo:**\nConfigura un trigger (ej: pago recibido) → action (ej: email de confirmación).\n\n**Evidencia:**\nCaptura de la automatización activa + ejemplo del mensaje enviado.\n\n> **Ejemplo:** \"El cliente paga → recibe confirmación automática → nosotros recibimos alerta. Cero intervención manual.\""
+        },
+        {
+          "titulo": "Regla del Repetitivo = Automatizable",
+          "pilar": "Procesos",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nCualquier acción que requiere copiar y pegar debe automatizarse inminentemente este trimestre.\n\n**Cómo hacerlo:**\nHaz una lista de las 5 tareas más repetitivas. Automatiza al menos 2.\n\n**Evidencia:**\nLista de tareas identificadas + capturas de las automatizaciones implementadas.\n\n> **Ejemplo:** \"Antes: copiar datos del formulario al CRM. Ahora: se hace solo. 30 minutos ahorrados al día.\""
+        }
+      ],
+      "arbol": [
+        {
+          "titulo": "Minería de Procesos (Process Mining)",
+          "pilar": "Procesos",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nUsa logs de sistemas para descubrir las ramificaciones donde el equipo ralentiza entregas.\n\n**Cómo hacerlo:**\nExporta los registros de tu sistema y analiza tiempos por etapa del proceso.\n\n**Evidencia:**\nReporte de cuellos de botella identificados + plan de optimización.\n\n> **Ejemplo:** \"Descubrimos que la aprobación de presupuestos toma 3 días. La reducimos a 4 horas.\""
+        },
+        {
+          "titulo": "Optimización mediante IA",
+          "pilar": "Procesos",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nConecta APIs de OpenAI u otros LLM para categorizar automáticamente correos de servicio al cliente o redactar minutas.\n\n**Cómo hacerlo:**\nIdentifica un flujo de texto repetitivo y entrena un modelo simple para clasificarlo.\n\n**Evidencia:**\nCaptura del flujo de IA + métricas de tiempo ahorrado.\n\n> **Ejemplo:** \"La IA clasifica los correos de soporte. El equipo solo responde los complejos. 50% menos tiempo.\""
+        },
+        {
+          "titulo": "Desacople Operativo",
+          "pilar": "Procesos",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nPreparar la infraestructura con microservicios o arquitecturas sin dependencia humana central.\n\n**Cómo hacerlo:**\nIdentifica los procesos que dependen de una persona clave y documenta cómo automatizarlos.\n\n**Evidencia:**\nMapa de dependencias humanas + plan de reducción de cada una.\n\n> **Ejemplo:** \"Si el encargado falta, el sistema sigue operando. Nada depende de una sola persona.\""
+        }
+      ]
+    },
+    "datos": {
+      "nombre": "Datos y Analítica",
+      "descripcion": "Lo que no se levanta en un tablero, no se mejora.",
+      "semilla": [
+        {
+          "titulo": "Fijar un Sistema CRM Mínimo",
+          "pilar": "Datos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nNo uses más las libretas. Consigue un CRM gratuito (HubSpot, Pipedrive) o al menos un Google Sheets unificado estricto para almacenar prospectos.\n\n**Cómo hacerlo:**\nCrea columnas obligatorias: nombre, contacto, origen, estado, fecha último contacto.\n\n**Evidencia:**\nCaptura del CRM o planilla con al menos 20 contactos registrados.\n\n> **Ejemplo:** \"Todos los clientes están en un solo lugar. Sabemos quién nos escribió y cuándo.\""
+        },
+        {
+          "titulo": "Inventario de Fuentes de Verdad",
+          "pilar": "Datos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nEstablece UNA sola base de datos oficial donde vive el dinero y los clientes. El resto de las listas debe eliminarse.\n\n**Cómo hacerlo:**\nIdentifica todas las listas de clientes que existen. Elige una como oficial y migra todo ahí.\n\n**Evidencia:**\nDocumento que declara la fuente única + lista de listas eliminadas.\n\n> **Ejemplo:** \"La planilla maestra es la única verdad. Las demás se eliminaron.\""
+        },
+        {
+          "titulo": "Rutina de Control Mensual",
+          "pilar": "Datos",
+          "tiempo": "1 hora/mes",
+          "descripcion": "**Qué hacer:**\nAgéndate 1 hora a fin de mes para solo mirar cuántos contactos nuevos hubieron y cuánto facturaste sin ensuciarte en operativa.\n\n**Cómo hacerlo:**\nBloquea el último viernes de cada mes. Revisa: nuevos contactos, ventas cerradas, total facturado.\n\n**Evidencia:**\nCaptura del evento en el calendario + reporte mensual guardado.\n\n> **Ejemplo:** \"Cada mes, 1 hora para revisar números. Sin operar, solo decidir.\""
+        }
+      ],
+      "brote": [
+        {
+          "titulo": "Habilitar Dashboard Central (Reportes)",
+          "pilar": "Datos",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nUsa Looker Studio (gratis) o el módulo de reportes de tu CRM para ver conversiones en gráficos en tiempo real.\n\n**Cómo hacerlo:**\nConecta tu fuente de datos y crea 3 gráficos: contactos, conversiones, ingresos.\n\n**Evidencia:**\nCaptura del dashboard + link de acceso para el equipo.\n\n> **Ejemplo:** \"El equipo ve los números en tiempo real. No hay que pedir reportes, están siempre visibles.\""
+        },
+        {
+          "titulo": "Medición del Costo Adquisición (CAC)",
+          "pilar": "Datos",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nDebes lograr levantar de inmediato cuánto te cuesta digitalmente obtener un nuevo cliente real.\n\n**Cómo hacerlo:**\nSuma todo lo gastado en marketing/mes ÷ nuevos clientes/mes = CAC.\n\n**Evidencia:**\nPlanilla de cálculo de CAC + valor mensual registrado.\n\n> **Ejemplo:** \"Sabemos que cada cliente nuevo nos cuesta $15.000 en publicidad. Ahora podemos optimizar.\""
+        },
+        {
+          "titulo": "Segregación de Base de Clientes",
+          "pilar": "Datos",
+          "tiempo": "3 horas",
+          "descripcion": "**Qué hacer:**\nDivide tu base de datos mediante etiquetas (Vip, Fríos, Históricos) para hacer campañas accionables personalizadas.\n\n**Cómo hacerlo:**\nDefine 3 segmentos y etiqueta todos tus contactos activos.\n\n**Evidencia:**\nCaptura de la base segmentada + ejemplo de campaña por segmento.\n\n> **Ejemplo:** \"Los VIP reciben ofertas exclusivas. Los fríos reciben contenido educativo. Cada mensaje es relevante.\""
+        }
+      ],
+      "arbol": [
+        {
+          "titulo": "Warehouse o Datalake Propio",
+          "pilar": "Datos",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nCentraliza los logs de aplicaciones internas hacia almacenes de datos profesionales para cruzar KPIs pesados.\n\n**Cómo hacerlo:**\nConfigura un destino central (BigQuery, Snowflake) y conecta todas tus fuentes.\n\n**Evidencia:**\nDiagrama de arquitectura de datos + lista de fuentes conectadas.\n\n> **Ejemplo:** \"Todos los datos van a un solo lugar. Podemos cruzar ventas con comportamiento web.\""
+        },
+        {
+          "titulo": "Business Intelligence Activa",
+          "pilar": "Datos",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nUsa tableros altamente interactivos donde los líderes de cada área justifiquen las caídas de tendencia.\n\n**Cómo hacerlo:**\nCrea dashboards por área con alertas automáticas cuando un KPI cae bajo el umbral.\n\n**Evidencia:**\nCaptura de los dashboards interactivos + registro de alertas configuradas.\n\n> **Ejemplo:** \"Si las ventas caen 10%, el sistema alerta. El área explica y actúa en 24 horas.\""
+        },
+        {
+          "titulo": "Modelado o Predicción de Churn",
+          "pilar": "Datos",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nLevantar modelos estadísticos de alerta temprana de fuga de clientes basado en su comportamiento de la última semana.\n\n**Cómo hacerlo:**\nIdentifica patrones de clientes que se fueron y crea reglas de alerta para los activos.\n\n**Evidencia:**\nDocumento de reglas de churn + lista de clientes en riesgo detectados.\n\n> **Ejemplo:** \"El sistema detecta clientes en riesgo 30 días antes de que se vayan. Podemos actuar a tiempo.\""
+        }
+      ]
+    },
+    "tecnologia": {
+      "nombre": "Tecnología e Infraestructura",
+      "descripcion": "El armazón invisible que sostiene el negocio para que no colapse.",
+      "semilla": [
+        {
+          "titulo": "Dominio y Correo Corporativo",
+          "pilar": "Tecnología",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nCesar de inmediato el uso de correos @gmail.com u @hotmail.com en operaciones clave con clientes. Comprar dominio matriz.\n\n**Cómo hacerlo:**\nCompra tu dominio (.cl o .com) y configura correos corporativos con Google Workspace o Zoho.\n\n**Evidencia:**\nCaptura del panel de administración del dominio + correos corporativos activos.\n\n> **Ejemplo:** \"contacto@tuempresa.cl genera más confianza que tuempresa@gmail.com. El dominio es TUYO.\""
+        },
+        {
+          "titulo": "Gestor de Contraseñas",
+          "pilar": "Tecnología",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nMigrar todas las notas de claves repartidas al uso de un Vault (como Bitwarden o LastPass). Nadie debe saber la clave bancaria completa de memoria.\n\n**Cómo hacerlo:**\nInstala Bitwarden (gratis) y migra todas las contraseñas críticas.\n\n**Evidencia:**\nCaptura del vault con al menos 20 contraseñas guardadas + 2FA activo.\n\n> **Ejemplo:** \"Una sola contraseña maestra. El resto las guarda el gestor. Seguro y accesible.\""
+        },
+        {
+          "titulo": "Respaldo en la Nube (Cloud Sync)",
+          "pilar": "Tecnología",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nConfigura copias automáticas (Google Drive, OneDrive) para que si un ordenador se rompe mañana, el negocio arranque ileso.\n\n**Cómo hacerlo:**\nActiva la sincronización automática de las carpetas críticas del negocio.\n\n**Evidencia:**\nCaptura de la configuración de backup + fecha del último respaldo exitoso.\n\n> **Ejemplo:** \"Si el computador muere, abres otro y todo está ahí. El negocio no se detiene.\""
+        }
+      ],
+      "brote": [
+        {
+          "titulo": "Mapeo de Integraciones (API/Webhooks)",
+          "pilar": "Tecnología",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nDiseña cómo el formulario de la Web inyecta al CRM sin que nadie toque datos. Exige conexión a tu soporte TI.\n\n**Cómo hacerlo:**\nIdentifica 2 sistemas que deben hablarse y configura la conexión (Zapier, Make o API directa).\n\n**Evidencia:**\nDiagrama de integración + captura del flujo automatizado funcionando.\n\n> **Ejemplo:** \"El formulario web → CRM → email de confirmación. Todo automático, cero copia y pega.\""
+        },
+        {
+          "titulo": "Protocolo de Entradas y Salidas",
+          "pilar": "Tecnología",
+          "tiempo": "2 horas",
+          "descripcion": "**Qué hacer:**\nProcedimientos estrictos de anulación de correos y usuarios si un trabajador abandona rápidamente la empresa.\n\n**Cómo hacerlo:**\nCrea un checklist de acceso a revocar cuando alguien sale (correo, sistemas, carpetas).\n\n**Evidencia:**\nDocumento del protocolo + registro de accesos por persona.\n\n> **Ejemplo:** \"Cuando alguien sale, en 1 hora todos sus accesos están revocados. Sin excepciones.\""
+        },
+        {
+          "titulo": "Asegurar el Canal de Venta",
+          "pilar": "Tecnología",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nReforzar alojamiento web, certificados de seguridad, subida a CDN para velocidad y no perder rankings en Google.\n\n**Cómo hacerlo:**\nVerifica que tu sitio tenga SSL, backup automático y hosting confiable.\n\n**Evidencia:**\nCaptura del certificado SSL activo + configuración de backup verificada.\n\n> **Ejemplo:** \"El sitio es seguro, rápido y tiene respaldo. Los clientes confían y Google nos posiciona.\""
+        }
+      ],
+      "arbol": [
+        {
+          "titulo": "Migración Arquitectura Cloud-Native",
+          "pilar": "Tecnología",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nSoporte de Docker, contenedores Cloud Run/AWS para evitar caídas frente a picos masivos de visitantes.\n\n**Cómo hacerlo:**\nEvalúa tu infraestructura actual y planifica la migración a contenedores escalables.\n\n**Evidencia:**\nDiagrama de arquitectura cloud + plan de migración por fases.\n\n> **Ejemplo:** \"Si llegas a salir en la TV, el sitio aguanta. No hay caídas por tráfico inesperado.\""
+        },
+        {
+          "titulo": "Ecosistema Zero Trust",
+          "pilar": "Tecnología",
+          "tiempo": "4 horas",
+          "descripcion": "**Qué hacer:**\nIdentidad validada y MFA obligatorio en todos los endpoints de acceso para evitar ransomware a fondo.\n\n**Cómo hacerlo:**\nActiva 2FA en todos los sistemas críticos y requiere verificación para accesos nuevos.\n\n**Evidencia:**\nLista de sistemas con MFA activo + política de acceso documentada.\n\n> **Ejemplo:** \"Nadie entra sin doble verificación. Ni tú, ni el equipo, ni los externos. Blindado.\""
+        },
+        {
+          "titulo": "Automatización End-to-End (CI/CD)",
+          "pilar": "Tecnología",
+          "tiempo": "8 horas",
+          "descripcion": "**Qué hacer:**\nDespliegues automatizados de desarrollos internos con alto performance donde tu rama Main despliegue al master.\n\n**Cómo hacerlo:**\nConfigura un pipeline de CI/CD para que cada cambio probado se despliegue automáticamente.\n\n**Evidencia:**\nCaptura del pipeline configurado + registro de despliegues automáticos exitosos.\n\n> **Ejemplo:** \"El código probado se publica solo. Sin intervención manual, sin errores humanos.\""
+        }
+      ]
+    }
+  }
+}

@@ -11,9 +11,15 @@ import {
   ConversationSummary,
 } from './interfaces/ai.interface'
 import { ContactDto } from '../forms/dto/contact.dto'
-import { ProspectRecord } from '../forms/interfaces/forms.interface'
 import { companyConfig } from '../config/company.config'
+import {
+  ContactoRecord,
+  ConsultaRecord,
+} from '../forms/interfaces/forms.interface'
 
+interface ContactoWithConsultas extends ContactoRecord {
+  recentConsultas?: ConsultaRecord[]
+}
 
 @Injectable()
 export class AIService {
@@ -34,17 +40,17 @@ export class AIService {
     this.defaultProvider = this.getDefaultProvider()
   }
 
-  async generateProspectResponse(
+  async generateResponse(
     contactDto: ContactDto,
-    existingProspect?: ProspectRecord,
+    existingContacto?: ContactoWithConsultas,
     providerType?: AIProviderType,
   ): Promise<AIResponse> {
     const startTime = Date.now()
     const provider = this.getProvider(providerType || this.defaultProvider)
 
     try {
-      const context = this.buildAIContext(contactDto, existingProspect)
-      const prompt = this.buildPrompt(contactDto, existingProspect)
+      const context = this.buildAIContext(contactDto, existingContacto)
+      const prompt = this.buildPrompt(contactDto, existingContacto)
 
       const content = await provider.generateResponse(prompt, context)
       const processingTime = Date.now() - startTime
@@ -60,16 +66,16 @@ export class AIService {
       // Fallback a otro proveedor si falla el principal
       if (providerType && providerType !== this.defaultProvider) {
         console.log('Intentando con proveedor por defecto...')
-        return this.generateProspectResponse(
+        return this.generateResponse(
           contactDto,
-          existingProspect,
+          existingContacto,
           this.defaultProvider,
         )
       }
 
       // Si el proveedor por defecto falla, devolver respuesta genérica
       return {
-        content: this.getGenericResponse(contactDto, !!existingProspect),
+        content: this.getGenericResponse(contactDto, !!existingContacto),
         provider: providerType || this.defaultProvider,
         processingTime: Date.now() - startTime,
       }
@@ -105,7 +111,7 @@ export class AIService {
 
   private buildAIContext(
     contactDto: ContactDto,
-    existingProspect?: ProspectRecord,
+    existingContacto?: ContactoWithConsultas,
   ): AIContext {
     const companyInfo: CompanyInfo = {
       name: companyConfig.name,
@@ -116,47 +122,67 @@ export class AIService {
     }
 
     return {
-      prospectName: contactDto.name,
-      prospectEmail: contactDto.email,
+      nombreContacto: contactDto.name,
+      emailContacto: contactDto.email,
       message: contactDto.message,
-      isReturningProspect: !!existingProspect,
+      esContactoRecurrente: !!existingContacto,
       previousConversations:
-        this.extractConversationSummaries(existingProspect),
+        this.extractConversationSummaries(existingContacto),
       companyInfo,
     }
   }
 
   private buildPrompt(
     contactDto: ContactDto,
-    existingProspect?: ProspectRecord,
+    existingContacto?: ContactoWithConsultas,
   ): string {
     let prompt = `Consulta: "${contactDto.message}"`
 
     if (
-      existingProspect &&
-      existingProspect.conversations &&
-      existingProspect.conversations.length > 0
+      existingContacto?.recentConsultas &&
+      existingContacto.recentConsultas.length > 0
     ) {
-      const lastConversation =
-        existingProspect.conversations[
-          existingProspect.conversations.length - 1
+      const lastConsulta =
+        existingContacto.recentConsultas[
+          existingContacto.recentConsultas.length - 1
         ]
-      prompt += `\n\nÚltima interacción: "${lastConversation.incomingMessage.content}"`
+      prompt += `\n\nÚltima interacción: "${lastConsulta.contenido}"`
     }
 
     return prompt
   }
 
   private extractConversationSummaries(
-    prospect?: ProspectRecord,
+    contacto?: ContactoWithConsultas,
   ): ConversationSummary[] {
-    if (!prospect || !prospect.conversations) return []
+    if (!contacto?.recentConsultas) return []
 
-    return prospect.conversations.slice(-3).map((conv) => ({
-      date: conv.timestamp.toString(),
-      topic: this.extractTopic(conv.incomingMessage.content),
-      summary: conv.incomingMessage.content.substring(0, 100) + '...',
+    return contacto.recentConsultas.slice(-3).map((consulta) => ({
+      date: this.formatConsultaDate(consulta.fecha),
+      topic: this.extractTopic(consulta.contenido),
+      summary: (consulta.contenido || '').substring(0, 100) + '...',
     }))
+  }
+
+  private formatConsultaDate(fecha: unknown): string {
+    if (!fecha) return ''
+    if (fecha instanceof Date) return fecha.toISOString()
+
+    // Manejo de Timestamp de Firestore
+    const timestamp = fecha as {
+      toDate?: () => Date
+      _seconds?: number
+    }
+
+    if (typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toISOString()
+    }
+
+    if (timestamp._seconds) {
+      return new Date(timestamp._seconds * 1000).toISOString()
+    }
+
+    return ''
   }
 
   private extractTopic(message: string): string {
@@ -204,10 +230,6 @@ export class AIService {
       },
     }
 
-    return this.generateProspectResponse(
-      mockContactDto,
-      undefined,
-      providerType,
-    )
+    return this.generateResponse(mockContactDto, undefined, providerType)
   }
 }
