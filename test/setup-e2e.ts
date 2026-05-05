@@ -11,6 +11,12 @@ beforeAll(async () => {
   process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099'
   process.env.FIREBASE_PROJECT_ID = 'demo-project'
   process.env.GCLOUD_PROJECT = 'demo-project'
+  
+  // Variables dummy para evitar fallos en constructores de servicios
+  process.env.FIREBASE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCr\n-----END PRIVATE KEY-----\n'
+  process.env.FIREBASE_CLIENT_EMAIL = 'test@example.com'
+  process.env.OPENAI_API_KEY = 'sk-dummy-key-for-e2e'
+  process.env.RESEND_API_KEY = 're_dummy_key'
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
