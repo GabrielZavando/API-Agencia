@@ -13,7 +13,31 @@ beforeAll(async () => {
   process.env.GCLOUD_PROJECT = 'demo-project'
   
   // Variables dummy para evitar fallos en constructores de servicios
-  process.env.FIREBASE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCr\n-----END PRIVATE KEY-----\n'
+  process.env.FIREBASE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDvD8zGfWp7zM7v
++zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0
+vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9v
+D8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zG
+fWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7
+zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v
++zV0vD9vD8zGfWp7zM7v+zV0vD9vAgMBAAECggEBAO8PzMZ9anvMzu77NXS8P28P
+zMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9
+anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvM
+zu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77
+NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8
+P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28B
+gQDvD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9v
+D8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zG
+fWp7zM7v+zV0vD9vAYEA7w/Mxn1qe8zO7vs1dLw/bw/Mxn1qe8zO7vs1dLw/bw/M
+xn1qe8zO7vs1dLw/bw/Mxn1qe8zO7vs1dLw/bw/Mxn1qe8zO7vs1dLw/bw/Mxn1q
+e8zO7vs1dLw/bwGBAO8PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9
+anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvMzu77NXS8P28PzMZ9anvM
+zu77NXS8P28PzMZ9anvMzu77NXS8P28BgQDvD8zGfWp7zM7v+zV0vD9vD8zGfWp7
+zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v+zV0vD9vD8zGfWp7zM7v
++zV0vD9vD8zGfWp7zM7v+zV0vD9vAYEA7w/Mxn1qe8zO7vs1dLw/bw/Mxn1qe8zO
+7vs1dLw/bw/Mxn1qe8zO7vs1dLw/bw/Mxn1qe8zO7vs1dLw/bw/Mxn1qe8zO7vs1
+dLw/bw/Mxn1qe8zO7vs1dLw/bw==
+-----END PRIVATE KEY-----`.replace(/\n/g, '\\n')
   process.env.FIREBASE_CLIENT_EMAIL = 'test@example.com'
   process.env.OPENAI_API_KEY = 'sk-dummy-key-for-e2e'
   process.env.RESEND_API_KEY = 're_dummy_key'
