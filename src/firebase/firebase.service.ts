@@ -95,6 +95,7 @@ export class FirebaseService {
     // Configurar settings de Firestore
     this.db.settings({
       timestampsInSnapshots: true,
+      ignoreUndefinedProperties: true,
     })
   }
 

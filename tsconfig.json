@@ -21,7 +21,8 @@
     "types": ["vitest/globals", "multer"],
     "paths": {
       "src/*": ["src/*"]
-    }
+    },
+    "jsx": "react"
   },
   "include": ["src/**/*", "test/**/*", "scripts/**/*", "*.ts"]
 }

@@ -11,6 +11,9 @@ import {
   AssessmentRecord,
   PillarName,
 } from './interfaces/assessment.interface'
+import { PdfContext } from './interfaces/pdf-context.interface'
+import { TemplateService } from '../templates/template.service'
+import * as React from 'react'
 
 @Injectable()
 export class AssessmentService {
@@ -21,6 +24,7 @@ export class AssessmentService {
     private readonly mailService: MailService,
     private readonly pdfService: PdfService,
     private readonly resolverService: ResolverService,
+    private readonly templateService: TemplateService,
   ) {}
 
   private mapAssessmentToDto(
@@ -91,7 +95,7 @@ export class AssessmentService {
     context: Record<string, any>,
     pdfBuffer?: Buffer,
   ): Promise<boolean> {
-    const baseVars = await this.mailService.getBaseVariables(dto.email)
+    const baseVars = this.mailService.getBaseVariables(dto.email)
     const scheduleUrl = 'https://calendar.app.google/HbTU9z3qgBWTUzkK7'
 
     const attachments =
@@ -105,21 +109,35 @@ export class AssessmentService {
           ]
         : []
 
+    const DiagnosticoResultadoComponent = (
+      await import('../templates/react/diagnostico-resultado')
+    ).DiagnosticoResultado
+
     const sent = await this.mailService.sendMail({
       to: dto.email,
       subject: `Tu diagnóstico: Nivel ${context.nivel || dto.industry} — ${
         context.score
       }/12 puntos`,
-      templateName: 'assessment-result',
-      templateVariables: {
-        ...baseVars,
-        nombre_completo: context.nombre_completo as string,
-        score: context.score as number,
-        nivel: context.nivel as string,
-        nivel_emoji: context.nivel_emoji as string,
-        situacion_actual_text: context.situacion_actual_text as string,
-        scheduleUrl,
-      },
+      html: await this.templateService.renderReactTemplate(
+        React.createElement(DiagnosticoResultadoComponent, {
+          ...baseVars,
+          previewText: 'Tu diagnóstico digital ya está listo',
+          nombreCompleto: context.nombre_completo as string,
+          score: context.score as number,
+          nivel: (context.nivel as string).toUpperCase(),
+          nivelEmoji: context.nivel_emoji as string,
+          situacionActualText: context.situacion_actual_text as string,
+          scheduleUrl,
+          websiteUrl: baseVars['websiteUrl'] as string,
+          logoUrl: baseVars['logoUrl'] as string,
+          companyName: baseVars['companyName'] as string,
+          address: baseVars['address'] as string,
+          email: baseVars['email'] as string,
+          currentYear: baseVars['currentYear'] as string,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          social: baseVars['social'] as any,
+        }),
+      ),
       attachments,
     })
 
@@ -178,7 +196,7 @@ export class AssessmentService {
     await this.saveAssessment(dto, context)
 
     this.pdfService
-      .generateDiagnosisPdf(context)
+      .generateDiagnosisPdf(context as unknown as PdfContext)
       .then((pdfBuffer) => {
         this.sendResultEmail(dto, context, pdfBuffer).catch((err: Error) =>
           this.logger.error('Error al enviar email con PDF: ' + err.message),

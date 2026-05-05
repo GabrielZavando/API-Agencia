@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config'
 import { BlogService } from '../blog/blog.service'
 import { SystemConfigService } from '../system-config/system-config.service'
 import { SchedulerRegistry } from '@nestjs/schedule'
+import { TemplateService } from '../templates/template.service'
 
 const mockFirebaseService = {
   findContactoByEmail: vi.fn(),
@@ -29,6 +30,10 @@ const mockMailService = {
   sendMailDetailed: vi.fn().mockResolvedValue({ success: true }),
   getBaseVariables: vi.fn().mockResolvedValue({}),
   testConnection: vi.fn().mockResolvedValue({ success: true }),
+}
+
+const mockTemplateService = {
+  renderReactTemplate: vi.fn().mockResolvedValue('<html></html>'),
 }
 
 const mockConfigService = {
@@ -75,6 +80,7 @@ describe('FormsService — handleContact', () => {
       mockBlogService as unknown as BlogService,
       mockSystemConfigService as unknown as SystemConfigService,
       mockSchedulerRegistry as unknown as SchedulerRegistry,
+      mockTemplateService as unknown as TemplateService,
     )
   })
 

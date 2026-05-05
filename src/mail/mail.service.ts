@@ -1,98 +1,95 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { TemplateService } from '../templates/template.service'
-import * as nodemailer from 'nodemailer'
-import { companyConfig } from '../config/company.config'
 import { SystemConfigService } from '../system-config/system-config.service'
-
+import { companyConfig } from '../config/company.config'
+import {
+  IMailProvider,
+  MAIL_PROVIDER,
+} from './interfaces/mail-provider.interface'
 import { MailAccount, MailOptions } from './interfaces/mail.interface'
+
+/**
+ * Configuración de un canal de envío.
+ * - from: remitente visible en el cliente de correo
+ * - replyTo: dirección real a la que el destinatario puede responder
+ */
+interface ChannelConfig {
+  from: string
+  replyTo: string
+}
 
 @Injectable()
 export class MailService {
-  private transporters: Map<MailAccount, nodemailer.Transporter> = new Map()
-  private fromAddresses: Map<MailAccount, string> = new Map()
   private readonly logger = new Logger(MailService.name)
+  private channels: Map<MailAccount, ChannelConfig> = new Map()
 
   constructor(
+    @Inject(MAIL_PROVIDER) private readonly provider: IMailProvider,
     private readonly configService: ConfigService,
     private readonly templateService: TemplateService,
     private readonly systemConfigService: SystemConfigService,
   ) {
-    this.initializeTransporters()
+    this.initializeChannels()
   }
 
-  private initializeTransporters() {
-    // 1. Inicializar cuenta de CONTACTO (Principal)
-    const contactUser = this.clean(this.configService.get<string>('SMTP_USER'))
-    const contactPass = this.clean(this.configService.get<string>('SMTP_PASS'))
+  // ─── Configuración de canales ────────────────────────────────────────────
 
-    this.transporters.set(
-      'CONTACT',
-      nodemailer.createTransport({
-        host: this.clean(
-          this.configService.get<string>('SMTP_HOST') || 'smtp.hostinger.com',
-        ),
-        port: parseInt(this.configService.get<string>('SMTP_PORT') || '465'),
-        secure: this.configService.get<string>('SMTP_SECURE') !== 'false',
-        auth: {
-          user: contactUser,
-          pass: contactPass,
-        },
-      }),
-    )
-    this.fromAddresses.set(
-      'CONTACT',
-      this.clean(
-        this.configService.get<string>('SMTP_FROM_EMAIL') || contactUser,
+  private initializeChannels() {
+    const get = (key: string, fallback: string) =>
+      this.configService.get<string>(key) || fallback
+
+    // Canal por defecto: correos al usuario final
+    const notifyChannel: ChannelConfig = {
+      from: get(
+        'MAIL_FROM_NOTIFY',
+        `Gabriel Zavando <no-reply@notify.gabrielzavando.cl>`,
       ),
-    )
-
-    // 2. Inicializar cuenta de SOPORTE
-    const supportUser = this.clean(
-      this.configService.get<string>('SMTP_SUPPORT_USER'),
-    )
-    const supportPass = this.clean(
-      this.configService.get<string>('SMTP_SUPPORT_PASS'),
-    )
-
-    if (supportUser && supportPass) {
-      this.transporters.set(
-        'SUPPORT',
-        nodemailer.createTransport({
-          host: this.clean(
-            this.configService.get<string>('SMTP_HOST') || 'smtp.hostinger.com',
-          ),
-          port: parseInt(this.configService.get<string>('SMTP_PORT') || '465'),
-          secure: this.configService.get<string>('SMTP_SECURE') !== 'false',
-          auth: {
-            user: supportUser,
-            pass: supportPass,
-          },
-        }),
-      )
-      this.fromAddresses.set(
-        'SUPPORT',
-        this.clean(
-          this.configService.get<string>('SMTP_SUPPORT_FROM_EMAIL') ||
-            supportUser,
-        ),
-      )
-      this.logger.log('Transporter de SOPORTE configurado correctamente.')
-    } else {
-      this.logger.warn(
-        'Configuración de SOPORTE incompleta. Se usará CONTACTO como fallback.',
-      )
+      replyTo: get('MAIL_REPLY_TO_NOTIFY', 'contacto@gabrielzavando.cl'),
     }
+
+    // Canal admin: alertas internas
+    const adminChannel: ChannelConfig = {
+      from: get(
+        'MAIL_FROM_ADMIN',
+        `Notificaciones <notificaciones@notify.gabrielzavando.cl>`,
+      ),
+      replyTo: get('MAIL_REPLY_TO_ADMIN', 'contacto@gabrielzavando.cl'),
+    }
+
+    // Canal soporte: tickets e informes
+    const supportChannel: ChannelConfig = {
+      from: get(
+        'MAIL_FROM_SUPPORT',
+        `Soporte Gabriel Zavando <soporte@notify.gabrielzavando.cl>`,
+      ),
+      replyTo: get('MAIL_REPLY_TO_SUPPORT', 'soporte@gabrielzavando.cl'),
+    }
+
+    this.channels.set('NOTIFY', notifyChannel)
+    this.channels.set('CONTACT', notifyChannel) // alias de compatibilidad
+    this.channels.set('ADMIN', adminChannel)
+    this.channels.set('SUPPORT', supportChannel)
+
+    this.logger.log('Canales de email inicializados.')
   }
 
-  async getBaseVariables(email: string) {
+  private resolveChannel(account: MailAccount = 'NOTIFY'): ChannelConfig {
+    return (
+      this.channels.get(account) ??
+      (this.channels.get('NOTIFY') as ChannelConfig)
+    )
+  }
+
+  // ─── Variables base para plantillas ──────────────────────────────────────
+
+  getBaseVariables(email: string): Record<string, unknown> {
     const websiteUrl = companyConfig.websiteUrl
-    await Promise.resolve()
     return {
       siteName: companyConfig.name,
       name: companyConfig.name,
       companyName: companyConfig.name,
-      websiteUrl: websiteUrl,
+      websiteUrl,
       logoUrl: companyConfig.logoUrl,
       address: companyConfig.address,
       phone: companyConfig.phone,
@@ -100,9 +97,6 @@ export class MailService {
       servicesUrl: companyConfig.servicesUrl,
       calendlyUrl: companyConfig.calendlyUrl,
       blogUrl: companyConfig.blogUrl,
-
-      // Aplanadas para las plantillas que usan {{linkedinUrl}} directamente
-
       linkedinUrl: companyConfig.social.linkedinUrl,
       linkedinIconUrl: companyConfig.social.linkedinIconUrl,
       instagramUrl: companyConfig.social.instagramUrl,
@@ -111,143 +105,95 @@ export class MailService {
       githubIconUrl: companyConfig.social.githubIconUrl,
       youtubeUrl: companyConfig.social.youtubeUrl,
       youtubeIconUrl: companyConfig.social.youtubeIconUrl,
-
       social: {
         linkedinUrl: companyConfig.social.linkedinUrl,
         linkedinIconUrl: companyConfig.social.linkedinIconUrl,
         instagramUrl: companyConfig.social.instagramUrl,
         instagramIconUrl: companyConfig.social.instagramIconUrl,
         githubUrl: companyConfig.social.githubUrl,
+        githubIconUrl: companyConfig.social.githubIconUrl,
+        youtubeUrl: companyConfig.social.youtubeUrl,
         youtubeIconUrl: companyConfig.social.youtubeIconUrl,
       },
       unsubscribeUrl: `${websiteUrl}/unsubscribe?email=${email}`,
       currentYear: new Date().getFullYear().toString(),
-    } as Record<string, unknown>
-  }
-
-  private clean(v?: string): string {
-    if (!v) return ''
-    return v
-      .toString()
-      .trim()
-      .replace(/^['"]|['"]$/g, '')
-  }
-
-  async sendMail(options: MailOptions): Promise<boolean> {
-    try {
-      const account = options.account || 'CONTACT'
-      const transporter =
-        this.transporters.get(account) || this.transporters.get('CONTACT')
-      const fromAddress =
-        this.fromAddresses.get(account) || this.fromAddresses.get('CONTACT')
-
-      if (!transporter) {
-        throw new Error(`Transporter no disponible para la cuenta: ${account}`)
-      }
-
-      let finalHtml = options.html || ''
-
-      if (options.templateName) {
-        const variables = options.templateVariables || {}
-        const baseVariables = await this.getBaseVariables(options.to)
-        const mergedVariables = { ...baseVariables, ...variables }
-
-        finalHtml = await this.templateService.getEmailTemplate(
-          options.templateName,
-          mergedVariables,
-        )
-      }
-
-      const config = await this.systemConfigService.getConfig()
-      const companyName = config?.name || companyConfig.name
-      const displayName =
-        account === 'SUPPORT' ? `Soporte ${companyName}` : companyName
-
-      const mailOptions = {
-        from: options.from || `"${displayName}" <${fromAddress}>`,
-        to: options.to,
-        subject: options.subject,
-        html: finalHtml,
-        attachments: options.attachments,
-      }
-
-      await transporter.sendMail(mailOptions)
-      this.logger.log(
-        `Email [${account}] enviado con éxito a: ${options.to} con asunto: ${options.subject}`,
-      )
-      return true
-    } catch (error) {
-      this.logger.error(`Error enviando email a ${options.to}:`, error)
-      return false
     }
   }
 
+  // ─── API pública ─────────────────────────────────────────────────────────
+
+  /**
+   * Envía un correo y retorna true/false.
+   * Mantiene la firma original para no romper los call sites existentes.
+   */
+  async sendMail(options: MailOptions): Promise<boolean> {
+    const result = await this.sendMailDetailed(options)
+    return result.success
+  }
+
+  /**
+   * Envía un correo y retorna detalles del resultado.
+   * Mantiene la firma original para no romper los call sites existentes.
+   */
   async sendMailDetailed(
     options: MailOptions,
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; data?: unknown }> {
+    const account = options.account ?? 'NOTIFY'
+    const channel = this.resolveChannel(account)
+
     try {
-      const account = options.account || 'CONTACT'
-      const transporter =
-        this.transporters.get(account) || this.transporters.get('CONTACT')
-      const fromAddress =
-        this.fromAddresses.get(account) || this.fromAddresses.get('CONTACT')
+      // Construir HTML final (desde plantilla o directo)
+      const html = options.html ?? ''
 
-      if (!transporter) {
-        throw new Error(`Transporter no disponible para la cuenta: ${account}`)
-      }
+      // Display name del from puede personalizarse si se pasa `options.from`
+      const from = options.from ?? channel.from
+      const replyTo = options.replyTo ?? channel.replyTo
 
-      let finalHtml = options.html || ''
-
-      if (options.templateName) {
-        const variables = options.templateVariables || {}
-        const baseVariables = await this.getBaseVariables(options.to)
-        const mergedVariables = { ...baseVariables, ...variables }
-
-        finalHtml = await this.templateService.getEmailTemplate(
-          options.templateName,
-          mergedVariables,
-        )
-      }
-
-      const config = await this.systemConfigService.getConfig()
-      const companyName = config?.name || companyConfig.name
-      const displayName =
-        account === 'SUPPORT' ? `Soporte ${companyName}` : companyName
-
-      const mailOptions = {
-        from: options.from || `"${displayName}" <${fromAddress}>`,
-        to: options.to,
+      const result = await this.provider.send({
+        from,
+        to: Array.isArray(options.to) ? options.to : [options.to],
         subject: options.subject,
-        html: finalHtml,
-        attachments: options.attachments,
+        html,
+        replyTo,
+        attachments: options.attachments?.map((att) => ({
+          filename: att.filename,
+          content: att.content,
+        })),
+      })
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'Error desconocido del proveedor')
       }
 
-      await transporter.sendMail(mailOptions)
       this.logger.log(
-        `Email [${account}] enviado con éxito a: ${options.to} con asunto: ${options.subject}`,
+        `[${account}] Email enviado → ${options.to} | ID: ${result.messageId}`,
       )
-      return { success: true }
-    } catch (error) {
-      this.logger.error(`Error enviando email a ${options.to}:`, error)
-      return { success: false, error: (error as Error).message }
+
+      return { success: true, data: { id: result.messageId } }
+    } catch (err) {
+      this.logger.error(
+        `[${account}] Fallo al enviar email a ${options.to}: ${(err as Error).message}`,
+      )
+      return { success: false, error: (err as Error).message }
     }
   }
 
-  async testConnection() {
-    try {
-      this.logger.log('Probando conexiones SMTP...')
-      for (const [name, transporter] of this.transporters.entries()) {
-        await transporter.verify()
-        this.logger.log(`Conexión SMTP [${name}] verificada correctamente`)
-      }
-
+  /** Verifica que la API Key esté presente y el proveedor listo. */
+  testConnection(): {
+    success: boolean
+    message?: string
+    error?: string
+  } {
+    const apiKey = this.configService.get<string>('RESEND_API_KEY')
+    if (apiKey) {
       return {
         success: true,
-        message: 'Todas las conexiones SMTP verificadas',
+        message: 'RESEND_API_KEY presente. Proveedor listo.',
       }
-    } catch (error) {
-      this.logger.error('Error en configuración SMTP:', error)
-      return { success: false, error: (error as Error).message }
+    }
+    return {
+      success: false,
+      error: 'RESEND_API_KEY no encontrada en configuración',
     }
   }
 }

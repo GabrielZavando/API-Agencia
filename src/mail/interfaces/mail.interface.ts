@@ -1,4 +1,4 @@
-export type MailAccount = 'CONTACT' | 'SUPPORT'
+export type MailAccount = 'CONTACT' | 'NOTIFY' | 'SUPPORT' | 'ADMIN'
 
 export interface MailAttachment {
   filename: string
@@ -9,11 +9,10 @@ export interface MailAttachment {
 export interface MailOptions {
   to: string
   subject: string
-  templateName?: string
-  templateVariables?: Record<string, unknown>
   html?: string
   isNewProspect?: boolean
   from?: string
+  replyTo?: string
   account?: MailAccount
   attachments?: MailAttachment[]
 }

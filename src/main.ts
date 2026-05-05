@@ -32,7 +32,7 @@ async function bootstrap() {
 
   // Validación global
   app.useGlobalPipes(new ValidationPipe())
-  
+
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('WebAstro API')
@@ -40,7 +40,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build()
-  
+
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('api/docs', app, document)
 

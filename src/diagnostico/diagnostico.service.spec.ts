@@ -4,6 +4,7 @@ import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 import { PdfService } from './pdf.service'
 import { ResolverService } from './resolver.service'
+import { TemplateService } from '../templates/template.service'
 
 const mockFirebaseService = {
   getDb: vi.fn(),
@@ -15,6 +16,10 @@ const mockFirebaseService = {
 const mockMailService = {
   sendMail: vi.fn().mockResolvedValue(true),
   getBaseVariables: vi.fn().mockResolvedValue({}),
+}
+
+const mockTemplateService = {
+  renderReactTemplate: vi.fn().mockResolvedValue('<html></html>'),
 }
 
 const mockPdfService = {
@@ -51,6 +56,7 @@ describe('DiagnosticoService', () => {
       mockMailService as unknown as MailService,
       mockPdfService as unknown as PdfService,
       mockResolverService as unknown as ResolverService,
+      mockTemplateService as unknown as TemplateService,
     )
   })
 

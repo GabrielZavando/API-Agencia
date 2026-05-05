@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common'
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+  HttpException,
+} from '@nestjs/common'
 import { Cron, SchedulerRegistry } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
 import { ContactDto } from './dto/contact.dto'
@@ -14,6 +20,9 @@ import { validate } from 'deep-email-validator'
 
 import { SystemConfigService } from '../system-config/system-config.service'
 import { SubscriberResponseDto } from './dto/form-response.dto'
+import { TemplateService } from '../templates/template.service'
+import { BienvenidaContacto } from '../templates/react/bienvenida-contacto'
+import * as React from 'react'
 
 @Injectable()
 export class FormsService {
@@ -26,6 +35,7 @@ export class FormsService {
     private readonly blogService: BlogService,
     private readonly systemConfigService: SystemConfigService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly templateService: TemplateService,
   ) {}
 
   // Eliminado mapProspectToDto
@@ -97,11 +107,9 @@ export class FormsService {
           contactDto.turnstileToken,
         )
         if (!turnstileOk) {
-          return {
-            success: false,
-            message:
-              'Verificación de seguridad fallida. Recarga la página e inténtalo de nuevo.',
-          }
+          throw new BadRequestException(
+            'Verificación de seguridad fallida. Recarga la página e inténtalo de nuevo.',
+          )
         }
       }
 
@@ -192,12 +200,15 @@ export class FormsService {
         isNewProspect: !existingContacto,
       }
     } catch (error) {
-      console.error('Error procesando formulario:', error)
-      return {
-        success: false,
-        message: 'Error procesando el formulario',
-        error: (error as Error).message,
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      this.logger.error(`Error procesando formulario: ${errorMessage}`)
+      if (error instanceof HttpException) {
+        throw error
       }
+      throw new InternalServerErrorException(
+        'Error procesando el formulario de contacto',
+      )
     }
   }
 
@@ -221,11 +232,11 @@ export class FormsService {
       // Fallback a respuesta estática por ahora
       if (existingContacto) {
         return Promise.resolve(
-          `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
+          `Hola ${contactDto.name}, recibí tu mensaje. Te contactaré con prioridad en menos de 12 horas.`,
         )
       } else {
         return Promise.resolve(
-          `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
+          `Hola ${contactDto.name}, recibí tu mensaje. Te contactaré en menos de 24 horas.`,
         )
       }
     } catch (error) {
@@ -234,11 +245,11 @@ export class FormsService {
       // Fallback a respuesta estática
       if (existingContacto) {
         return Promise.resolve(
-          `Hola ${contactDto.name}, he recibido tu nuevo mensaje y te responderé con prioridad en un plazo máximo de 12 horas.`,
+          `Hola ${contactDto.name}, recibí tu mensaje. Te contactaré con prioridad en menos de 12 horas.`,
         )
       } else {
         return Promise.resolve(
-          `Hola ${contactDto.name}, he recibido tu mensaje y te responderé en un plazo máximo de 24 horas.`,
+          `Hola ${contactDto.name}, recibí tu mensaje. Te contactaré en menos de 24 horas.`,
         )
       }
     }
@@ -251,23 +262,57 @@ export class FormsService {
     esContactoNuevo: boolean,
   ): Promise<boolean> {
     try {
-      const templateName = esContactoNuevo
-        ? 'bienvenida-contacto'
-        : 'regreso-contacto'
-
       const subject = esContactoNuevo
         ? `Gracias por contactarnos, ${contactDto.name}`
         : `¡Qué gusto verte de nuevo, ${contactDto.name}!`
 
+      const baseVars = this.mailService.getBaseVariables(contactDto.email)
+
+      if (esContactoNuevo) {
+        return await this.mailService.sendMail({
+          to: contactDto.email,
+          subject,
+          html: await this.templateService.renderReactTemplate(
+            React.createElement(BienvenidaContacto, {
+              ...baseVars,
+              prospectName: contactDto.name,
+              previewText: 'Gracias por contactarme. He recibido tu mensaje.',
+              websiteUrl: baseVars['websiteUrl'] as string,
+              calendlyUrl: baseVars['calendlyUrl'] as string,
+              logoUrl: baseVars['logoUrl'] as string,
+              companyName: baseVars['companyName'] as string,
+              address: baseVars['address'] as string,
+              email: baseVars['email'] as string,
+              currentYear: baseVars['currentYear'] as string,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              social: baseVars['social'] as any,
+            }),
+          ),
+        })
+      }
+
+      const RegresoContactoComponent = (
+        await import('../templates/react/regreso-contacto')
+      ).RegresoContacto
       return await this.mailService.sendMail({
         to: contactDto.email,
         subject,
-        templateName,
-        templateVariables: {
-          name: contactDto.name,
-          message: contactDto.message,
-          responseContent,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(RegresoContactoComponent, {
+            ...baseVars,
+            prospectName: contactDto.name,
+            previewText: '¡Qué gusto saludarte de nuevo!',
+            websiteUrl: baseVars['websiteUrl'] as string,
+            calendlyUrl: baseVars['calendlyUrl'] as string,
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando email:', error)
@@ -285,21 +330,36 @@ export class FormsService {
       const config = await this.systemConfigService.getConfig()
       const adminEmail = config?.email || companyConfig.email
 
+      const baseVars = this.mailService.getBaseVariables(adminEmail)
+      const AdminContactComponent = (
+        await import('../templates/react/admin-contact')
+      ).AdminContact
+
       return await this.mailService.sendMail({
         to: adminEmail,
         subject: `Nuevo mensaje de contacto ${esContactoNuevo ? '(NUEVO)' : '(RECURRENTE)'} - ${contactDto.name}`,
-        templateName: 'admin-contact',
-        templateVariables: {
-          typeLabel: esContactoNuevo
-            ? 'PRIMER CONTACTO (CONTACTO NUEVO)'
-            : 'CONTACTO RECURRENTE',
-          contactName: contactDto.name,
-          contactEmail: contactDto.email,
-          contactPhone: contactDto.phone || 'No proporcionado',
-          contactMessage: contactDto.message.replace(/\n/g, '<br>'),
-          autoResponse: responseContent.replace(/\n/g, '<br>'),
-          date: new Date().toLocaleString('es-ES'),
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(AdminContactComponent, {
+            ...baseVars,
+            typeLabel: esContactoNuevo
+              ? 'PRIMER CONTACTO (CONTACTO NUEVO)'
+              : 'CONTACTO RECURRENTE',
+            contactName: contactDto.name,
+            contactEmail: contactDto.email,
+            contactPhone: contactDto.phone || 'No proporcionado',
+            contactMessage: contactDto.message,
+            autoResponse: responseContent,
+            date: new Date().toLocaleString('es-ES'),
+            previewText: 'Nuevo mensaje de contacto recibido en la web',
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando notificación administrativa:', error)
@@ -315,17 +375,32 @@ export class FormsService {
       const config = await this.systemConfigService.getConfig()
       const adminEmail = config?.email || companyConfig.email
 
+      const baseVars = this.mailService.getBaseVariables(adminEmail)
+      const AdminSubscriptionComponent = (
+        await import('../templates/react/admin-subscription')
+      ).AdminSubscription
+
       return await this.mailService.sendMail({
         to: adminEmail,
         subject: `🔔 Nueva suscripción al newsletter`,
-        templateName: 'admin-subscription',
-        templateVariables: {
-          subscriberEmail: subscribeDto.email,
-          date: new Date().toLocaleString('es-ES'),
-          pageOrigin: subscribeDto.meta.page,
-          referrer: subscribeDto.meta.referrer || 'Directo',
-          userAgent: subscribeDto.meta.userAgent,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(AdminSubscriptionComponent, {
+            ...baseVars,
+            subscriberEmail: subscribeDto.email,
+            date: new Date().toLocaleString('es-ES'),
+            pageOrigin: subscribeDto.meta.page,
+            referrer: subscribeDto.meta.referrer || 'Directo',
+            userAgent: subscribeDto.meta.userAgent,
+            previewText: 'Nueva suscripción al newsletter',
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando notificación de suscripción:', error)
@@ -336,10 +411,29 @@ export class FormsService {
   // Método para enviar email de bienvenida a suscriptores
   private async sendSubscriberWelcomeEmail(email: string): Promise<boolean> {
     try {
+      const baseVars = this.mailService.getBaseVariables(email)
+      const SubscriberWelcomeComponent = (
+        await import('../templates/react/subscriber-welcome')
+      ).SubscriberWelcome
+
       return await this.mailService.sendMail({
         to: email,
         subject: '¡Bienvenido/a a mi newsletter! 🎉',
-        templateName: 'subscriber-welcome',
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(SubscriberWelcomeComponent, {
+            ...baseVars,
+            previewText: 'Bienvenido al newsletter oficial de Gabriel Zavando',
+            websiteUrl: baseVars['websiteUrl'] as string,
+            unsubscribeUrl: baseVars['unsubscribeUrl'] as string,
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando email de bienvenida:', error)
@@ -387,12 +481,26 @@ export class FormsService {
     email: string,
   ): Promise<boolean> {
     try {
-      const baseVariables = await this.mailService.getBaseVariables(email)
+      const baseVars = this.mailService.getBaseVariables(email)
+      const UnsubscribeConfirmationComponent = (
+        await import('../templates/react/unsubscribe-confirmation')
+      ).UnsubscribeConfirmation
       return await this.mailService.sendMail({
         to: email,
         subject: 'Confirmación de desuscripción - Newsletter',
-        templateName: 'unsubscribe-confirmation',
-        templateVariables: baseVariables,
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(UnsubscribeConfirmationComponent, {
+            ...baseVars,
+            previewText: 'Confirmación de desuscripción',
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error(
@@ -408,7 +516,7 @@ export class FormsService {
     return await this.firebaseService.testConnection()
   }
 
-  async testSMTPConnection() {
+  testMailConnection() {
     return this.mailService.testConnection()
   }
 
@@ -504,11 +612,14 @@ export class FormsService {
     return subscribers.map((s) => this.mapSubscriberToDto(s))
   }
 
-  // Double Opt-In: confirmar suscripción por token
   async verifySubscription(
     token: string,
   ): Promise<{ success: boolean; email?: string }> {
     return await this.firebaseService.confirmSubscriber(token)
+  }
+
+  async getSystemConfig() {
+    return await this.systemConfigService.getConfig()
   }
 
   // Email de confirmación para Double Opt-In
@@ -521,13 +632,29 @@ export class FormsService {
       const websiteUrl = config?.websiteUrl || companyConfig.websiteUrl
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
+      const baseVars = this.mailService.getBaseVariables(email)
+      const SubscriberDoubleOptInComponent = (
+        await import('../templates/react/subscriber-double-opt-in')
+      ).SubscriberDoubleOptIn
+
       return await this.mailService.sendMailDetailed({
         to: email,
         subject: 'Confirma tu suscripción al Newsletter',
-        templateName: 'subscriber-double-opt-in',
-        templateVariables: {
-          confirmUrl,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(SubscriberDoubleOptInComponent, {
+            ...baseVars,
+            confirmationUrl: confirmUrl,
+            previewText:
+              'Confirma tu suscripción para empezar a recibir contenido',
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando email de confirmación:', error)
@@ -720,13 +847,29 @@ export class FormsService {
       const websiteUrl = config?.websiteUrl || companyConfig.websiteUrl
       const confirmUrl = `${websiteUrl.replace(/\/+$/, '')}/api/forms/verify-subscription/${token}`
 
+      const baseVars = this.mailService.getBaseVariables(email)
+      const SubscriberReconfirmationComponent = (
+        await import('../templates/react/subscriber-reconfirmation')
+      ).SubscriberReconfirmation
+
       return await this.mailService.sendMailDetailed({
         to: email,
         subject: '¿Sigues interesado? Confirma tu suscripción',
-        templateName: 'subscriber-reconfirmation',
-        templateVariables: {
-          confirmUrl,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(SubscriberReconfirmationComponent, {
+            ...baseVars,
+            reconfirmationUrl: confirmUrl,
+            previewText:
+              '¿Sigues ahí? Queremos asegurarnos de que quieras seguir recibiendo correos',
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando email de re-confirmación:', error)
@@ -790,16 +933,38 @@ export class FormsService {
 
     for (const sub of targets) {
       try {
+        const contact = await this.firebaseService.findContactoByEmail(
+          sub.email,
+        )
+        const subscriberName = contact?.name || 'ahí'
+
+        const baseVars = this.mailService.getBaseVariables(sub.email)
+        const NewsletterComponent = (
+          await import('../templates/react/newsletter')
+        ).Newsletter
+
         await this.mailService.sendMailDetailed({
           to: sub.email,
           subject: post.title,
-          templateName: 'newsletter',
-          templateVariables: {
-            postTitle: post.title,
-            postExcerpt: post.excerpt,
-            postUrl: `${companyConfig.websiteUrl}/blog/${post.slug}`,
-            postImage: post.coverImage,
-          },
+          html: await this.templateService.renderReactTemplate(
+            React.createElement(NewsletterComponent, {
+              ...baseVars,
+              subscriberName,
+              postTitle: post.title,
+              postExcerpt: post.excerpt || '',
+              postUrl: `${companyConfig.websiteUrl}/blog/${post.slug}`,
+              postImage: post.coverImage || undefined,
+              unsubscribeUrl: `${companyConfig.websiteUrl}/api/forms/unsubscribe/${sub.subscriberId}`,
+              previewText: 'Últimas noticias y actualizaciones',
+              logoUrl: baseVars['logoUrl'] as string,
+              companyName: baseVars['companyName'] as string,
+              address: baseVars['address'] as string,
+              email: baseVars['email'] as string,
+              currentYear: baseVars['currentYear'] as string,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              social: baseVars['social'] as any,
+            }),
+          ),
         })
         sent++
         // Delay preventivo

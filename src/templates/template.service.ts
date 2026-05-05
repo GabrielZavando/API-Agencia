@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as React from 'react'
+import { render } from '@react-email/render'
 
 @Injectable()
 export class TemplateService {
@@ -70,6 +72,15 @@ export class TemplateService {
     } catch (error) {
       console.error('Error cargando plantilla:', error)
       throw new Error(`Error cargando plantilla: ${templateName}`)
+    }
+  }
+
+  async renderReactTemplate(component: React.ReactElement): Promise<string> {
+    try {
+      return await render(component)
+    } catch (error) {
+      console.error('Error renderizando plantilla React:', error)
+      throw new Error('Error renderizando plantilla React')
     }
   }
 }

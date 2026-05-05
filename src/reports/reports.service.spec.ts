@@ -3,6 +3,7 @@ import { FirebaseService } from '../firebase/firebase.service'
 import { UsersService } from '../users/users.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { MailService } from '../mail/mail.service'
+import { TemplateService } from '../templates/template.service'
 
 vi.mock('firebase-admin', () => ({
   firestore: vi.fn(() => ({
@@ -36,11 +37,16 @@ describe('ReportsService', () => {
       sendMail: vi.fn(),
     }
 
+    const mockTemplateService = {
+      renderReactTemplate: vi.fn(),
+    }
+
     service = new ReportsService(
       mockFirebaseService as FirebaseService,
       mockNotificationsService as NotificationsService,
       mockMailService as MailService,
       mockUsersService as UsersService,
+      mockTemplateService as unknown as TemplateService,
     )
   })
 

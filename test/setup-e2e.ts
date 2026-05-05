@@ -1,24 +1,24 @@
-import { beforeAll, beforeEach, afterAll } from 'vitest';
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '../src/app.module';
+import { beforeAll, beforeEach, afterAll } from 'vitest'
+import { INestApplication } from '@nestjs/common'
+import { Test, TestingModule } from '@nestjs/testing'
+import { AppModule } from '../src/app.module'
 
-export let app: INestApplication;
+export let app: INestApplication
 
 beforeAll(async () => {
   // Configurar variables de entorno para los emuladores
-  process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-  process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
-  process.env.FIREBASE_PROJECT_ID = 'demo-project';
-  process.env.GCLOUD_PROJECT = 'demo-project';
+  process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080'
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099'
+  process.env.FIREBASE_PROJECT_ID = 'demo-project'
+  process.env.GCLOUD_PROJECT = 'demo-project'
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  }).compile()
 
-  app = moduleFixture.createNestApplication();
-  await app.init();
-});
+  app = moduleFixture.createNestApplication()
+  await app.init()
+})
 
 beforeEach(async () => {
   // Limpiar Firestore antes de cada test
@@ -26,18 +26,18 @@ beforeEach(async () => {
   try {
     const response = await fetch(
       'http://localhost:8080/emulator/v1/projects/demo-project/databases/(default)/documents',
-      { method: 'DELETE' }
-    );
+      { method: 'DELETE' },
+    )
     if (!response.ok) {
-      console.warn('Failed to clear Firestore emulator data');
+      console.warn('Failed to clear Firestore emulator data')
     }
   } catch (error) {
-    console.error('Error clearing Firestore emulator:', error);
+    console.error('Error clearing Firestore emulator:', error)
   }
-});
+})
 
 afterAll(async () => {
   if (app) {
-    await app.close();
+    await app.close()
   }
-});
+})
