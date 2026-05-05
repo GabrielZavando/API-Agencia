@@ -10,21 +10,9 @@ export interface DiagnosticoResultadoProps extends EmailLayoutProps {
   websiteUrl: string
 }
 
-export interface DiagnosticoReportPdfProps {
-  nombre_completo: string
-  industria: string
-  fecha: string
-  score: number
-  nivel: string
-  nivel_color: string
-  situacion_actual_text?: string
-  pillarScores: {
-    personas: number
-    procesos: number
-    tecnologia: number
-    datos: number
-  }
-}
+import { PdfContext } from '../../../assessment/interfaces/pdf-context.interface'
+
+export type DiagnosticoReportPdfProps = PdfContext
 
 export interface ReportDeliveryProps extends EmailLayoutProps {
   clientName: string

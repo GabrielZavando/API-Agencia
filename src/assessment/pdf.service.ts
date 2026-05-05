@@ -12,14 +12,7 @@ export class PdfService {
     try {
       const buffer = await renderToBuffer(
         React.createElement(DiagnosticoReportPdf, {
-          nombre_completo: context.nombre_completo,
-          industria: context.industria,
-          fecha: context.fecha,
-          score: context.score,
-          nivel: context.nivel,
-          nivel_color: context.nivel_color,
-          situacion_actual_text: context.situacion_actual_text,
-          pillarScores: context.pillarScores,
+          ...context,
         }) as unknown as React.ReactElement<DocumentProps>,
       )
       this.logger.log(

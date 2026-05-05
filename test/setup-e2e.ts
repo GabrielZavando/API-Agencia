@@ -11,7 +11,7 @@ beforeAll(async () => {
   process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099'
   process.env.FIREBASE_PROJECT_ID = 'demo-project'
   process.env.GCLOUD_PROJECT = 'demo-project'
-  
+
   // Variables dummy para evitar fallos en constructores de servicios
   process.env.FIREBASE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDvD8zGfWp7zM7v
