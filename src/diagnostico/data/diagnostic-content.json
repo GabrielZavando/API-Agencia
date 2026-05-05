@@ -8,12 +8,12 @@
     "brote": {
       "titulo": "Brote: Adopción Digital Fragmentada",
       "situacion_actual_text": "El negocio ya usa herramientas, pero actúan como 'islas de información'. La falta de integración genera procesos manuales lentos para sincronizar distintas áreas y duplicidad de esfuerzo en el equipo.",
-      "mensaje_clave_text": "Tu siguiente paso no es contratar más software, sino integrar las plataformas que ya tienes y capacitar al equipo."
+      "mensaje_clave_text": "Tu siguiente paso no es, necesariamente, contratar más software, sino integrar las plataformas que ya tienes y capacitar al equipo."
     },
     "arbol": {
       "titulo": "Árbol: Raíces Digitales Sólidas",
       "situacion_actual_text": "Tu negocio es altamente escalable. El sistema trabaja para ti, los procesos fluyen de forma conectada y las decisiones estratégicas comienzan a basarse cien por ciento en datos duros.",
-      "mensaje_clave_text": "Es el momento exacto para delegar con confianza apoyado en Inteligencia Artificial y buscar la automatización extrema."
+      "mensaje_clave_text": "Es el momento exacto para delegar con confianza apoyado en Inteligencia Artificial y buscar la automatización detallada."
     }
   },
   "capa_sector": {
@@ -28,7 +28,7 @@
       "impacto_industria_text": "En el mundo de la alimentación y la hospitalidad, los márgenes son ajustados y la agilidad para atender o tomar reservas es vital. La dependencia excesiva de plataformas a domicilio erosiona la utilidad neta.",
       "riesgos": [
         { "titulo": "Ceguera de Rentabilidad", "consecuencia": "Ausencia de control digital de mermas e ingredientes." },
-        { "titulo": "Dependencia Externa", "consecuencia": "Altas comisiones por no tener canal de venta o reserva propio digital." }
+        { "titulo": "Dependencia Externa", "consecuencia": "Altas comisiones por no tener canal de venta o reserva propia digital." }
       ]
     },
     "servicios_b2b": {
@@ -41,7 +41,7 @@
     "salud_bienestar": {
       "impacto_industria_text": "En el rubro de la salud y el bienestar, la confianza y la privacidad de los datos son críticos. La optimización digital de agendas evita tiempos muertos valiosos.",
       "riesgos": [
-        { "titulo": "Agendas Fantasmas", "consecuencia": "Pacientes que no asisten por falta de confirmación digital automatizada." },
+        { "titulo": "Agendas Fantasmas", "consecuencia": "Pacientes que no asisten por falta de seguimiento y confirmación digital automatizada." },
         { "titulo": "Ficha Desintegrada", "consecuencia": "Historiales clínicos fragmentados que dilatan la atención." }
       ]
     },
@@ -56,7 +56,7 @@
       "impacto_industria_text": "Dada tu naturaleza, el nivel de exigencia digital por parte de tus clientes es máximo. Estandarizar metodologías ágiles es vital para sobrevivir a la rotación de talento.",
       "riesgos": [
         { "titulo": "Deuda Técnica Acumulada", "consecuencia": "Sistemas o procesos imposibles de heredar a nuevos integrantes del equipo." },
-        { "titulo": "Síndrome del Héroe", "consecuencia": "Dependencia extrema de un talento individual para que las cosas pasen." }
+        { "titulo": "Síndrome del Héroe", "consecuencia": "Dependencia extrema de un talento individual para que las tareas se ejecuten." }
       ]
     },
     "educacion": {
@@ -77,7 +77,7 @@
   "capa_dimension_critica": {
     "cultura": {
       "nombre": "Cultura y Organización",
-      "descripcion": "El factor clave siempre son las personas trabajando bajo una mentalidad digital compartida.",
+      "descripcion": "El factor clave siempre son las personas trabajando bajo una estrategia digital compartida.",
       "semilla": [
         {
           "titulo": "Asignar Tiempo Digital",
@@ -89,7 +89,7 @@
           "titulo": "Formalizar Canales de Comunicación",
           "pilar": "Cultura",
           "tiempo": "2 horas",
-          "descripcion": "**Qué hacer:**\nDefine un canal único para decisiones laborales (email, Slack o WhatsApp Business).\n\n**Cómo hacerlo:**\nComunica la regla por escrito y recuérdala en la próxima reunión.\n\n**Evidencia:**\nDocumento con la política de canales compartido con el equipo.\n\n> **Ejemplo:** \"Las solicitudes operativas van por email. Las urgencias por WhatsApp. Nada se pierde en el limbo.\""
+          "descripcion": "**Qué hacer:**\nDefine un canal único para decisiones laborales (email, Slack o WhatsApp, por ejemplo).\n\n**Cómo hacerlo:**\nComunica la regla por escrito y recuérdala en la próxima reunión.\n\n**Evidencia:**\nDocumento con la política de canales compartido con el equipo.\n\n> **Ejemplo:** \"Las solicitudes operativas van por email. Las urgencias por WhatsApp. Nada se pierde en el limbo.\""
         },
         {
           "titulo": "Evangelizar Documentación",
@@ -103,7 +103,7 @@
           "titulo": "Líder de Transformación",
           "pilar": "Cultura",
           "tiempo": "1 hora",
-          "descripcion": "**Qué hacer:**\nDesigna internamente a un campeón digital que se encargue de proponer mejoras de software.\n\n**Cómo hacerlo:**\nElige a alguien con curiosidad tecnológica, sin importar su jerarquía.\n\n**Evidencia:**\nCorreo o documento formalizando el rol y las responsabilidades.\n\n> **Ejemplo:** \"María será nuestra Líder Digital. Ella investiga, propone y capacita al equipo.\""
+          "descripcion": "**Qué hacer:**\nDesigna internamente a un 'campeón digital' que se encargue de proponer mejoras de software.\n\n**Cómo hacerlo:**\nElige a alguien con curiosidad tecnológica, sin importar su jerarquía.\n\n**Evidencia:**\nCorreo o documento formalizando el rol y las responsabilidades.\n\n> **Ejemplo:** \"María será nuestra 'Líder Digital'. Ella investiga, propone y capacita al equipo.\""
         },
         {
           "titulo": "Auditoría de Herramientas Reales",
@@ -135,7 +135,7 @@
           "titulo": "Onboarding Escalable",
           "pilar": "Cultura",
           "tiempo": "8 horas",
-          "descripcion": "**Qué hacer:**\nSistematiza cien por ciento el ingreso de nuevos talentos de manera que el sistema y videos enseñen, no tus horas operativas.\n\n**Cómo hacerlo:**\nGraba videos cortos de cada proceso clave y crea un checklist de primera semana.\n\n**Evidencia:**\nPlaylist de videos de onboarding + checklist completado por el nuevo integrante.\n\n> **Ejemplo:** \"El nuevo vendedor ve 5 videos y completa 10 tareas en su primera semana. Sin depender de ti.\""
+          "descripcion": "**Qué hacer:**\nSistematiza cien por ciento el ingreso de nuevos talentos de manera que el sistema y videos enseñen, liberando horas operativas.\n\n**Cómo hacerlo:**\nGraba videos cortos de cada proceso clave y crea un checklist de primera semana.\n\n**Evidencia:**\nPlaylist de videos de onboarding + checklist completado por el nuevo integrante.\n\n> **Ejemplo:** \"El nuevo vendedor ve 5 videos y completa 10 tareas en su primera semana. Sin depender de ti.\""
         }
       ]
     },
@@ -150,7 +150,7 @@
           "descripcion": "**Qué hacer:**\nDibuja en papel el proceso de cómo ingresa un cliente, cómo paga y cómo se atiende. Ubica la etapa que quita más horas.\n\n**Cómo hacerlo:**\nUsa post-its o una pizarra. Identifica los 5 pasos principales.\n\n**Evidencia:**\nFoto del mapa de proceso + círculo en el cuello de botella identificado.\n\n> **Ejemplo:** \"Descubrimos que el 40% del tiempo se va en responder las mismas 5 preguntas por WhatsApp.\""
         },
         {
-          "titulo": "Asignar Presupuesto OIT",
+          "titulo": "Asignar Presupuesto IT",
           "pilar": "Estrategia",
           "tiempo": "1 hora",
           "descripcion": "**Qué hacer:**\nAsigna un pequeño monto fijo mensual exclusivamente para pago de suscripciones clave (SaaS) que reemplacen mano de obra.\n\n**Cómo hacerlo:**\nDefine un monto (ej: $50.000 CLP/mes) y úsalo solo para herramientas que ahorren tiempo.\n\n**Evidencia:**\nRegistro presupuestario + lista de suscripciones activas.\n\n> **Ejemplo:** \"Destinamos $50.000/mes para software. Priorizamos lo que elimina tareas repetitivas.\""
@@ -231,19 +231,19 @@
           "titulo": "Apalancar Workflows Centralizados",
           "pilar": "Procesos",
           "tiempo": "4 horas",
-          "descripcion": "**Qué hacer:**\nNo más de 2 sistemas de origen. Usa Trello, Asana o Jira para trazar todo cambio de estado operativo.\n\n**Cómo hacerlo:**\nDefine 3 estados (Pendiente, En Proceso, Completado) y migra todo ahí.\n\n**Evidencia:**\nCaptura del tablero + todos los proyectos activos visibles.\n\n> **Ejemplo:** \"Todo el equipo ve el mismo tablero. Nada se pierde en chats privados.\""
+          "descripcion": "**Qué hacer:**\nNo más de 2 sistemas de origen. Usa todoist.com o Airtable, por ejemplo, para trazar todo cambio de estado operativo.\n\n**Cómo hacerlo:**\nDefine 3 estados (Pendiente, En Proceso, Completado) y migra todo ahí.\n\n**Evidencia:**\nCaptura del tablero + todos los proyectos activos visibles.\n\n> **Ejemplo:** \"Todo el equipo ve el mismo tablero. Nada se pierde en chats privados.\""
         },
         {
           "titulo": "Automatizar la Confirmación",
           "pilar": "Procesos",
           "tiempo": "2 horas",
-          "descripcion": "**Qué hacer:**\nIntegra Zapier o conectores nativos para avisar al cliente cuando su proceso ha iniciado sin tocar teclas.\n\n**Cómo hacerlo:**\nConfigura un trigger (ej: pago recibido) → action (ej: email de confirmación).\n\n**Evidencia:**\nCaptura de la automatización activa + ejemplo del mensaje enviado.\n\n> **Ejemplo:** \"El cliente paga → recibe confirmación automática → nosotros recibimos alerta. Cero intervención manual.\""
+          "descripcion": "**Qué hacer:**\nIntegra N8N o conectores nativos para avisar al cliente cuando su proceso ha iniciado sin tocar teclas.\n\n**Cómo hacerlo:**\nConfigura un trigger (ej: pago recibido) → action (ej: email de confirmación).\n\n**Evidencia:**\nCaptura de la automatización activa + ejemplo del mensaje enviado.\n\n> **Ejemplo:** \"El cliente paga → recibe confirmación automática → nosotros recibimos alerta. Cero intervención manual.\""
         },
         {
           "titulo": "Regla del Repetitivo = Automatizable",
           "pilar": "Procesos",
           "tiempo": "4 horas",
-          "descripcion": "**Qué hacer:**\nCualquier acción que requiere copiar y pegar debe automatizarse inminentemente este trimestre.\n\n**Cómo hacerlo:**\nHaz una lista de las 5 tareas más repetitivas. Automatiza al menos 2.\n\n**Evidencia:**\nLista de tareas identificadas + capturas de las automatizaciones implementadas.\n\n> **Ejemplo:** \"Antes: copiar datos del formulario al CRM. Ahora: se hace solo. 30 minutos ahorrados al día.\""
+          "descripcion": "**Qué hacer:**\nCualquier acción que requiere copiar y pegar debe automatizarse dentro de este trimestre.\n\n**Cómo hacerlo:**\nHaz una lista de las 5 tareas más repetitivas. Automatiza al menos 2.\n\n**Evidencia:**\nLista de tareas identificadas + capturas de las automatizaciones implementadas.\n\n> **Ejemplo:** \"Antes: copiar datos del formulario al CRM. Ahora: se hace solo. 30 minutos ahorrados al día.\""
         }
       ],
       "arbol": [
@@ -257,7 +257,7 @@
           "titulo": "Optimización mediante IA",
           "pilar": "Procesos",
           "tiempo": "4 horas",
-          "descripcion": "**Qué hacer:**\nConecta APIs de OpenAI u otros LLM para categorizar automáticamente correos de servicio al cliente o redactar minutas.\n\n**Cómo hacerlo:**\nIdentifica un flujo de texto repetitivo y entrena un modelo simple para clasificarlo.\n\n**Evidencia:**\nCaptura del flujo de IA + métricas de tiempo ahorrado.\n\n> **Ejemplo:** \"La IA clasifica los correos de soporte. El equipo solo responde los complejos. 50% menos tiempo.\""
+          "descripcion": "**Qué hacer:**\nCategorizar automáticamente correos de servicio al cliente o redactar minutas con IA.\n\n**Cómo hacerlo:**\nIdentifica un flujo de texto repetitivo y conecta un modelo de IA que categorice y redacte automáticamente en N8N.\n\n**Evidencia:**\nCaptura del flujo de IA + métricas de tiempo ahorrado.\n\n> **Ejemplo:** \"La IA clasifica los correos de soporte. El equipo solo responde los complejos. 50% menos tiempo.\""
         },
         {
           "titulo": "Desacople Operativo",
@@ -275,7 +275,7 @@
           "titulo": "Fijar un Sistema CRM Mínimo",
           "pilar": "Datos",
           "tiempo": "2 horas",
-          "descripcion": "**Qué hacer:**\nNo uses más las libretas. Consigue un CRM gratuito (HubSpot, Pipedrive) o al menos un Google Sheets unificado estricto para almacenar prospectos.\n\n**Cómo hacerlo:**\nCrea columnas obligatorias: nombre, contacto, origen, estado, fecha último contacto.\n\n**Evidencia:**\nCaptura del CRM o planilla con al menos 20 contactos registrados.\n\n> **Ejemplo:** \"Todos los clientes están en un solo lugar. Sabemos quién nos escribió y cuándo.\""
+          "descripcion": "**Qué hacer:**\nNo uses más las libretas. Consigue un CRM gratuito (HubSpot, por ejemplo) o al menos un Google Sheets unificado estricto para almacenar prospectos.\n\n**Cómo hacerlo:**\nCrea columnas obligatorias: nombre, contacto, origen, estado, fecha último contacto.\n\n**Evidencia:**\nCaptura del CRM o planilla con al menos 20 contactos registrados.\n\n> **Ejemplo:** \"Todos los clientes están en un solo lugar. Sabemos quién nos escribió y cuándo.\""
         },
         {
           "titulo": "Inventario de Fuentes de Verdad",
@@ -345,7 +345,7 @@
           "titulo": "Gestor de Contraseñas",
           "pilar": "Tecnología",
           "tiempo": "2 horas",
-          "descripcion": "**Qué hacer:**\nMigrar todas las notas de claves repartidas al uso de un Vault (como Bitwarden o LastPass). Nadie debe saber la clave bancaria completa de memoria.\n\n**Cómo hacerlo:**\nInstala Bitwarden (gratis) y migra todas las contraseñas críticas.\n\n**Evidencia:**\nCaptura del vault con al menos 20 contraseñas guardadas + 2FA activo.\n\n> **Ejemplo:** \"Una sola contraseña maestra. El resto las guarda el gestor. Seguro y accesible.\""
+          "descripcion": "**Qué hacer:**\nMigrar todas las notas de claves repartidas al uso de un Vault (como Bitwarden o LastPass). Nadie debe saber la clave bancaria completa de memoria.\n\n**Cómo hacerlo:**\nInstala Bitwarden o Lastpass y migra todas las contraseñas críticas.\n\n**Evidencia:**\nCaptura del vault con al menos 20 contraseñas guardadas + 2FA activo.\n\n> **Ejemplo:** \"Una sola contraseña maestra. El resto las guarda el gestor. Seguro y accesible.\""
         },
         {
           "titulo": "Respaldo en la Nube (Cloud Sync)",
@@ -359,7 +359,7 @@
           "titulo": "Mapeo de Integraciones (API/Webhooks)",
           "pilar": "Tecnología",
           "tiempo": "4 horas",
-          "descripcion": "**Qué hacer:**\nDiseña cómo el formulario de la Web inyecta al CRM sin que nadie toque datos. Exige conexión a tu soporte TI.\n\n**Cómo hacerlo:**\nIdentifica 2 sistemas que deben hablarse y configura la conexión (Zapier, Make o API directa).\n\n**Evidencia:**\nDiagrama de integración + captura del flujo automatizado funcionando.\n\n> **Ejemplo:** \"El formulario web → CRM → email de confirmación. Todo automático, cero copia y pega.\""
+          "descripcion": "**Qué hacer:**\nDiseña cómo el formulario de la Web inyecta al CRM sin que nadie toque datos. Exige conexión a tu soporte IT.\n\n**Cómo hacerlo:**\nIdentifica 2 sistemas que deben hablarse y configura la conexión (N8N, Make o API directa).\n\n**Evidencia:**\nDiagrama de integración + captura del flujo automatizado funcionando.\n\n> **Ejemplo:** \"El formulario web → CRM → email de confirmación. Todo automático, cero copia y pega.\""
         },
         {
           "titulo": "Protocolo de Entradas y Salidas",

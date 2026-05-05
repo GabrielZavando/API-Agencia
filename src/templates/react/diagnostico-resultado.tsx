@@ -14,9 +14,9 @@ export const DiagnosticoResultado = (props: DiagnosticoResultadoProps) => {
   } = props
 
   const iconMap: Record<string, string> = {
-    '🌱': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/action/eco/materialicons/24dp/2x/baseline_eco_black_24dp.png',
-    '🌿': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/image/nature/materialicons/24dp/2x/baseline_nature_black_24dp.png',
-    '🌳': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/image/forest/materialicons/24dp/2x/baseline_forest_black_24dp.png',
+    '🌱': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/places/spa/materialicons/24dp/2x/baseline_spa_black_24dp.png',
+    '🌿': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/action/eco/materialicons/24dp/2x/baseline_eco_black_24dp.png',
+    '🌳': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/image/nature/materialicons/24dp/2x/baseline_nature_black_24dp.png',
   }
   const iconUrl =
     iconMap[nivelEmoji] ||
