@@ -237,25 +237,31 @@ export class DiagnosticoService {
       return context // Terminamos temprano, se enviará después en el Cron.
     }
 
-    this.pdfService
-      .generateDiagnosisPdf(context as unknown as PdfContext)
-      .then((pdfBuffer) => {
-        this.sendResultEmail(dto.email, context, pdfBuffer).catch(
-          (err: Error) =>
-            this.logger.error('Error al enviar email con PDF: ' + err.message),
-        )
-      })
-      .catch((err: Error) => {
-        this.logger.warn(
-          `PDF no disponible: ${err.message}. Enviando email sin adjunto.`,
-        )
-        this.sendResultEmail(dto.email, context, Buffer.alloc(0)).catch(
-          (mailErr: Error) =>
-            this.logger.error(
-              'Error al enviar email sin PDF: ' + mailErr.message,
-            ),
-        )
-      })
+    try {
+      this.logger.log(`[FLOW] Iniciando generación de PDF para: ${dto.email}`)
+      const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
+        context as unknown as PdfContext,
+      )
+      this.logger.log(`[FLOW] PDF generado exitosamente (${pdfBuffer.length} bytes)`)
+
+      this.logger.log(`[FLOW] Llamando a MailService para enviar a: ${dto.email}`)
+      const startEmail = Date.now()
+      const sent = await this.sendResultEmail(dto.email, context, pdfBuffer)
+      const duration = Date.now() - startEmail
+      
+      this.logger.log(`[FLOW] Resultado de envío: ${sent ? 'EXITOSO' : 'FALLIDO'} | Duración: ${duration}ms`)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      this.logger.error(`[FLOW] ERROR CRÍTICO en proceso de entrega: ${errorMessage}`)
+      
+      try {
+        this.logger.warn(`[FLOW] Intentando envío de rescate (sin PDF) a: ${dto.email}`)
+        await this.sendResultEmail(dto.email, context, Buffer.alloc(0))
+        this.logger.log(`[FLOW] Envío de rescate completado.`)
+      } catch (mailErr) {
+        this.logger.error(`[FLOW] FALLO TOTAL: No se pudo enviar ni el rescate: ${String(mailErr)}`)
+      }
+    }
 
     return context
   }
