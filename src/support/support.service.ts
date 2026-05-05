@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import * as admin from 'firebase-admin'
+import { ConfigService } from '@nestjs/config'
 import { CreateTicketDto } from './dto/create-ticket.dto'
 import { UpdateTicketDto } from './dto/update-ticket.dto'
 import { AddMessageDto } from './dto/add-message.dto'
@@ -13,6 +14,8 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { TicketResponseDto } from './dto/ticket-response.dto'
 import { MessageResponseDto } from './dto/message-response.dto'
 import { TicketQuota } from './interfaces/support.interface'
+import { TemplateService } from '../templates/template.service'
+import * as React from 'react'
 
 const DEFAULT_MONTHLY_LIMIT = 3
 
@@ -24,6 +27,8 @@ export class SupportService {
     private readonly _firebase: FirebaseService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
+    private readonly templateService: TemplateService,
   ) {
     this.db = this._firebase.getDb()
   }
@@ -193,22 +198,39 @@ export class SupportService {
       console.error('Error notificando admins sobre nuevo ticket', e),
     )
 
-    // Notificación por EMAIL al administrador
+    const adminEmail =
+      this.configService.get<string>('MAIL_ADMIN_ADDRESS') ??
+      'contacto@gabrielzavando.cl'
+    const baseVars = this.mailService.getBaseVariables(adminEmail)
+    const TicketCreatedComponent = (
+      await import('../templates/react/ticket-created')
+    ).TicketCreated
+
     this.mailService
       .sendMail({
-        to: 'soporte@gabrielzavando.cl',
-        account: 'SUPPORT',
+        to: adminEmail,
+        account: 'ADMIN',
         subject: `[SOPORTE] Nuevo Ticket: ${dto.subject}`,
-        templateName: 'ticket-created',
-        templateVariables: {
-          clientEmail: email,
-          subject: dto.subject,
-          message: dto.message,
-          priority: dto.priority || 'medium',
-          projectName: dto.projectName || 'General',
-          date: new Date().toLocaleString('es-ES'),
-          ticketId: docRef.id,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(TicketCreatedComponent, {
+            ...baseVars,
+            clientEmail: email,
+            subject: dto.subject,
+            message: dto.message,
+            priority: dto.priority || 'medium',
+            ticketId: docRef.id,
+            date: new Date().toLocaleString('es-ES'),
+            previewText: 'Nuevo ticket de soporte técnico',
+            websiteUrl: baseVars['websiteUrl'] as string,
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
       .catch((e) =>
         console.error('Error enviando email de nuevo ticket al admin', e),
@@ -331,19 +353,34 @@ export class SupportService {
       console.error('Error fetching client name:', err)
     }
 
+    const baseVars = this.mailService.getBaseVariables(ticketDto.clientEmail)
+    const TicketResponseComponent = (
+      await import('../templates/react/ticket-response')
+    ).TicketResponse
+
     this.mailService
       .sendMail({
         to: ticketDto.clientEmail,
         account: 'SUPPORT',
         subject: `Actualización de tu ticket: ${ticketDto.subject}`,
-        templateName: 'ticket-response',
-        templateVariables: {
-          clientName,
-          subject: ticketDto.subject,
-          status: ticketDto.status,
-          message: ticketDto.message,
-          adminResponse: ticketDto.adminResponse,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(TicketResponseComponent, {
+            ...baseVars,
+            userName: clientName,
+            ticketId: ticketDto.id,
+            ticketSubject: ticketDto.subject,
+            responseMessage: ticketDto.adminResponse || '',
+            previewText: 'Tienes una respuesta en tu ticket de soporte',
+            websiteUrl: baseVars['websiteUrl'] as string,
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
       .catch((e) => console.error('Error sending mail:', e))
 
@@ -434,19 +471,37 @@ export class SupportService {
       ).catch((e) => console.error('Error notifying admins:', e))
 
       // Notificación por EMAIL al administrador (Réplica de Cliente)
+      const adminEmail =
+        this.configService.get<string>('MAIL_ADMIN_ADDRESS') ??
+        'contacto@gabrielzavando.cl'
+      const baseVars = this.mailService.getBaseVariables(adminEmail)
+      const TicketReplyComponent = (
+        await import('../templates/react/ticket-reply')
+      ).TicketReply
+
       this.mailService
         .sendMail({
-          to: 'soporte@gabrielzavando.cl',
-          account: 'SUPPORT',
+          to: adminEmail,
+          account: 'ADMIN',
           subject: `[SOPORTE] Nueva Réplica: ${ticket.subject}`,
-          templateName: 'ticket-reply',
-          templateVariables: {
-            clientEmail: senderEmail,
-            subject: ticket.subject,
-            message: dto.body,
-            ticketId: ticketId,
-            date: new Date().toLocaleString('es-ES'),
-          },
+          html: await this.templateService.renderReactTemplate(
+            React.createElement(TicketReplyComponent, {
+              ...baseVars,
+              clientEmail: senderEmail,
+              message: dto.body,
+              ticketId: ticketId,
+              date: new Date().toLocaleString('es-ES'),
+              previewText: 'Nueva réplica de cliente en ticket de soporte',
+              websiteUrl: baseVars['websiteUrl'] as string,
+              logoUrl: baseVars['logoUrl'] as string,
+              companyName: baseVars['companyName'] as string,
+              address: baseVars['address'] as string,
+              email: baseVars['email'] as string,
+              currentYear: baseVars['currentYear'] as string,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              social: baseVars['social'] as any,
+            }),
+          ),
         })
         .catch((e) =>
           console.error('Error enviando email de réplica al admin', e),

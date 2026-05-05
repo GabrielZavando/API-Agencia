@@ -5,9 +5,10 @@ import { PdfService } from './pdf.service'
 import { ResolverService } from './resolver.service'
 import { FirebaseModule } from '../firebase/firebase.module'
 import { MailModule } from '../mail/mail.module'
+import { TemplatesModule } from '../templates/templates.module'
 
 @Module({
-  imports: [FirebaseModule, MailModule],
+  imports: [FirebaseModule, MailModule, TemplatesModule],
   controllers: [DiagnosticoController],
   providers: [DiagnosticoService, PdfService, ResolverService],
 })

@@ -79,11 +79,18 @@ export class FirebaseService {
           )
         }
 
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
+        const appOptions: admin.AppOptions = {
           projectId: serviceAccount.project_id,
           storageBucket: `${serviceAccount.project_id}.firebasestorage.app`,
-        })
+        }
+
+        if (process.env.FIRESTORE_EMULATOR_HOST) {
+          console.log('✅ Firebase inicializado en modo EMULADOR (sin cert)')
+        } else {
+          appOptions.credential = admin.credential.cert(serviceAccount)
+        }
+
+        admin.initializeApp(appOptions)
       } catch (error) {
         console.error('Error inicializando Firebase:', error)
         throw new Error('No se pudieron cargar las credenciales de Firebase')
@@ -95,6 +102,7 @@ export class FirebaseService {
     // Configurar settings de Firestore
     this.db.settings({
       timestampsInSnapshots: true,
+      ignoreUndefinedProperties: true,
     })
   }
 

@@ -1,5 +1,6 @@
 import { BlogService } from './blog.service'
 import { FirebaseService } from '../firebase/firebase.service'
+import { Cache } from '@nestjs/cache-manager'
 
 vi.mock('firebase-admin', () => ({
   firestore: vi.fn(() => ({
@@ -19,7 +20,10 @@ describe('BlogService', () => {
         doc: vi.fn().mockReturnThis(),
       }),
     }
-    service = new BlogService(mockFirebaseService as FirebaseService)
+    service = new BlogService(
+      mockFirebaseService as FirebaseService,
+      {} as unknown as Cache, // Cache Manager
+    )
   })
 
   it('should be defined', () => {

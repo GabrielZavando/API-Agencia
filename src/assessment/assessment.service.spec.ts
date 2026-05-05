@@ -4,6 +4,7 @@ import type { FirebaseService } from '../firebase/firebase.service'
 import type { MailService } from '../mail/mail.service'
 import type { PdfService } from './pdf.service'
 import type { ResolverService } from './resolver.service'
+import { TemplateService } from '../templates/template.service'
 
 // ── Mocks ─────────────────────────────────────────────────────
 const mockFirebaseService = {
@@ -39,11 +40,15 @@ describe('AssessmentService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    const mockTemplateService = {
+      renderReactTemplate: vi.fn(),
+    }
     service = new AssessmentService(
       mockFirebaseService as unknown as FirebaseService,
       mockMailService as unknown as MailService,
       mockPdfService as unknown as PdfService,
       mockResolverService as unknown as ResolverService,
+      mockTemplateService as unknown as TemplateService,
     )
   })
 

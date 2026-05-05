@@ -2,6 +2,8 @@ import { SupportService } from './support.service'
 import { FirebaseService } from '../firebase/firebase.service'
 import { MailService } from '../mail/mail.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { ConfigService } from '@nestjs/config'
+import { TemplateService } from '../templates/template.service'
 import * as common from '@nestjs/common'
 
 const { NotFoundException } = common
@@ -21,6 +23,8 @@ describe('SupportService', () => {
   let mockFirebaseService: any
   let mockMailService: any
   let mockNotificationsService: any
+  let mockConfigService: Partial<ConfigService>
+  let mockTemplateService: Partial<TemplateService>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -65,16 +69,38 @@ describe('SupportService', () => {
 
     mockMailService = {
       sendMail: vi.fn().mockResolvedValue(true),
+      sendMailDetailed: vi.fn().mockResolvedValue({ success: true }),
+      getBaseVariables: vi.fn().mockReturnValue({
+        calendlyUrl: 'https://calendly.com',
+        websiteUrl: 'https://gabrielzavando.cl',
+        logoUrl: 'https://logo.com',
+        companyName: 'Company',
+        address: '123 St',
+        phone: '1234',
+        email: 'test@example.com',
+        currentYear: '2023',
+        social: {},
+      }),
     }
 
     mockNotificationsService = {
       create: vi.fn().mockResolvedValue({ id: 'test-notif-id' }),
     }
 
+    mockConfigService = {
+      get: vi.fn().mockReturnValue('contacto@gabrielzavando.cl'),
+    }
+
+    mockTemplateService = {
+      renderReactTemplate: vi.fn().mockResolvedValue('<html></html>'),
+    }
+
     service = new SupportService(
       mockFirebaseService as FirebaseService,
       mockMailService as MailService,
       mockNotificationsService as NotificationsService,
+      mockConfigService as ConfigService,
+      mockTemplateService as TemplateService,
     )
   })
 

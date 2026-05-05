@@ -12,6 +12,8 @@ import { MailService } from '../mail/mail.service'
 import { UsersService } from '../users/users.service'
 import { ReportResponseDto } from './dto/report-response.dto'
 import { ReportRecord } from './interfaces/report.interface'
+import { TemplateService } from '../templates/template.service'
+import * as React from 'react'
 
 @Injectable()
 export class ReportsService {
@@ -23,6 +25,7 @@ export class ReportsService {
     private readonly notificationsService: NotificationsService,
     private readonly mailService: MailService,
     private readonly usersService: UsersService,
+    private readonly templateService: TemplateService,
   ) {
     this.db = this._firebase.getDb()
     this.storage = admin.storage()
@@ -95,17 +98,33 @@ export class ReportsService {
     try {
       const user = await this.usersService.findOne(dto.clientId)
       if (user && user.email) {
+        const baseVars = this.mailService.getBaseVariables(user.email)
+        const ReportDeliveryComponent = (
+          await import('../templates/react/report-delivery')
+        ).ReportDelivery
+
         await this.mailService.sendMail({
           to: user.email,
           account: 'SUPPORT',
           subject: `Nuevo Informe: ${dto.title}`,
-          templateName: 'report-delivery',
-          templateVariables: {
-            clientName: user.displayName || 'Cliente',
-            reportTitle: dto.title,
-            reportProject: dto.projectName || 'General',
-            reportDescription: dto.description || '',
-          },
+          html: await this.templateService.renderReactTemplate(
+            React.createElement(ReportDeliveryComponent, {
+              ...baseVars,
+              previewText: 'Tu reporte está listo para ser revisado',
+              clientName: user.displayName || 'Cliente',
+              reportTitle: dto.title,
+              reportProject: dto.projectName || 'General',
+              reportDescription: dto.description || '',
+              websiteUrl: baseVars['websiteUrl'] as string,
+              logoUrl: baseVars['logoUrl'] as string,
+              companyName: baseVars['companyName'] as string,
+              address: baseVars['address'] as string,
+              email: baseVars['email'] as string,
+              currentYear: baseVars['currentYear'] as string,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              social: baseVars['social'] as any,
+            }),
+          ),
           attachments: [
             {
               filename: file.originalname,

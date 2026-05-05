@@ -1,0 +1,14 @@
+scripts/send-test-email.ts(23,7): error TS2353: Object literal may only specify known properties, and 'templateName' does not exist in type 'MailOptions'.
+src/assessment/assessment.service.spec.ts(42,15): error TS2554: Expected 5 arguments, but got 4.
+src/assessment/assessment.service.ts(134,11): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'phone' does not exist in type 'Attributes & DiagnosticoResultadoProps'.
+src/forms/forms.service.ts(634,63): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '{ confirmationUrl: string; previewText: string; logoUrl: string; companyName: string; address: string; email: string; currentYear: string; social: any; }' is not assignable to parameter of type 'Attributes & SubscriberDoubleOptInProps'.
+      Property 'confirmUrl' is missing in type '{ confirmationUrl: string; previewText: string; logoUrl: string; companyName: string; address: string; email: string; currentYear: string; social: any; }' but required in type 'SubscriberDoubleOptInProps'.
+src/forms/forms.service.ts(848,66): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '{ reconfirmationUrl: string; previewText: string; logoUrl: string; companyName: string; address: string; email: string; currentYear: string; social: any; }' is not assignable to parameter of type 'Attributes & SubscriberReconfirmationProps'.
+      Property 'reconfirmUrl' is missing in type '{ reconfirmationUrl: string; previewText: string; logoUrl: string; companyName: string; address: string; email: string; currentYear: string; social: any; }' but required in type 'SubscriberReconfirmationProps'.
+src/reports/reports.service.spec.ts(39,15): error TS2554: Expected 5 arguments, but got 4.

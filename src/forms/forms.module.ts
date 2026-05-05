@@ -5,9 +5,16 @@ import { FirebaseModule } from '../firebase/firebase.module'
 import { MailModule } from '../mail/mail.module'
 import { BlogModule } from '../blog/blog.module'
 import { SystemConfigModule } from '../system-config/system-config.module'
+import { TemplatesModule } from '../templates/templates.module'
 
 @Module({
-  imports: [FirebaseModule, MailModule, BlogModule, SystemConfigModule],
+  imports: [
+    FirebaseModule,
+    MailModule,
+    BlogModule,
+    SystemConfigModule,
+    TemplatesModule,
+  ],
   controllers: [FormsController],
   providers: [FormsService],
 })

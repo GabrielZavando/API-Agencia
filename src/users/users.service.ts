@@ -11,6 +11,8 @@ import { MailService } from '../mail/mail.service'
 import { companyConfig } from '../config/company.config'
 import { UserResponseDto } from './dto/user-response.dto'
 import { UserRecord, UserUpdates } from './interfaces/user.interface'
+import { TemplateService } from '../templates/template.service'
+import * as React from 'react'
 
 interface MulterFile {
   fieldname: string
@@ -29,6 +31,7 @@ export class UsersService {
     private readonly firebaseService: FirebaseService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly templateService: TemplateService,
   ) {
     this.collection = this.firebaseService
       .getDb()
@@ -84,16 +87,32 @@ export class UsersService {
   ) {
     try {
       const companyName = companyConfig.name
+      const baseVars = this.mailService.getBaseVariables(email)
+      const UserWelcomeComponent = (
+        await import('../templates/react/user-welcome')
+      ).UserWelcome
+
       await this.mailService.sendMail({
         to: email,
         subject: `Tus credenciales de acceso - ${companyName}`,
-        templateName: 'user-welcome',
-        templateVariables: {
-          name,
-          userEmail: email,
-          password: pass,
-          role,
-        },
+        html: await this.templateService.renderReactTemplate(
+          React.createElement(UserWelcomeComponent, {
+            ...baseVars,
+            userName: name,
+            userEmail: email,
+            pass,
+            role,
+            previewText: 'Bienvenido a tu panel de gestión digital',
+            websiteUrl: baseVars['websiteUrl'] as string,
+            logoUrl: baseVars['logoUrl'] as string,
+            companyName: baseVars['companyName'] as string,
+            address: baseVars['address'] as string,
+            email: baseVars['email'] as string,
+            currentYear: baseVars['currentYear'] as string,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            social: baseVars['social'] as any,
+          }),
+        ),
       })
     } catch (error) {
       console.error('Error enviando email de bienvenida:', error)

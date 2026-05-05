@@ -9,6 +9,10 @@ import {
   DiagnosticoLevel,
   NombrePilar,
 } from './interfaces/diagnostico.interface'
+import { DiagnosticoResultado } from '../templates/react/diagnostico-resultado'
+import { TemplateService } from '../templates/template.service'
+import * as React from 'react'
+import { PdfContext } from '../assessment/interfaces/pdf-context.interface'
 
 @Injectable()
 export class DiagnosticoService {
@@ -20,6 +24,7 @@ export class DiagnosticoService {
     private readonly mailService: MailService,
     private readonly pdfService: PdfService,
     private readonly resolverService: ResolverService,
+    private readonly templateService: TemplateService,
   ) {}
 
   calculateScore(answers: boolean[]): number {
@@ -119,7 +124,7 @@ export class DiagnosticoService {
     context: Record<string, any>,
     pdfBuffer?: Buffer,
   ): Promise<boolean> {
-    const baseVars = await this.mailService.getBaseVariables(email)
+    const baseVars = this.mailService.getBaseVariables(email)
     const scheduleUrl = 'https://calendly.com/gabrielzavando/30min'
 
     const attachments =
@@ -138,16 +143,26 @@ export class DiagnosticoService {
       subject: `Tu diagnóstico: Nivel ${context.nivel || context.empresa} — ${
         context.score
       }/15 puntos`,
-      templateName: 'diagnostico-resultado',
-      templateVariables: {
-        ...baseVars,
-        nombre_completo: context.nombre_completo as string,
-        score: context.score as number,
-        nivel: context.nivel as string,
-        nivel_emoji: context.nivel_emoji as string,
-        situacion_actual_text: context.situacion_actual_text as string,
-        scheduleUrl,
-      },
+      html: await this.templateService.renderReactTemplate(
+        React.createElement(DiagnosticoResultado, {
+          ...baseVars,
+          nombreCompleto: context.nombre_completo as string,
+          score: context.score as number,
+          nivel: (context.nivel as string).toUpperCase(),
+          nivelEmoji: context.nivel_emoji as string,
+          situacionActualText: context.situacion_actual_text as string,
+          scheduleUrl,
+          websiteUrl: baseVars['websiteUrl'] as string,
+          previewText: 'Tu diagnóstico digital ya está listo',
+          logoUrl: baseVars['logoUrl'] as string,
+          companyName: baseVars['companyName'] as string,
+          address: baseVars['address'] as string,
+          email: baseVars['email'] as string,
+          currentYear: baseVars['currentYear'] as string,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          social: baseVars['social'] as any,
+        }),
+      ),
       attachments,
     })
 
@@ -223,7 +238,7 @@ export class DiagnosticoService {
     }
 
     this.pdfService
-      .generateDiagnosisPdf(context)
+      .generateDiagnosisPdf(context as unknown as PdfContext)
       .then((pdfBuffer) => {
         this.sendResultEmail(dto.email, context, pdfBuffer).catch(
           (err: Error) =>
@@ -315,7 +330,7 @@ export class DiagnosticoService {
 
         try {
           const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
-            diagnostico.contenido as Record<string, any>,
+            diagnostico.contenido as unknown as PdfContext,
           )
           const sent = await this.sendResultEmail(
             contacto.email as string,

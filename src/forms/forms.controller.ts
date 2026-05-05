@@ -6,7 +6,9 @@ import {
   Query,
   Param,
   UseGuards,
+  Res,
 } from '@nestjs/common'
+import { Response } from 'express'
 import { ContactDto } from './dto/contact.dto'
 import { SubscribeDto } from './dto/subscribe.dto'
 import { FormsService } from './forms.service'
@@ -14,6 +16,7 @@ import { Throttle, SkipThrottle } from '@nestjs/throttler'
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard'
 import { Roles } from '../auth/roles.decorator'
 import { SubscriberResponseDto } from './dto/form-response.dto'
+import { companyConfig } from '../config/company.config'
 
 @Controller('forms')
 export class FormsController {
@@ -29,6 +32,22 @@ export class FormsController {
   @Post('subscribe')
   async handleSubscribe(@Body() subscribeDto: SubscribeDto): Promise<any> {
     return this.formsService.handleSubscribe(subscribeDto)
+  }
+
+  @Get('verify-subscription/:token')
+  async verifySubscription(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const result = await this.formsService.verifySubscription(token)
+    const config = await this.formsService.getSystemConfig()
+    const websiteUrl = config?.websiteUrl || companyConfig.websiteUrl
+
+    const redirectUrl = result.success
+      ? `${websiteUrl.replace(/\/+$/, '')}/suscripcion-confirmada?status=ok`
+      : `${websiteUrl.replace(/\/+$/, '')}/suscripcion-confirmada?status=error`
+
+    return res.redirect(redirectUrl)
   }
 
   @Post('unsubscribe')
@@ -140,9 +159,9 @@ export class FormsController {
     }
   }
 
-  @Get('test-smtp')
-  async testSMTP(): Promise<any> {
-    return this.formsService.testSMTPConnection()
+  @Get('test-mail')
+  testMail(): any {
+    return this.formsService.testMailConnection()
   }
 
   @Get('status')
@@ -152,7 +171,7 @@ export class FormsController {
       message: 'API funcionando correctamente',
       features: {
         firebase: '✅ Configurado',
-        smtp: '✅ Configurado (Hostinger)',
+        mail: '✅ Configurado (Resend API)',
         ai: '⚠️ Deshabilitado (faltan API keys)',
         templates: '✅ Configurado',
       },
@@ -161,7 +180,7 @@ export class FormsController {
         subscribe: 'POST /forms/subscribe',
         unsubscribe: 'POST /forms/unsubscribe?email=example@email.com',
         testFirebase: 'GET /forms/test-firebase',
-        testSMTP: 'GET /forms/test-smtp',
+        testMail: 'GET /forms/test-mail',
       },
     })
   }
