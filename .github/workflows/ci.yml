@@ -36,3 +36,9 @@ jobs:
 
       - name: Build Project
         run: pnpm build
+
+      - name: Install Firebase Tools
+        run: pnpm add -g firebase-tools
+
+      - name: Run E2E Tests with Emulators
+        run: firebase emulators:exec --project demo-project 'pnpm test:e2e'
