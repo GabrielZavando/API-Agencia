@@ -50,7 +50,7 @@
     },
     {
       "collectionGroup": "diagnosticos",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
