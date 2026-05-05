@@ -238,23 +238,28 @@ export class DiagnosticoService {
     }
 
     try {
-      this.logger.log(`Generando PDF para ${dto.email}...`)
+      this.logger.log(`[FLOW] Iniciando generación de PDF para: ${dto.email}`)
       const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
         context as unknown as PdfContext,
       )
+      this.logger.log(`[FLOW] PDF generado exitosamente (${pdfBuffer.length} bytes)`)
 
-      this.logger.log(`Enviando email con PDF a ${dto.email}...`)
-      await this.sendResultEmail(dto.email, context, pdfBuffer)
+      this.logger.log(`[FLOW] Llamando a MailService para enviar a: ${dto.email}`)
+      const startEmail = Date.now()
+      const sent = await this.sendResultEmail(dto.email, context, pdfBuffer)
+      const duration = Date.now() - startEmail
+      
+      this.logger.log(`[FLOW] Resultado de envío: ${sent ? 'EXITOSO' : 'FALLIDO'} | Duración: ${duration}ms`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
-      this.logger.error(`Error en el proceso asíncrono de entrega: ${errorMessage}`)
+      this.logger.error(`[FLOW] ERROR CRÍTICO en proceso de entrega: ${errorMessage}`)
       
-      // Intento de envío de rescate sin PDF
       try {
-        this.logger.warn(`Intentando envío de rescate sin PDF a ${dto.email}...`)
+        this.logger.warn(`[FLOW] Intentando envío de rescate (sin PDF) a: ${dto.email}`)
         await this.sendResultEmail(dto.email, context, Buffer.alloc(0))
+        this.logger.log(`[FLOW] Envío de rescate completado.`)
       } catch (mailErr) {
-        this.logger.error(`Fallo crítico: No se pudo enviar ni el email de rescate: ${String(mailErr)}`)
+        this.logger.error(`[FLOW] FALLO TOTAL: No se pudo enviar ni el rescate: ${String(mailErr)}`)
       }
     }
 
