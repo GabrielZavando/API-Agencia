@@ -237,25 +237,26 @@ export class DiagnosticoService {
       return context // Terminamos temprano, se enviará después en el Cron.
     }
 
-    this.pdfService
-      .generateDiagnosisPdf(context as unknown as PdfContext)
-      .then((pdfBuffer) => {
-        this.sendResultEmail(dto.email, context, pdfBuffer).catch(
-          (err: Error) =>
-            this.logger.error('Error al enviar email con PDF: ' + err.message),
-        )
-      })
-      .catch((err: Error) => {
-        this.logger.warn(
-          `PDF no disponible: ${err.message}. Enviando email sin adjunto.`,
-        )
-        this.sendResultEmail(dto.email, context, Buffer.alloc(0)).catch(
-          (mailErr: Error) =>
-            this.logger.error(
-              'Error al enviar email sin PDF: ' + mailErr.message,
-            ),
-        )
-      })
+    try {
+      this.logger.log(`Generando PDF para ${dto.email}...`)
+      const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
+        context as unknown as PdfContext,
+      )
+
+      this.logger.log(`Enviando email con PDF a ${dto.email}...`)
+      await this.sendResultEmail(dto.email, context, pdfBuffer)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      this.logger.error(`Error en el proceso asíncrono de entrega: ${errorMessage}`)
+      
+      // Intento de envío de rescate sin PDF
+      try {
+        this.logger.warn(`Intentando envío de rescate sin PDF a ${dto.email}...`)
+        await this.sendResultEmail(dto.email, context, Buffer.alloc(0))
+      } catch (mailErr) {
+        this.logger.error(`Fallo crítico: No se pudo enviar ni el email de rescate: ${String(mailErr)}`)
+      }
+    }
 
     return context
   }
