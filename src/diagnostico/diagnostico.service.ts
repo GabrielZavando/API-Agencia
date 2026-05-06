@@ -5,14 +5,14 @@ import { PdfService } from './pdf.service'
 import { ResolverService } from './resolver.service'
 import { CrearDiagnosticoDto } from './dto/crear-diagnostico.dto'
 import { Cron, CronExpression } from '@nestjs/schedule'
-import {
-  DiagnosticoLevel,
-  NombrePilar,
-} from './interfaces/diagnostico.interface'
 import { DiagnosticoResultado } from '../templates/react/diagnostico-resultado'
 import { TemplateService } from '../templates/template.service'
 import * as React from 'react'
-import { PdfContext } from '../assessment/interfaces/pdf-context.interface'
+import {
+  DiagnosticoLevel,
+  NombrePilar,
+  PdfContext,
+} from './interfaces/diagnostico.interface'
 
 @Injectable()
 export class DiagnosticoService {
@@ -84,6 +84,7 @@ export class DiagnosticoService {
       const contactoId = await this.firebaseService.saveContacto({
         name: dto.name,
         email: dto.email,
+        empresa: dto.company,
         industria: dto.industry,
         origen: 'formulario_diagnostico',
       })
@@ -174,9 +175,7 @@ export class DiagnosticoService {
     return sent
   }
 
-  async processAndDeliver(
-    dto: CrearDiagnosticoDto,
-  ): Promise<Record<string, any>> {
+  async processAndDeliver(dto: CrearDiagnosticoDto): Promise<PdfContext> {
     const score = this.calculateScore(dto.answers)
     const levelKey = this.getLevel(score)
     const pillarScores = this.getPillarScores(dto.answers)
@@ -196,7 +195,7 @@ export class DiagnosticoService {
 
     const dynamicVars = {
       nombre_completo: dto.name,
-      empresa: dto.industry,
+      empresa: dto.company,
       industria: dto.industry,
       fecha: todayStr,
       id_diagnostico: Math.random().toString(36).substring(2, 11).toUpperCase(),
@@ -239,27 +238,41 @@ export class DiagnosticoService {
 
     try {
       this.logger.log(`[FLOW] Iniciando generación de PDF para: ${dto.email}`)
-      const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
-        context as unknown as PdfContext,
+      const pdfBuffer = await this.pdfService.generateDiagnosisPdf(context)
+      this.logger.log(
+        `[FLOW] PDF generado exitosamente (${pdfBuffer.length} bytes)`,
       )
-      this.logger.log(`[FLOW] PDF generado exitosamente (${pdfBuffer.length} bytes)`)
 
-      this.logger.log(`[FLOW] Llamando a MailService para enviar a: ${dto.email}`)
+      this.logger.log(
+        `[FLOW] Llamando a MailService para enviar a: ${dto.email}`,
+      )
       const startEmail = Date.now()
       const sent = await this.sendResultEmail(dto.email, context, pdfBuffer)
       const duration = Date.now() - startEmail
-      
-      this.logger.log(`[FLOW] Resultado de envío: ${sent ? 'EXITOSO' : 'FALLIDO'} | Duración: ${duration}ms`)
+
+      this.logger.log(
+        `[FLOW] Resultado de envío: ${
+          sent ? 'EXITOSO' : 'FALLIDO'
+        } | Duración: ${duration}ms`,
+      )
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
-      this.logger.error(`[FLOW] ERROR CRÍTICO en proceso de entrega: ${errorMessage}`)
-      
+      this.logger.error(
+        `[FLOW] ERROR CRÍTICO en proceso de entrega: ${errorMessage}`,
+      )
+
       try {
-        this.logger.warn(`[FLOW] Intentando envío de rescate (sin PDF) a: ${dto.email}`)
+        this.logger.warn(
+          `[FLOW] Intentando envío de rescate (sin PDF) a: ${dto.email}`,
+        )
         await this.sendResultEmail(dto.email, context, Buffer.alloc(0))
         this.logger.log(`[FLOW] Envío de rescate completado.`)
       } catch (mailErr) {
-        this.logger.error(`[FLOW] FALLO TOTAL: No se pudo enviar ni el rescate: ${String(mailErr)}`)
+        this.logger.error(
+          `[FLOW] FALLO TOTAL: No se pudo enviar ni el rescate: ${String(
+            mailErr,
+          )}`,
+        )
       }
     }
 
@@ -336,7 +349,7 @@ export class DiagnosticoService {
 
         try {
           const pdfBuffer = await this.pdfService.generateDiagnosisPdf(
-            diagnostico.contenido as unknown as PdfContext,
+            diagnostico.contenido as PdfContext,
           )
           const sent = await this.sendResultEmail(
             contacto.email as string,

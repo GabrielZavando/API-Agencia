@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { renderToBuffer, DocumentProps } from '@react-pdf/renderer'
 import { DiagnosticoReportPdf } from '../templates/react/diagnostico-report-pdf'
 import * as React from 'react'
-import { PdfContext } from '../assessment/interfaces/pdf-context.interface'
+import { PdfContext } from './interfaces/diagnostico.interface'
 
 @Injectable()
 export class PdfService {

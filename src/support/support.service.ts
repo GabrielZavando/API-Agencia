@@ -206,8 +206,8 @@ export class SupportService {
       await import('../templates/react/ticket-created')
     ).TicketCreated
 
-    this.mailService
-      .sendMail({
+    try {
+      await this.mailService.sendMail({
         to: adminEmail,
         account: 'ADMIN',
         subject: `[SOPORTE] Nuevo Ticket: ${dto.subject}`,
@@ -232,9 +232,9 @@ export class SupportService {
           }),
         ),
       })
-      .catch((e) =>
-        console.error('Error enviando email de nuevo ticket al admin', e),
-      )
+    } catch (e) {
+      console.error('Error enviando email de nuevo ticket al admin', e)
+    }
 
     const savedDoc = await docRef.get()
     return this.mapTicketToDto(savedDoc)
@@ -358,8 +358,8 @@ export class SupportService {
       await import('../templates/react/ticket-response')
     ).TicketResponse
 
-    this.mailService
-      .sendMail({
+    try {
+      await this.mailService.sendMail({
         to: ticketDto.clientEmail,
         account: 'SUPPORT',
         subject: `Actualización de tu ticket: ${ticketDto.subject}`,
@@ -382,7 +382,9 @@ export class SupportService {
           }),
         ),
       })
-      .catch((e) => console.error('Error sending mail:', e))
+    } catch (e) {
+      console.error('Error sending mail:', e)
+    }
 
     this.notificationsService
       .create(
@@ -479,8 +481,8 @@ export class SupportService {
         await import('../templates/react/ticket-reply')
       ).TicketReply
 
-      this.mailService
-        .sendMail({
+      try {
+        await this.mailService.sendMail({
           to: adminEmail,
           account: 'ADMIN',
           subject: `[SOPORTE] Nueva Réplica: ${ticket.subject}`,
@@ -503,9 +505,9 @@ export class SupportService {
             }),
           ),
         })
-        .catch((e) =>
-          console.error('Error enviando email de réplica al admin', e),
-        )
+      } catch (e) {
+        console.error('Error enviando email de réplica al admin', e)
+      }
     }
 
     const savedMsg = await msgRef.get()

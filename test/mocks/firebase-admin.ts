@@ -122,6 +122,7 @@ export const mockAuth: any = {
   updateUser: vi.fn().mockResolvedValue({ uid: 'uid' }),
   deleteUser: vi.fn().mockResolvedValue(true),
   createSessionCookie: vi.fn().mockResolvedValue('session-cookie'),
+  setCustomUserClaims: vi.fn().mockResolvedValue(true),
 }
 
 export const mockFirebaseAdmin: any = {
@@ -142,6 +143,15 @@ export const mockFirebaseAdmin: any = {
     vi.fn(() => mockAuth),
     mockAuth,
   ),
+  storage: vi.fn(() => ({
+    bucket: vi.fn(() => ({
+      file: vi.fn(() => ({
+        save: vi.fn().mockResolvedValue(true),
+        getSignedUrl: vi.fn().mockResolvedValue(['http://mock-url']),
+        delete: vi.fn().mockResolvedValue(true),
+      })),
+    })),
+  })),
 }
 
 export default mockFirebaseAdmin

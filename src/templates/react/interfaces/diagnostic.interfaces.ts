@@ -10,7 +10,7 @@ export interface DiagnosticoResultadoProps extends EmailLayoutProps {
   websiteUrl: string
 }
 
-import { PdfContext } from '../../../assessment/interfaces/pdf-context.interface'
+import { PdfContext } from '../../../diagnostico/interfaces/diagnostico.interface'
 
 export type DiagnosticoReportPdfProps = PdfContext
 
