@@ -14,13 +14,13 @@ export const DiagnosticoResultado = (props: DiagnosticoResultadoProps) => {
   } = props
 
   const iconMap: Record<string, string> = {
-    '🌱': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/places/spa/materialicons/24dp/2x/baseline_spa_black_24dp.png',
-    '🌿': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/action/eco/materialicons/24dp/2x/baseline_eco_black_24dp.png',
-    '🌳': 'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/image/nature/materialicons/24dp/2x/baseline_nature_black_24dp.png',
+    '🌱': 'https://material-icons.github.io/material-icons-png/png/black/spa/baseline-2x.png',
+    '🌿': 'https://material-icons.github.io/material-icons-png/png/black/eco/baseline-2x.png',
+    '🌳': 'https://material-icons.github.io/material-icons-png/png/black/nature/baseline-2x.png',
   }
   const iconUrl =
     iconMap[nivelEmoji] ||
-    'https://cdn.jsdelivr.net/gh/google/material-design-icons@4.0.0/png/editor/analytics/materialicons/24dp/2x/baseline_analytics_black_24dp.png'
+    'https://material-icons.github.io/material-icons-png/png/black/analytics/baseline-2x.png'
 
   return (
     <EmailLayout {...layoutProps}>

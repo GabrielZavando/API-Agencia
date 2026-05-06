@@ -193,6 +193,12 @@ export class DiagnosticoService {
       year: 'numeric',
     })
 
+    const emojis: Record<DiagnosticoLevel, string> = {
+      semilla: '🌱',
+      brote: '🌿',
+      arbol: '🌳',
+    }
+
     const dynamicVars = {
       nombre_completo: dto.name,
       empresa: dto.company,
@@ -202,6 +208,7 @@ export class DiagnosticoService {
       score: score,
       nivel_color: color,
       nivel: levelKey,
+      nivel_emoji: emojis[levelKey],
       puntaje_cultura: pillarScores.cultura,
       puntaje_estrategia: pillarScores.estrategia,
       puntaje_procesos: pillarScores.procesos,
