@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from '../app.module'
 import { PdfService } from '../diagnostico/pdf.service'
 import { ResolverService } from '../diagnostico/resolver.service'
-import { PdfContext } from '../diagnostico/interfaces/diagnostico.interface'
 import * as fs from 'fs'
 import * as path from 'path'
 
