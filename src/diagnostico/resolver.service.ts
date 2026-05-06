@@ -132,9 +132,7 @@ export class ResolverService {
 
   getDiagnosticContentMaster(): DiagnosticContent {
     const filePath = path.join(
-      process.cwd(),
-      'src',
-      'diagnostico',
+      __dirname,
       'data',
       'diagnostic-content.json',
     )

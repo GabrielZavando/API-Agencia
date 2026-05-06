@@ -8,6 +8,10 @@
       {
         "include": "templates/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "diagnostico/data/**/*",
+        "watchAssets": true
       }
     ]
   }
