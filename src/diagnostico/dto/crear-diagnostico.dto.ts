@@ -20,6 +20,10 @@ export class CrearDiagnosticoDto {
 
   @IsNotEmpty()
   @IsString()
+  company: string
+
+  @IsNotEmpty()
+  @IsString()
   industry: string
 
   @IsArray()

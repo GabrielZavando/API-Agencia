@@ -8,6 +8,7 @@ describe('CrearDiagnosticoDto (Validación)', () => {
     dto.name = 'Gabriel Zavando'
     dto.email = 'gabriel@webastro.cl'
     dto.industry = 'Tecnología'
+    dto.company = 'WebAstro'
     dto.answers = new Array(15).fill(false)
 
     const errors = await validate(dto)
@@ -19,6 +20,7 @@ describe('CrearDiagnosticoDto (Validación)', () => {
     dto.name = 'Test'
     dto.email = 'formato-incorrecto'
     dto.industry = 'Test'
+    dto.company = 'Test Co'
     dto.answers = new Array(15).fill(true)
 
     const errors = await validate(dto)
@@ -30,6 +32,7 @@ describe('CrearDiagnosticoDto (Validación)', () => {
     dto.name = 'Test'
     dto.email = 'test@test.com'
     dto.industry = 'Test'
+    dto.company = 'Test Co'
     dto.answers = [true, true] // Solo 2
 
     const errors = await validate(dto)
@@ -41,6 +44,7 @@ describe('CrearDiagnosticoDto (Validación)', () => {
     dto.name = 'Test'
     dto.email = 'test@test.com'
     dto.industry = 'Test'
+    dto.company = 'Test Co'
     dto.answers = new Array(15).fill('not-boolean') as any
 
     const errors = await validate(dto)

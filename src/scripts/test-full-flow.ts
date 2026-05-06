@@ -12,6 +12,7 @@ async function testFullFlow() {
     name: 'Gabriel Test Flow',
     email: 'gabrielzavando@gmail.com',
     industry: 'tecnologia',
+    company: 'Agencia Digital Test',
     answers: [
       true,
       true,

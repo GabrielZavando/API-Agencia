@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import * as fs from 'fs'
 import * as path from 'path'
-import { NombrePilar } from './interfaces/diagnostico.interface'
+import { NombrePilar, PdfContext } from './interfaces/diagnostico.interface'
 
 export interface DiagnosticCapaNivel {
   titulo?: string
@@ -183,7 +183,7 @@ export class ResolverService {
     sector: string,
     pillarScores: Record<NombrePilar, number>,
     dynamicVars: Record<string, unknown>,
-  ): Record<string, unknown> {
+  ): PdfContext {
     const dataMaster = this.getDiagnosticContentMaster()
     const criticalPillar = this.getCriticalPillar(pillarScores)
     const levelKey = level.toLowerCase()
@@ -285,6 +285,6 @@ export class ResolverService {
       consultor_nombre: this.CONSULTOR_NOMBRE,
       sector_label,
       year: new Date().getFullYear().toString(),
-    }
+    } as unknown as PdfContext
   }
 }

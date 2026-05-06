@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from '../app.module'
 import { PdfService } from '../diagnostico/pdf.service'
 import { ResolverService } from '../diagnostico/resolver.service'
-import { PdfContext } from '../assessment/interfaces/pdf-context.interface'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -42,9 +41,7 @@ async function generateTestPdf() {
     mockDynamicVars as Record<string, unknown>,
   )
 
-  const buffer = await pdfService.generateDiagnosisPdf(
-    context as unknown as PdfContext,
-  )
+  const buffer = await pdfService.generateDiagnosisPdf(context)
 
   const outputPath = path.join(process.cwd(), 'test-diagnostico.pdf')
   fs.writeFileSync(outputPath, buffer)
