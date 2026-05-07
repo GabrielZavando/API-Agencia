@@ -5,6 +5,7 @@ WORKDIR /app
 RUN npm install -g corepack@latest && corepack enable pnpm
 
 COPY package.json pnpm-lock.yaml ./
+RUN pnpm config set strict-dep-builds false
 RUN pnpm install --frozen-lockfile
 
 COPY . .
@@ -18,6 +19,7 @@ ENV NODE_ENV=production
 RUN npm install -g corepack@latest && corepack enable pnpm
 
 COPY package.json pnpm-lock.yaml ./
+RUN pnpm config set strict-dep-builds false
 RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/dist ./dist
