@@ -91,5 +91,14 @@
     "typescript-eslint": "^8.20.0",
     "unplugin-swc": "^1.5.9",
     "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "allowBuilds": [
+      "@firebase/util",
+      "@parcel/watcher",
+      "esbuild",
+      "protobufjs",
+      "sharp"
+    ]
   }
 }
