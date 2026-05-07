@@ -131,7 +131,11 @@ export class ResolverService {
   }
 
   getDiagnosticContentMaster(): DiagnosticContent {
-    const filePath = path.join(__dirname, 'data', 'diagnostic-content.json')
+    const filePath = path.join(
+      __dirname,
+      'data',
+      'diagnostic-content.json',
+    )
 
     try {
       if (fs.existsSync(filePath)) {
