@@ -7,6 +7,8 @@ import {
   Req,
   UseInterceptors,
   UploadedFile,
+  Delete,
+  Param,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { IdeasService } from './ideas.service'
@@ -43,5 +45,18 @@ export class IdeasController {
   @Roles('client')
   async findMyIdeas(@Req() req: AuthRequest): Promise<IdeaResponseDto[]> {
     return this.ideasService.findByClient(req.user.uid)
+  }
+
+  @Get(':id')
+  @Roles('admin')
+  async findOne(@Param('id') id: string): Promise<IdeaResponseDto> {
+    return this.ideasService.findOne(id)
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
+    await this.ideasService.remove(id)
+    return { message: `Idea ${id} eliminada correctamente` }
   }
 }

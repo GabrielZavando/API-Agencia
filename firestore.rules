@@ -28,7 +28,7 @@ service cloud.firestore {
         resource.data.clientId == request.auth.uid
       );
       allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['title', 'description', 'clientId'])
+        && request.resource.data.keys().hasAll(['name', 'explanation', 'clientId'])
         && request.resource.data.clientId == request.auth.uid;
       allow update, delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';

@@ -6,5 +6,5 @@ export interface IdeaRecord {
   explanation: string
   imageUrl?: string
   clientId: string
-  createdAt: admin.firestore.Timestamp | admin.firestore.FieldValue
+  createdAt: admin.firestore.Timestamp | admin.firestore.FieldValue | Date
 }
