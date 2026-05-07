@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g corepack@latest && corepack enable pnpm
@@ -11,7 +11,7 @@ COPY . .
 RUN rm -f tsconfig.build.tsbuildinfo && pnpm run build && ls -la dist/
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
