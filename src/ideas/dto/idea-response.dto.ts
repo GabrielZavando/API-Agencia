@@ -1,4 +1,3 @@
-import * as admin from 'firebase-admin'
 
 export class IdeaResponseDto {
   id: string
