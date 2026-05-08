@@ -1,4 +1,3 @@
-import * as admin from 'firebase-admin'
 
 export class IdeaResponseDto {
   id: string
@@ -6,10 +5,6 @@ export class IdeaResponseDto {
   explanation: string
   imageUrl?: string
   clientId: string
-  createdAt:
-    | admin.firestore.Timestamp
-    | admin.firestore.FieldValue
-    | Date
-    | string
-    | number
+  clientName?: string
+  createdAt: string
 }
